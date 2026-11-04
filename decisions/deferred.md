@@ -14,3 +14,4 @@ read whenever a decision record is written and when a phase ends.
 | `pre-commit` as a requirement rather than an option | A second contributor | The gates run in CI, and a hook one person installs is a hook one person maintains |
 | Pressing the door from outside the home network | Roy asks to open or close the door while away | The controller cannot join the tailnet; a route in (a subnet router or an always-on box at home) is a new way in and wants its own decision |
 | Branch protection and required pull requests | The repository goes public or the account gets a plan that allows protection on private repositories | GitHub refuses protection on a private repository on this plan |
+| A 3D-printed enclosure: parametric OpenSCAD, with STL files built by CI and attached to releases | Roy asks for it (noted 2026-11-04), once the board and its cable glands are fixed | The parts and their layout are not settled yet; a box drawn now would be drawn twice |
