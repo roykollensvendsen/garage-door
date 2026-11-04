@@ -39,3 +39,7 @@ hardware/~*.lck
 
 # Built site
 site/
+
+# Scope captures (several MB each). The decoded result goes in docs/plan.md;
+# scripts/decode_capture.py turns a capture back into bytes.
+docs/captures/
