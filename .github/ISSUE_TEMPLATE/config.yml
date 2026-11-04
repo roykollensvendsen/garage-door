@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+blank_issues_enabled: true
+contact_links:
+  - name: Safety
+    url: https://roykollensvendsen.github.io/garage-door/safety/
+    about: Read the safety page before building.

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Add my opener
+description: Tell us about an opener model, so it can go on the compatibility list.
+title: "Opener: <brand> <model>"
+labels: [opener, good first issue]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you! You can also add it yourself: copy `hardware/openers/_template.yaml`
+        (see "Add your opener" on the compatibility page). Leave out anything private.
+  - type: input
+    id: model
+    attributes: {label: Brand and model, description: As printed on the type plate, placeholder: LiftMaster LM100EVF}
+    validations: {required: true}
+  - type: input
+    id: manual
+    attributes: {label: Link to the manual, description: The maker's PDF, if you can find it}
+  - type: input
+    id: terminals
+    attributes: {label: Push-button terminals, description: Which two terminals the wall button uses, and the manual page, placeholder: "1 and 2, manual p. 12"}
+  - type: input
+    id: volts
+    attributes: {label: Voltage across them, description: Measured with a meter on DC volts, opener plugged in, placeholder: "24 V"}
+  - type: dropdown
+    id: status
+    attributes:
+      label: Have you built the controller for it?
+      options: ["No, just asking", "Yes, and it works", "Yes, and it does not work"]
+    validations: {required: true}
+  - type: textarea
+    id: notes
+    attributes: {label: Anything else, description: "A photo of the terminal block helps (no house numbers or faces, please)."}

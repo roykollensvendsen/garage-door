@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Share my build
+description: Show us the controller you built, for the builds page.
+title: "Build: <your opener model>"
+labels: [build]
+body:
+  - type: input
+    id: opener
+    attributes: {label: Opener brand and model}
+    validations: {required: true}
+  - type: textarea
+    id: photos
+    attributes:
+      label: Photos
+      description: Drag photos here. Please leave out house numbers, number plates, faces and network names.
+    validations: {required: true}
+  - type: textarea
+    id: story
+    attributes: {label: "How did it go?", description: What took longest, what you would do differently, any part you swapped.}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Permission
+      options:
+        - label: The photos and text may be shown on the project site under GPL-3.0-or-later, credited to my GitHub name.
+          required: true
