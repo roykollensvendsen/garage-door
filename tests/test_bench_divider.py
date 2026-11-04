@@ -83,3 +83,34 @@ def test_the_isolated_input_loads_the_bus_by_about_a_milliampere():
 def test_the_isolated_input_picture_is_drawn_from_the_current_values():
     opto = _opto()
     assert opto.OUTPUT.read_text() == opto.schematic(), "run python3 scripts/opto_input.py"
+
+
+def _board():
+    spec = importlib.util.spec_from_file_location("bench_breadboard", ROOT / "scripts/bench_breadboard.py")
+    assert spec
+    assert spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_as_built_board_uses_only_holes_a_half_size_breadboard_has():
+    board = _board()
+    plan = bench.tomllib.loads(bench.PLAN.read_text())["bench_breadboard"]
+    for part in plan["parts"]:
+        board.hole(part["from"])
+        board.hole(part["to"], part["from"])
+    for wire in plan["wires"]:
+        board.hole(wire["at"])
+
+
+def test_the_as_built_board_puts_node_a_gpio36_and_3v3_on_their_rows():
+    plan = bench.tomllib.loads(bench.PLAN.read_text())["bench_breadboard"]
+    rows = {p["what"]: (p["from"][1:], p["to"][1:]) for p in plan["parts"] if p["what"] in {"1k", "1N4148"}}
+    assert rows["1k"] == ("9", "13")  # node A to GPIO36
+    assert rows["1N4148"] == ("13", "17")  # cathode on the 3V3 row
+
+
+def test_the_as_built_picture_is_drawn_from_the_current_values():
+    board = _board()
+    assert board.OUTPUT.read_text() == board.breadboard(), "run python3 scripts/bench_breadboard.py"

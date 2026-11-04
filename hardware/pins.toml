@@ -46,6 +46,35 @@ line_idle_min = 10.1        # volts, mean high on 0+2 on the scope (with 50 Hz r
 line_max = 15.0             # volts, assumed worst case
 clamp_drop = 0.6            # 1N4148 at a fraction of a milliampere; a Schottky is about 0.3
 
+[bench_breadboard]
+# Roy's test board as built (2026-11-04): a half-size breadboard, rows 1-30,
+# holes a-e of each row joined; "gnd" is the blue rail beside them. Each part
+# runs from one hole to another; a diode's "to" is its cathode (black stripe).
+# Drawn by scripts/bench_breadboard.py.
+parts = [
+  { what = "22k", from = "b1", to = "b5" },
+  { what = "10k", from = "c5", to = "c9", note = "shorted by the jumper" },
+  { what = "jumper", from = "a5", to = "b9", colour = "green" },
+  { what = "10k", from = "d9", to = "gnd" },
+  { what = "1k", from = "e9", to = "e13" },
+  { what = "1N4148", from = "c13", to = "c17" },
+  { what = "10n", from = "d13", to = "d15" },
+  { what = "jumper", from = "e15", to = "gnd", colour = "grey" },
+]
+wires = [
+  { colour = "red", at = "a1", to = "opener terminal 0" },
+  { colour = "black", at = "gnd", to = "opener terminal 2" },
+  { colour = "green", at = "b13", to = "scope probe (its ground clip on the black wire)" },
+  { colour = "yellow", at = "a13", to = "ESP32 GPIO36 (not connected yet)" },
+  { colour = "blue", at = "a17", to = "ESP32 3V3 (not connected yet)" },
+  { colour = "black", at = "gnd", to = "ESP32 GND (not connected yet)" },
+]
+measured = [
+  "Node A (row 9): 3.17 V mean.",
+  "Row 13 (GPIO36) with the 10n: idle min about 2.7 V, 0.8 V peak to peak of 50 Hz ripple.",
+  "Packets swing about 0 V to 3.4 V; min -240 mV during packets.",
+]
+
 [opto_input]
 # The permanent, isolated input on the opener's data wire (docs/plan.md):
 # terminal 0 -> led_resistor -> 6N136 pin 2, pin 3 -> terminal 2, reverse diode

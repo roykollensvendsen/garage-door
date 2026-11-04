@@ -114,16 +114,36 @@ The diode runs from GPIO36 up to 3V3, band towards 3V3.
 
 ![Breadboard layout of the bench divider](wiring/bench-divider-breadboard.svg)
 
-On the breadboard (Roy's layout, by column number): 22 kΩ in columns 1–5,
-a jumper from 5 to 9 (where a second 10 kΩ sat first), so node A is column 9.
-The 10 kΩ goes from 9 to 13 (ground), the 1 kΩ from 9 to 17 (GPIO36), the
-1 nF from 13 to 17, and the 1N4148 from 17 to 21 (3V3) with its black stripe
-at 21. Wires: **red** from terminal 0 to column 1, **black** from column 13
-to terminal 2 and on to the ESP32's GND, **yellow** from column 17 to GPIO36,
-**blue** from column 21 to the ESP32's 3V3. Measure node A with the red probe
-in column 9 and the black probe in column 13. Colour bands: 22 kΩ
-red-red-orange-gold, 10 kΩ brown-black-orange-gold, 1 kΩ brown-black-red-gold
-(5 %). 1 % resistors have five bands instead.
+**As built by Roy (2026-11-04)**, on a half-size breadboard: rows 1–30,
+holes a–e of each row joined, and the blue rail beside them as ground.
+
+| Part | Holes | Net |
+|---|---|---|
+| red wire from opener terminal 0 | a1 | line |
+| 22 kΩ | b1–b5 | line to row 5 |
+| 10 kΩ, still fitted but shorted | c5–c9 | row 5 to node A |
+| green jumper that shorts it | a5–b9 | so the top is 22 kΩ alone |
+| 10 kΩ | d9 to the rail | node A (row 9) to ground |
+| black wire from opener terminal 2 | rail | ground |
+| 1 kΩ | e9–e13 | node A to GPIO36 (row 13) |
+| 1N4148, black stripe at c17 | c13–c17 | GPIO36 to 3V3 (row 17) |
+| 10 nF ceramic (103) | d13–d15 | GPIO36 to row 15 |
+| wire | e15 to the rail | so the 10 nF is GPIO36 to ground |
+| green scope probe wire | b13 | ground clip on the black wire |
+| yellow wire to ESP32 GPIO36 | a13 | not connected yet |
+| blue wire to ESP32 3V3 | a17 | not connected yet |
+| black wire to ESP32 GND | rail | not connected yet |
+
+Roy measured on the scope:
+- node A: 3.17 V mean;
+- row 13, with the 10 nF: about 2.7 V minimum while idle, with about 0.8 V
+  peak to peak of 50 Hz ripple;
+- packets swing from about 0 V to 3.4 V, with a minimum of −240 mV.
+
+To measure node A, put the red probe in a9 and the black probe on the rail.
+Colour bands: 22 kΩ red-red-orange-gold, 10 kΩ brown-black-orange-gold,
+1 kΩ brown-black-red-gold (5 %). The ESP32 Thing still needs its headers.
+It runs from a USB power bank in the garage.
 
 1. **Opener unplugged.** Measure each resistor on the ohms range.
 2. **Divider only, ESP32 off the board.** Wire terminal 0 and terminal 2 to

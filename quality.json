@@ -24,7 +24,7 @@
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 3.5,
-  "tests": 183,
+  "test_seconds": 3.1,
+  "tests": 186,
   "type_errors": 0
 }
