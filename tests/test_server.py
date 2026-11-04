@@ -10,6 +10,7 @@ import pytest
 from mcp.server.mcpserver.exceptions import ToolError
 
 from garage_door.door import DoorState
+from garage_door.manual import ManualPress
 from garage_door.server import build_server, settings_from
 from garage_door.service import GarageService
 
@@ -18,11 +19,27 @@ if TYPE_CHECKING:
 
 
 class FakeDevice:
-    def __init__(self, state: DoorState, after_press: DoorState, *, armed: bool | None = True) -> None:
+    def __init__(
+        self,
+        state: DoorState,
+        after_press: DoorState,
+        *,
+        armed: bool | None = True,
+        manual: bool | None = False,
+    ) -> None:
         self.current = state
         self.after_press = after_press
         self.is_armed = armed
+        self.is_manual = manual
         self.presses = 0
+        self.manual_presses = 0
+
+    async def manual(self) -> bool | None:
+        return self.is_manual
+
+    async def manual_press(self) -> str:
+        self.manual_presses += 1
+        return "sent"
 
     async def state(self) -> DoorState:
         return self.current
@@ -42,7 +59,7 @@ async def _no_wait(_seconds: float) -> None:
 
 def server_for(device: FakeDevice, tmp_path: pathlib.Path):
     service = GarageService(device, log_path=tmp_path / "presses.jsonl", sleep=_no_wait)
-    return build_server(service)
+    return build_server(service, ManualPress(device, log_path=tmp_path / "presses.jsonl"))
 
 
 def call(server, tool: str, arguments: dict[str, object]) -> dict[str, object]:
@@ -51,23 +68,25 @@ def call(server, tool: str, arguments: dict[str, object]) -> dict[str, object]:
     return result.structured_content
 
 
-def test_the_server_offers_exactly_status_request_and_confirm(tmp_path):
+def test_the_server_offers_exactly_status_request_confirm_and_the_manual_press(tmp_path):
     server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
-    assert set(tools) == {"garage_status", "garage_request", "garage_confirm"}
+    assert set(tools) == {"garage_status", "garage_request", "garage_confirm", "garage_press_button"}
     assert "spoken yes" in tools["garage_confirm"].description
     assert tools["garage_request"].input_schema["properties"]["action"]["enum"] == ["open", "close"]
 
 
 def test_status_reports_the_door(tmp_path):
     server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
-    assert call(server, "garage_status", {}) == {"state": "closed", "armed": True}
+    answer = call(server, "garage_status", {})
+    assert (answer["state"], answer["armed"]) == ("closed", True)
 
 
 @pytest.mark.parametrize("armed", [False, None])
 def test_status_says_when_the_controller_is_in_test_mode_or_not_known(tmp_path, armed):
     server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN, armed=armed), tmp_path)
-    assert call(server, "garage_status", {}) == {"state": "closed", "armed": armed}
+    answer = call(server, "garage_status", {})
+    assert (answer["state"], answer["armed"]) == ("closed", armed)
 
 
 def test_a_press_in_test_mode_comes_back_as_test_mode(tmp_path):
@@ -98,7 +117,7 @@ def test_a_refusal_comes_back_as_something_to_say(tmp_path):
     device = FakeDevice(DoorState.MOVING, DoorState.OPEN)
     server = server_for(device, tmp_path)
     refused = call(server, "garage_request", {"action": "open"})
-    assert refused == {
+    assert {k: v for k, v in refused.items() if k != "controller"} == {
         "outcome": "refused",
         "state": "moving",
         "say": "The garage door is moving, so I won't press.",
@@ -140,11 +159,12 @@ def test_the_simulated_server_says_it_is_simulated_and_logs_apart(tmp_path):
     from garage_door.server import simulated_service  # noqa: PLC0415
     from garage_door.simulator import Start  # noqa: PLC0415
 
-    service = simulated_service({"XDG_STATE_HOME": str(tmp_path)}, Start.CLOSED)
-    server = build_server(service, simulated=True)
+    services = simulated_service({"XDG_STATE_HOME": str(tmp_path)}, Start.CLOSED)
+    server = build_server(*services, simulated=True)
     assert server.name == "garage-door-simulated"
     assert server.instructions.startswith("SIMULATED:")
-    assert call(server, "garage_status", {}) == {"state": "closed", "armed": True}
+    answer = call(server, "garage_status", {})
+    assert (answer["state"], answer["armed"]) == ("closed", True)
     asked = call(server, "garage_request", {"action": "open"})
     assert asked["outcome"] == "question"
     assert (tmp_path / "garage-door/simulated.jsonl").exists()
@@ -158,3 +178,57 @@ def test_a_confirm_with_a_wrong_token_is_refused_through_the_tools(tmp_path):
     refused = call(server, "garage_confirm", {"token": "not-the-token"})
     assert refused["outcome"] == "refused"
     assert device.presses == 0
+
+
+# --- Manual press (decisions/ADR-GD-004) and what the controller says ---------------
+
+
+def test_every_answer_says_what_the_controller_reports(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, DoorState.OPEN)
+    server = server_for(device, tmp_path)
+    report = {"state": "closed", "state_trusted": True, "armed": True, "manual": False}
+    assert call(server, "garage_status", {})["controller"] == report
+    question = call(server, "garage_request", {"action": "open"})
+    assert question["controller"] == report
+    assert call(server, "garage_confirm", {"token": question["token"]})["controller"]["state"] == "open"
+    assert call(server, "garage_press_button", {})["controller"] == {**report, "state": "open"}
+
+
+def test_the_manual_press_says_not_armed_instead_of_asking(tmp_path):
+    server = server_for(FakeDevice(DoorState.UNKNOWN, DoorState.UNKNOWN, armed=False, manual=True), tmp_path)
+    answer = call(server, "garage_press_button", {})
+    assert answer["outcome"] == "refused"
+    assert answer["say"].startswith("The controller is not armed")
+    assert "token" not in answer
+
+
+def test_the_manual_press_asks_names_no_direction_and_presses_once_on_confirm(tmp_path):
+    device = FakeDevice(DoorState.UNKNOWN, DoorState.UNKNOWN, manual=True)
+    server = server_for(device, tmp_path)
+    question = call(server, "garage_press_button", {})
+    assert question["outcome"] == "question"
+    assert "Only say yes if you can see the door." in question["say"]
+    assert question["controller"]["manual"] is True
+    pressed = call(server, "garage_confirm", {"token": question["token"]})
+    assert pressed["outcome"] == "pressed"
+    assert pressed["say"].startswith("Pressed. I can't tell which way")
+    assert "reached" not in pressed
+    assert (device.manual_presses, device.presses) == (1, 0)
+
+
+def test_an_ordinary_request_still_refuses_an_unknown_door_in_manual_mode(tmp_path):
+    device = FakeDevice(DoorState.UNKNOWN, DoorState.OPEN, manual=True)
+    answer = call(server_for(device, tmp_path), "garage_request", {"action": "open"})
+    assert answer["outcome"] == "refused"
+    assert device.presses == 0
+
+
+def test_a_manual_confirm_after_manual_mode_ended_is_refused(tmp_path):
+    device = FakeDevice(DoorState.UNKNOWN, DoorState.UNKNOWN, manual=True)
+    server = server_for(device, tmp_path)
+    question = call(server, "garage_press_button", {})
+    device.is_manual = False
+    answer = call(server, "garage_confirm", {"token": question["token"]})
+    assert answer["outcome"] == "refused"
+    assert answer["controller"]["manual"] is False
+    assert device.manual_presses == 0

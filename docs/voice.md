@@ -9,7 +9,12 @@ session.
 |---|---|
 | `garage_status` | Says whether the door is open, closed, moving, unknown or faulty, and whether the controller is armed. Not armed is test mode: a press is judged and logged, but the relay stays open. |
 | `garage_request` | Asks to open or close. Presses nothing. Returns a question to read aloud and a one-time token, or a refusal to read aloud. |
+| `garage_press_button` | **Manual mode only** ([ADR-GD-004](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-004-manual-press.md)): one press with no direction, for testing on the real door before its state is known. Asks "Only say yes if you can see the door", and afterwards says only "Pressed". Refused unless the controller is armed and manual mode is on (`garage-door manual on`; off by itself after 10 minutes). |
 | `garage_confirm` | Presses, given the token, and only after a spoken yes. Returns what the door did. |
+
+Every answer also carries `controller`: the door state, whether it can be
+trusted, and whether the controller is armed and in manual mode. Claude says
+that first when the controller is not armed or is in manual mode.
 
 A conversation looks like this:
 

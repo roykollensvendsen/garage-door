@@ -15,6 +15,7 @@ class FakeDevice:
         self._fail = fail
         self.pressed = False
         self.armed: list[bool] = []
+        self.manual: list[bool] = []
 
     async def readings(self, wait: float = 2.0) -> dict[str, str]:
         assert wait > 0
@@ -28,6 +29,12 @@ class FakeDevice:
             msg = "the garage door controller is not reachable: refused"
             raise DeviceUnavailableError(msg)
         self.armed.append(on)
+
+    async def set_manual(self, *, on: bool) -> None:
+        if self._fail:
+            msg = "the garage door controller is not reachable: refused"
+            raise DeviceUnavailableError(msg)
+        self.manual.append(on)
 
     async def press(self) -> str:  # pragma: no cover - must never be called
         self.pressed = True
@@ -84,3 +91,30 @@ def test_arm_and_disarm_switch_test_mode_and_press_nothing(capsys):
 def test_arming_fails_when_the_controller_does_not_answer(capsys):
     assert cli.main(["arm"], device=FakeDevice(fail=True)) == 1
     assert "not reachable" in capsys.readouterr().err
+
+
+def test_manual_on_and_off_switch_manual_mode_and_press_nothing(capsys):
+    device = FakeDevice()
+    assert cli.main(["manual", "on"], device=device) == 0
+    assert "MANUAL MODE ON" in capsys.readouterr().out
+    assert cli.main(["manual", "off"], device=device) == 0
+    assert "Manual mode off" in capsys.readouterr().out
+    assert device.manual == [True, False]
+    assert not device.pressed
+
+
+def test_manual_needs_on_or_off(capsys):
+    with pytest.raises(SystemExit):
+        cli.main(["manual"], device=FakeDevice())
+    assert "on or off" in capsys.readouterr().err
+
+
+def test_manual_fails_when_the_controller_does_not_answer(capsys):
+    assert cli.main(["manual", "on"], device=FakeDevice(fail=True)) == 1
+    assert "not reachable" in capsys.readouterr().err
+
+
+def test_check_warns_when_manual_mode_is_on(capsys):
+    device = FakeDevice({"Door state": "unknown", "Armed": "on", "Manual mode": "on"})
+    assert cli.main(["check"], device=device) == 0
+    assert "MANUAL MODE ON" in capsys.readouterr().out

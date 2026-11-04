@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The garage door as MCP tools, for a local voice session.
 
-Three tools: ``garage_status`` reads the door and whether the controller is
+Four tools: ``garage_status`` reads the door and whether the controller is
 armed; ``garage_request`` checks that opening or closing is safe and returns a
-question to read aloud with a token; ``garage_confirm`` presses, and is to be
-called only after Roy says yes.
+question to read aloud with a token; ``garage_press_button`` asks for a manual
+press with no direction, only while Roy watches the door (ADR-GD-004);
+``garage_confirm`` presses, and is to be called only after Roy says yes.
+Every answer carries ``controller``: the door state, whether it can be
+trusted, and whether the controller is armed and in manual mode.
 
 Run over stdio by Roy's local MCP server. Settings come from the environment:
 
@@ -30,6 +33,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from mcp.server.mcpserver import MCPServer
 
 from garage_door.door import Action
+from garage_door.manual import ManualPress, ManualPressed, ManualQuestion
 from garage_door.service import Confirmed, GarageService, Question
 from garage_door.simulator import Start, simulated_controller
 
@@ -39,7 +43,9 @@ if TYPE_CHECKING:
 INSTRUCTIONS = (
     "Controls Roy's garage door. Never press without asking: call garage_request, read its "
     "'say' text to Roy exactly, and call garage_confirm only if Roy clearly answers yes. "
-    "If he says anything else, do not confirm. Read every refusal and result aloud."
+    "If he says anything else, do not confirm. Read every refusal and result aloud. Every answer "
+    "has 'controller': say first when it is not armed, or in manual mode. garage_press_button is "
+    "only for when Roy says he is at the door watching it; it never opens or closes by name."
 )
 
 SIMULATED = "SIMULATED: this is a simulated garage door, not a real one. Say so when you report on it. "
@@ -59,9 +65,10 @@ def _state_folder(env: Mapping[str, str]) -> pathlib.Path:
     return pathlib.Path(env.get("XDG_STATE_HOME") or pathlib.Path.home() / ".local/state") / "garage-door"
 
 
-def simulated_service(env: Mapping[str, str], start: Start) -> GarageService:
-    """The service wired to a simulated door; it logs apart from the real door."""
-    return GarageService(simulated_controller(start=start), log_path=_state_folder(env) / "simulated.jsonl")
+def simulated_service(env: Mapping[str, str], start: Start) -> tuple[GarageService, ManualPress]:
+    """The services wired to a simulated door; they log apart from the real door."""
+    controller, log = simulated_controller(start=start), _state_folder(env) / "simulated.jsonl"
+    return GarageService(controller, log_path=log), ManualPress(controller, log_path=log)
 
 
 def settings_from(env: Mapping[str, str]) -> Settings:
@@ -79,8 +86,8 @@ def settings_from(env: Mapping[str, str]) -> Settings:
     )
 
 
-def build_server(service: GarageService, *, simulated: bool = False) -> MCPServer[Any]:
-    """The MCP server with its three tools bound to `service`."""
+def build_server(service: GarageService, manual: ManualPress, *, simulated: bool = False) -> MCPServer[Any]:
+    """The MCP server with its four tools bound to `service` and `manual`."""
     server: MCPServer[Any] = MCPServer(
         name="garage-door-simulated" if simulated else "garage-door",
         instructions=(SIMULATED + INSTRUCTIONS) if simulated else INSTRUCTIONS,
@@ -92,8 +99,9 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
             "the controller is armed (false: test mode, a press switches nothing; null: not known)."
         )
     )
-    async def garage_status() -> dict[str, str | bool | None]:
-        return {"state": str(await service.status()), "armed": await service.armed()}
+    async def garage_status() -> dict[str, Any]:
+        report = await manual.report()
+        return {"state": report["state"], "armed": report["armed"], "controller": report}
 
     @server.tool(
         description=(
@@ -101,7 +109,7 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
             "('say') to read to Roy with a token, or a refusal ('say') to read to him."
         )
     )
-    async def garage_request(action: Literal["open", "close"]) -> dict[str, str]:
+    async def garage_request(action: Literal["open", "close"]) -> dict[str, Any]:
         answer = await service.request(Action(action), requester="mcp")
         if isinstance(answer, Question):
             return {
@@ -109,8 +117,32 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
                 "state": str(answer.state),
                 "say": answer.question,
                 "token": answer.token,
+                "controller": await manual.report(),
             }
-        return {"outcome": "refused", "state": str(answer.state), "say": answer.reason}
+        return {
+            "outcome": "refused",
+            "state": str(answer.state),
+            "say": answer.reason,
+            "controller": await manual.report(),
+        }
+
+    @server.tool(
+        description=(
+            "Manual mode only, while Roy stands at the door and watches it: ask to press the "
+            "button once, with no direction. Presses nothing. Returns a question ('say') with a "
+            "token, or a refusal ('say'), e.g. when the controller is not armed. Read it aloud."
+        )
+    )
+    async def garage_press_button() -> dict[str, Any]:
+        answer = await manual.request(requester="mcp")
+        if isinstance(answer, ManualQuestion):
+            return {
+                "outcome": "question",
+                "say": answer.question,
+                "token": answer.token,
+                "controller": answer.controller,
+            }
+        return {"outcome": "refused", "say": answer.reason, "controller": await manual.report()}
 
     @server.tool(
         description=(
@@ -118,7 +150,12 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
             "after Roy has given a spoken yes to its question. Read the result ('say') aloud."
         )
     )
-    async def garage_confirm(token: str) -> dict[str, str | bool | None]:
+    async def garage_confirm(token: str) -> dict[str, Any]:
+        if manual.owns(token):
+            pressed = await manual.confirm(token)
+            if isinstance(pressed, ManualPressed):
+                return {"outcome": "pressed", "say": pressed.message, "controller": await manual.report()}
+            return {"outcome": "refused", "say": pressed.reason, "controller": await manual.report()}
         outcome = await service.confirm(token)
         if isinstance(outcome, Confirmed):
             return {
@@ -128,8 +165,14 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
                 "reached": outcome.reached,
                 "armed": outcome.armed,
                 "say": outcome.message,
+                "controller": await manual.report(),
             }
-        return {"outcome": "refused", "state": str(outcome.state), "say": outcome.reason}
+        return {
+            "outcome": "refused",
+            "state": str(outcome.state),
+            "say": outcome.reason,
+            "controller": await manual.report(),
+        }
 
     return server
 
@@ -143,7 +186,7 @@ def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the
     )
     args = parser.parse_args(argv)
     if args.simulate:
-        build_server(simulated_service(os.environ, args.start), simulated=True).run()
+        build_server(*simulated_service(os.environ, args.start), simulated=True).run()
         return
 
     from aioesphomeapi.client import APIClient  # noqa: PLC0415 - only needed when running for real
@@ -157,4 +200,4 @@ def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the
         )
     )
     service = GarageService(device, log_path=settings.log_path, allow_close=settings.allow_close)
-    build_server(service).run()
+    build_server(service, ManualPress(device, log_path=settings.log_path)).run()

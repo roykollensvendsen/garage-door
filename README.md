@@ -99,6 +99,8 @@ $ env -u GARAGE_DOOR_HOST garage-door arm
 garage-door: GARAGE_DOOR_HOST is not set
 $ env -u GARAGE_DOOR_HOST garage-door disarm
 garage-door: GARAGE_DOOR_HOST is not set
+$ env -u GARAGE_DOOR_HOST garage-door manual off
+garage-door: GARAGE_DOOR_HOST is not set
 ```
 
 `sh scripts/esphome-config.sh compile` builds the firmware exactly as an

@@ -20,7 +20,9 @@ if TYPE_CHECKING:
 
 STATE_SENSOR = "Door state"
 ARMED_SWITCH = "Armed"
+MANUAL_SWITCH = "Manual mode"
 PRESS_ACTION = "press"
+MANUAL_PRESS_ACTION = "manual_press"
 FAILURES = (APIConnectionError, TimeoutError, OSError)
 
 
@@ -52,6 +54,9 @@ class EsphomeDevice:
         self._press: Any = None
         self._armed_key: int | None = None
         self._armed: bool | None = None
+        self._manual_key: int | None = None
+        self._manual: bool | None = None
+        self._manual_press: Any = None
         self._door: str | None = None
         self._names: dict[int, str] = {}
         self._seen: dict[str, str] = {}
@@ -69,14 +74,27 @@ class EsphomeDevice:
         await self._ensure_connected()
         return self._armed
 
+    async def manual(self) -> bool | None:
+        """The controller's Manual mode switch as last reported; None until it is."""
+        await self._ensure_connected()
+        return self._manual
+
     async def press(self) -> str:
         """Ask the controller to press once. Its own logic may still refuse."""
-        await self._ensure_connected()
-        if self._press is None:
-            msg = f"the controller has no '{PRESS_ACTION}' action"
+        return await self._run(PRESS_ACTION)
+
+    async def manual_press(self) -> str:
+        """Ask for a manual press (decisions/ADR-GD-004). The controller may still refuse."""
+        return await self._run(MANUAL_PRESS_ACTION)
+
+    async def _run(self, name: str) -> str:
+        await self._ensure_connected()  # the actions are looked up on connecting
+        action = self._press if name == PRESS_ACTION else self._manual_press
+        if action is None:
+            msg = f"the controller has no '{name}' action"
             raise DeviceUnavailableError(msg)
         try:
-            await self._client.execute_service(self._press, {})
+            await self._client.execute_service(action, {})
         except FAILURES as error:
             self._connected = False
             msg = f"the press was not delivered: {error}"
@@ -101,6 +119,14 @@ class EsphomeDevice:
             raise DeviceUnavailableError(msg)
         self._client.switch_command(self._armed_key, on)
 
+    async def set_manual(self, *, on: bool) -> None:
+        """Switch manual mode on or off (decisions/ADR-GD-004). Presses nothing."""
+        await self._ensure_connected()
+        if self._manual_key is None:
+            msg = f"the controller has no '{MANUAL_SWITCH}' switch"
+            raise DeviceUnavailableError(msg)
+        self._client.switch_command(self._manual_key, on)
+
     @property
     def _client(self) -> Client:
         if self._client_made is None:
@@ -120,6 +146,9 @@ class EsphomeDevice:
         self._state_key = next((e.key for e in entities if e.name == STATE_SENSOR), None)
         self._armed_key = next((e.key for e in entities if e.name == ARMED_SWITCH), None)
         self._press = next((s for s in services if s.name == PRESS_ACTION), None)
+        self._manual_key = next((e.key for e in entities if e.name == MANUAL_SWITCH), None)
+        self._manual_press = next((s for s in services if s.name == MANUAL_PRESS_ACTION), None)
+        self._manual = None  # off after a restart; wait to be told
         self._door = None
         self._armed = None  # a controller that restarted comes back unarmed; wait to be told
         self._client.subscribe_states(self._on_state)
@@ -140,6 +169,8 @@ class EsphomeDevice:
             self._door = state.state
         if isinstance(state, SwitchState) and state.key == self._armed_key:
             self._armed = state.state
+        if isinstance(state, SwitchState) and state.key == self._manual_key:
+            self._manual = state.state
 
 
 def _shown(state: object) -> str:

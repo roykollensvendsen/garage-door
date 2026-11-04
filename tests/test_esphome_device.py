@@ -236,3 +236,46 @@ def test_arming_fails_closed_on_a_controller_without_the_switch():
     client = FakeClient("closed")
     with pytest.raises(DeviceUnavailableError, match="Armed"):
         run(EsphomeDevice(lambda: client).set_armed(on=True))
+
+
+def _manual_client() -> FakeClient:
+    from aioesphomeapi import SwitchInfo  # noqa: PLC0415
+
+    client = FakeClient("unknown")
+    client.entities.append(SwitchInfo(name="Manual mode", key=15))
+    client.services.append(UserService(name="manual_press", key=22))
+    return client
+
+
+def test_manual_mode_follows_the_controllers_manual_mode_switch():
+    from aioesphomeapi import SwitchState  # noqa: PLC0415
+
+    client = _manual_client()
+    device = EsphomeDevice(lambda: client)
+    assert run(device.manual()) is None  # not reported yet
+    client.deliver(SwitchState(key=15, state=True))
+    assert run(device.manual()) is True
+
+
+def test_manual_mode_is_switched_with_the_controllers_manual_mode_switch():
+    client = _manual_client()
+    device = EsphomeDevice(lambda: client)
+    run(device.set_manual(on=True))
+    run(device.set_manual(on=False))
+    assert client.switched == [(15, True), (15, False)]
+    assert client.executed == []
+
+
+def test_a_manual_press_calls_the_controllers_manual_press_action_and_never_the_ordinary_one():
+    client = _manual_client()
+    device = EsphomeDevice(lambda: client)
+    assert run(device.manual_press()) == "sent"
+    assert client.executed == ["manual_press"]
+
+
+def test_a_controller_without_manual_mode_refuses_it():
+    device = EsphomeDevice(lambda: FakeClient("unknown"))
+    with pytest.raises(DeviceUnavailableError, match="manual_press"):
+        run(device.manual_press())
+    with pytest.raises(DeviceUnavailableError, match="Manual mode"):
+        run(device.set_manual(on=True))

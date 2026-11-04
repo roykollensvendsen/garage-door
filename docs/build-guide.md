@@ -234,6 +234,28 @@ output:
   read "unknown", because the door was read before the controller's first
   report arrived. Fixed on the laptop, with a test; the controller was fine.
 
+## First press on the real door: manual mode
+
+Before the reed contacts or the opener's data wire can say where the door
+is, every ordinary press is refused. Manual mode allows one kind of press
+anyway, while you stand at the door and watch it
+([ADR-GD-004](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-004-manual-press.md)).
+
+1. **Take the jumper wires off GPIO34 and GPIO35** (the ones that fake
+   "closed" on the bench) before the relay goes near the opener. The door
+   state should then read unknown or fault, never closed.
+2. Wire the relay's COM and NO to opener terminals 1 and 2, as above.
+3. Stand where you can see the whole door, with nobody in the doorway.
+4. `garage-door arm`, then `garage-door manual on`. Manual mode switches
+   itself off after 10 minutes, and is off after every restart.
+5. Ask Claude to "press the garage button". It asks "Only say yes if you
+   can see the door". Answer yes only while you can see it. It says
+   "Pressed" and nothing about which way the door went: a press may open,
+   stop or close it, as the wall button does.
+6. `garage-door manual off` and `garage-door disarm` when you are done.
+
+Open and close by name stay refused until the door's state is known.
+
 ## Step by step
 
 1. **Measure first** (opener plugged in, door clear, a meter on DC volts).

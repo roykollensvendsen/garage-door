@@ -116,6 +116,14 @@ class SimulatedController:
         """Always armed: the simulated door has no test mode, so a press moves it."""
         return True
 
+    async def manual(self) -> bool:
+        """Never in manual mode: the simulated door always knows where it is."""
+        return False
+
+    async def manual_press(self) -> str:
+        """Refused, as the firmware refuses it with manual mode off."""
+        return "refused: manual mode is off"
+
     async def press(self) -> str:
         """Press once if the firmware would; return its verdict, as the controller does."""
         state = await self.state()

@@ -1,8 +1,9 @@
 {
   "complexity": {
-    "cli.py": 5,
+    "cli.py": 7,
     "door.py": 2,
-    "esphome_device.py": 12,
+    "esphome_device.py": 16,
+    "manual.py": 6,
     "server.py": 4,
     "service.py": 12,
     "simulator.py": 7
@@ -24,7 +25,7 @@
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 4.0,
-  "tests": 207,
+  "test_seconds": 6.3,
+  "tests": 237,
   "type_errors": 0
 }
