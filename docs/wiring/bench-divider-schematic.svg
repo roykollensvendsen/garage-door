@@ -43,5 +43,5 @@
 <text x="20" y="400" class="s">Ratio 0.238. Load 42 kOhm, 0.29 mA at 12 V.</text>
 <text x="20" y="418" class="s">Node A: 2.67 V at 11.2 V, 2.86 V at 12 V, 3.57 V at 15 V.</text>
 <text x="20" y="436" class="s">ESP32 reads high above 2.48 V; absolute maximum 3.6 V (clamp through 1k).</text>
-<text x="20" y="454" class="s">Not isolated: run the laptop on battery for this test.</text>
+<text x="20" y="454" class="s">Not isolated: power the ESP32 from a USB power bank, not the laptop.</text>
 </svg>

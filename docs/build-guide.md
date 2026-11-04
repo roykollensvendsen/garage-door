@@ -91,7 +91,8 @@ WireViz.
 A first, listen-only test on a breadboard, before anything is soldered. It
 lets the controller hear the opener's own status messages (see the plan,
 "First bench test"). It is **not isolated**: it joins the ESP32's ground to
-terminal 2, so run the laptop on battery while the USB cable is in.
+terminal 2, so power the ESP32 from a USB power bank in the garage, not
+from the laptop.
 
 | Qty | Part | Where it goes |
 |---|---|---|
@@ -112,14 +113,16 @@ The diode runs from GPIO36 up to 3V3, band towards 3V3.
 
 ![Breadboard layout of the bench divider](wiring/bench-divider-breadboard.svg)
 
-On the breadboard: a yellow wire from terminal 0 to the 22 kΩ, the 22 kΩ
-and a 10 kΩ in a row to node A, the other 10 kΩ from node A down to the
-ground rail, the 1 kΩ from node A to a column with a green wire to GPIO36,
-and the diode from that column up to the 3V3 rail. Black wires join terminal
-2 and the ESP32's GND to the ground rail, and a red wire joins the ESP32's
-3V3 to the 3V3 rail. Each resistor's colour bands are printed under the
-picture: 22 kΩ red-red-orange-gold, 10 kΩ brown-black-orange-gold, 1 kΩ
-brown-black-red-gold (5 %). 1 % resistors have five bands instead.
+On the breadboard (Roy's layout, by column number): 22 kΩ in columns 1–5,
+10 kΩ in 5–9, so node A is column 9. The second 10 kΩ goes from 9 to 13
+(ground), the 1 kΩ from 9 to 17 (GPIO36), and the 1N4148 from 17 to 21 (3V3)
+with its black stripe at 21. Wires: **red** from terminal 0 to column 1,
+**black** from column 13 to terminal 2 and on to the ESP32's GND, **yellow**
+from column 17 to GPIO36, **blue** from column 21 to the ESP32's 3V3. Measure
+node A with the red probe in column 9 and the black probe in column 13. Each
+resistor's colour bands are printed under the picture: 22 kΩ
+red-red-orange-gold, 10 kΩ brown-black-orange-gold, 1 kΩ brown-black-red-gold
+(5 %). 1 % resistors have five bands instead.
 
 1. **Opener unplugged.** Measure each resistor on the ohms range.
 2. **Divider only, ESP32 off the board.** Wire terminal 0 and terminal 2 to

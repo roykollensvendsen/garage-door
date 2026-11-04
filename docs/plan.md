@@ -163,8 +163,9 @@ waveform to USB (CSV) as well, so it can be decoded off the scope.
 
 *First bench test: a resistor divider (Roy's choice, 2026-11-04; not the
 final build).* It loads the line least and needs no parts beyond resistors,
-but it is **not isolated**: it ties the ESP32's ground to terminal 2. Run the
-laptop on battery for the test, and use the optocoupler below in the build.
+but it is **not isolated**: it ties the ESP32's ground to terminal 2. Power the
+ESP32 from a USB power bank, not the laptop, and use the optocoupler below in
+the build.
 - Terminal 0 → **22 kΩ + 10 kΩ** in series → node A → **10 kΩ** → terminal 2
   (ESP32 GND). Node A → **1 kΩ** → GPIO36. Add a Schottky diode (BAT85 or
   BAT54, or a 1N5819) from GPIO36 to 3V3, cathode at 3V3, and optionally

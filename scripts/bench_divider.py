@@ -204,90 +204,111 @@ def _levels(d: Divider, x: float, y: float) -> list[str]:
             f"{d.at(d.line_max):.2f} V at {d.line_max:.0f} V."
         ),
         f"ESP32 reads high above {VIH:.2f} V; absolute maximum {ABS_MAX:.1f} V (clamp through {d.series}).",
-        "Not isolated: run the laptop on battery for this test.",
+        "Not isolated: power the ESP32 from a USB power bank, not the laptop.",
     ]
     return [f'<text x="{x}" y="{y + i * 18}" class="s">{t}</text>' for i, t in enumerate(lines)]
 
 
+# Roy's layout (2026-11-04): each part between two numbered columns of the
+# breadboard, (first, last, row). Each numbered column is one strip of holes.
+LAYOUT = {
+    "top0": (1, 5, 2),
+    "top1": (5, 9, 2),
+    "bottom": (9, 13, 0),
+    "series": (9, 17, 3),
+    "clamp": (17, 21, 2),
+}
+WIRES = {  # column, colour, where it goes
+    "terminal 0": (1, "#d22", "red"),
+    "terminal 2 and ESP32 GND": (13, "#222", "black"),
+    "GPIO36 (VP)": (17, "#e0b000", "yellow"),
+    "3V3": (21, "#26d", "blue"),
+}
+PITCH, LEFT, TOP, HOLE_ROWS = 34, 60, 110, 5
+
+
+def _hole(col: int, row: int) -> tuple[float, float]:
+    return LEFT + col * PITCH, TOP + row * 18
+
+
+def _part(first: int, last: int, row: int, label: str, value: str | None) -> list[str]:
+    """A resistor (with bands) or the diode (with its stripe at `last`), lead to lead."""
+    (x1, y), (x2, _) = _hole(first, row), _hole(last, row)
+    out = [_wire([(x1, y), (x1 + 14, y)], "#888", 2), _wire([(x2 - 14, y), (x2, y)], "#888", 2)]
+    if value is None:  # the diode: glass body, black stripe at the cathode end
+        out += [
+            f'<rect x="{x1 + 14}" y="{y - 6}" width="{x2 - x1 - 28}" height="12" rx="4" fill="#e66"/>',
+            f'<rect x="{x2 - 24}" y="{y - 6}" width="6" height="12" fill="#111"/>',
+        ]
+    else:
+        out.append(_resistor_h(x1 + 14, y, value, x2 - x1 - 28))
+    out += [
+        f'<circle cx="{x1}" cy="{y}" r="3" fill="#444"/>',
+        f'<circle cx="{x2}" cy="{y}" r="3" fill="#444"/>',
+    ]
+    if value is None:
+        out.append(f'<text x="{(x1 + x2) / 2}" y="{y - 11}" class="v">{label}</text>')
+    return out
+
+
 def breadboard(d: Divider) -> str:
-    """A breadboard seen from above: the parts, the wires, and the meter."""
-    pitch, left, top = 20, 140, 90
-    col = {n: left + n * pitch for n in range(31)}
-    rail_gnd, rail_3v3, row = top + 170, top - 30, top + 60
+    """A breadboard seen from above, in Roy's layout, with the wires and the meter."""
+    width = LEFT + 23 * PITCH
     body = [
         '<text x="20" y="28" class="h">Breadboard: listen on the opener\'s data wire (0+2)</text>',
         (
-            f'<rect x="{left - 10}" y="{top - 50}" width="{31 * pitch}" height="240" rx="8" '
-            'fill="#f3f3ee" stroke="#bbb"/>'
+            f'<rect x="{LEFT + 10}" y="{TOP - 30}" width="{22 * PITCH}" '
+            f'height="{HOLE_ROWS * 18 + 40}" rx="8" fill="#f3f3ee" stroke="#bbb"/>'
         ),
-        _wire([(left, rail_3v3), (left + 29 * pitch, rail_3v3)], "#d22", 2),
-        f'<text x="{left}" y="{rail_3v3 - 6}" class="s">3V3 rail</text>',
-        _wire([(left, rail_gnd), (left + 29 * pitch, rail_gnd)], "#26d", 2),
-        f'<text x="{left + 30}" y="{rail_gnd - 6}" class="s">GND rail</text>',
     ]
-    body += [f'<circle cx="{col[n]}" cy="{row}" r="2" fill="#999"/>' for n in range(1, 30)]
-    a, b, node, gpio = 3, 7, 11, 17
-    body += [
-        _resistor_h(col[a] + 4, row, d.top[0], col[b] - col[a] - 8),
-        _resistor_h(col[b] + 4, row, d.top[1], col[node] - col[b] - 8),
-        _resistor_h(col[node] + 4, row, d.series, col[gpio] - col[node] - 8),
-        # bottom resistor, node A down to the GND rail
-        f'<g transform="rotate(90 {col[node]} {row + 50})">',
-        _resistor_h(col[node] - 30, row + 50, d.bottom),
-        "</g>",
-        _wire([(col[node], row), (col[node], row + 20)], "#888", 2),
-        _wire([(col[node], row + 80), (col[node], rail_gnd)], "#888", 2),
-        # Schottky: anode at the GPIO column, cathode (band) up to the 3V3 rail
-        f'<rect x="{col[gpio] - 6}" y="{rail_3v3 + 18}" width="12" height="34" fill="#222"/>',
-        f'<rect x="{col[gpio] - 6}" y="{rail_3v3 + 18}" width="12" height="5" fill="#ccc"/>',
-        _wire([(col[gpio], rail_3v3), (col[gpio], rail_3v3 + 18)], "#888", 2),
-        _wire([(col[gpio], rail_3v3 + 52), (col[gpio], row)], "#888", 2),
-        f'<text x="{col[gpio] + 10}" y="{rail_3v3 + 36}" class="s">{d.clamp}, band (cathode) to 3V3</text>',
-        f'<circle cx="{col[node]}" cy="{row}" r="5" fill="none" stroke="#222" stroke-width="2"/>',
-        f'<text x="{col[node] - 8}" y="{row + 22}" class="s" text-anchor="end">node A</text>',
-    ]
-    body += _breadboard_wires(col, row, (rail_gnd, rail_3v3), (a, gpio))
-    body += _meter(d, col[node], row, rail_gnd)
-    body += [f'<text x="20" y="{top + 300 + i * 18}" class="s">{t}</text>' for i, t in enumerate(_legend(d))]
-    return _svg(960, top + 300 + 18 * len(_legend(d)) + 20, "Bench divider: breadboard", body)
+    for col in range(1, 22):
+        x, _ = _hole(col, 0)
+        body.append(f'<text x="{x}" y="{TOP - 14}" class="s" text-anchor="middle">{col}</text>')
+        body += [f'<circle cx="{x}" cy="{_hole(col, r)[1]}" r="2" fill="#bbb"/>' for r in range(HOLE_ROWS)]
+    names = {
+        "top0": (d.top[0], d.top[0]),
+        "top1": (d.top[1], d.top[1]),
+        "bottom": (d.bottom, d.bottom),
+        "series": (d.series, d.series),
+        "clamp": (d.clamp, None),
+    }
+    for key, (first, last, row) in LAYOUT.items():
+        label, value = names[key]
+        body += _part(first, last, row, label, value)
+    node_x, _ = _hole(LAYOUT["top1"][1], 0)
+    body.append(f'<text x="{node_x}" y="{TOP - 40}" class="l" text-anchor="middle">node A (column 9)</text>')
+    body += _breadboard_wires()
+    body += _meter(d, node_x, _hole(LAYOUT["bottom"][1], 0)[0])
+    legend = _legend(d)
+    y0 = TOP + 300
+    body += [f'<text x="20" y="{y0 + i * 18}" class="s">{t}</text>' for i, t in enumerate(legend)]
+    return _svg(int(width + 140), y0 + 18 * len(legend) + 20, "Bench divider: breadboard", body)
 
 
-def _breadboard_wires(
-    col: dict[int, float], row: float, rails: tuple[float, float], columns: tuple[int, int]
-) -> list[str]:
-    (gnd, v33), (a, gpio) = rails, columns
-    esp = col[29] + 50
+def _breadboard_wires() -> list[str]:
+    """One wire down from each named column to where it goes."""
+    out = []
+    bottom = TOP + HOLE_ROWS * 18 + 30
+    for i, (where, (col, ink, name)) in enumerate(WIRES.items()):
+        x, y = _hole(col, HOLE_ROWS - 1)
+        end = bottom + 30 + (len(WIRES) - 1 - i) * 22
+        out += [
+            _wire([(x, y + 6), (x, end), (x + 30, end)], ink, 4),
+            f'<text x="{x + 36}" y="{end + 4}" class="s">{name} wire: {where}</text>',
+        ]
+    return out
+
+
+def _meter(d: Divider, node_x: float, gnd_x: float) -> list[str]:
+    mx, my = node_x + 170, TOP - 92
     return [
-        _wire([(20, row), (col[a], row)], "#ed0", 4),
-        f'<text x="20" y="{row - 8}" class="l">Terminal 0 (yellow)</text>',
-        _wire([(20, gnd + 40), (col[1], gnd + 40), (col[1], gnd)], "#222", 4),
-        f'<text x="20" y="{gnd + 32}" class="l">Terminal 2 (black)</text>',
-        _wire(
-            [(col[gpio], row), (col[gpio] + 30, row), (col[gpio] + 30, row - 6), (esp, row - 6)], "#2a2", 4
-        ),
-        (
-            f'<rect x="{esp}" y="{v33 - 10}" width="130" height="{gnd - v33 + 20}" '
-            'fill="#c33" opacity="0.85" rx="6"/>'
-        ),
-        f'<text x="{esp + 65}" y="{v33 + 40}" class="v" fill="#fff">ESP32 Thing</text>',
-        f'<text x="{esp + 6}" y="{row - 2}" class="s" fill="#fff">GPIO36 / VP</text>',
-        _wire([(col[29], v33), (esp, v33)], "#d22", 4),
-        f'<text x="{esp + 6}" y="{v33 + 4}" class="s" fill="#fff">3V3</text>',
-        _wire([(col[29], gnd), (esp, gnd)], "#222", 4),
-        f'<text x="{esp + 6}" y="{gnd + 4}" class="s" fill="#fff">GND</text>',
-    ]
-
-
-def _meter(d: Divider, x: float, row: float, gnd: float) -> list[str]:
-    mx, my = x + 70, gnd + 30
-    return [
-        f'<rect x="{mx}" y="{my}" width="120" height="56" rx="6" fill="#ffd400" stroke="#333"/>',
-        f'<text x="{mx + 60}" y="{my + 22}" class="v">DC volts</text>',
-        f'<text x="{mx + 60}" y="{my + 42}" class="v">~{d.at(d.line_idle_min):.2f} V</text>',
-        _wire([(mx + 100, my), (x + 4, row + 4)], "#d22", 2),
-        _wire([(mx + 20, my), (x + 40, gnd)], "#222", 2),
-        f'<text x="{mx + 126}" y="{my + 22}" class="s">red probe on node A,</text>',
-        f'<text x="{mx + 126}" y="{my + 38}" class="s">black probe on the GND rail</text>',
+        f'<rect x="{mx}" y="{my}" width="120" height="46" rx="6" fill="#ffd400" stroke="#333"/>',
+        f'<text x="{mx + 60}" y="{my + 19}" class="v">DC volts</text>',
+        f'<text x="{mx + 60}" y="{my + 37}" class="v">~{d.at(d.line_idle_min):.2f} V</text>',
+        _wire([(mx, my + 14), (node_x + 4, TOP - 6)], "#d22", 2),
+        _wire([(mx, my + 34), (gnd_x + 4, TOP - 6)], "#222", 2),
+        f'<text x="{mx + 126}" y="{my + 18}" class="s">red probe: column 9 (node A)</text>',
+        f'<text x="{mx + 126}" y="{my + 36}" class="s">black probe: column 13 (GND)</text>',
     ]
 
 
@@ -302,7 +323,7 @@ def _legend(d: Divider) -> list[str]:
             f"{d.at(d.line_idle_min):.2f} V at {d.line_idle_min} V idle, never above "
             f"{d.at(d.line_max):.2f} V, never negative."
         ),
-        f"Optional {d.filter} from GPIO36 to GND. Not isolated: laptop on battery.",
+        f"Optional {d.filter} from GPIO36 to GND. Not isolated: ESP32 on a USB power bank, not the laptop.",
     ]
     return out
 
