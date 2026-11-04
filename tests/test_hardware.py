@@ -45,7 +45,7 @@ def _esphome_config() -> dict:
 
 def test_the_firmware_uses_the_planned_pins():
     config = _esphome_config()
-    outputs = {o["id"]: o["pin"] for o in config["output"]}
+    outputs = {o["id"]: o["pin"]["number"] for o in config["output"]}
     sensors = {s["id"]: s["pin"]["number"] for s in config["binary_sensor"]}
     assert outputs["press_output"] == f"GPIO{GPIO['press']}"
     assert sensors["at_closed"] == f"GPIO{GPIO['sensor_closed']}"
@@ -123,3 +123,20 @@ def test_every_picture_the_docs_show_exists():
         for target in re.findall(r"!\[[^\]]*\]\(([^)]+)\)", page.read_text()):
             if not target.startswith("http"):
                 assert (page.parent / target).exists(), f"{page.name} shows a missing picture: {target}"
+
+
+def test_the_relay_polarity_is_set_in_one_place_and_defaults_to_active_high():
+    # Roy's first-test relay module may trigger on a low input (2026-11-04). The
+    # level is one substitution, so "off" means relay open whichever module is
+    # fitted; the bench check in the build guide decides it before the opener.
+    raw = _esphome_config()
+    assert raw["substitutions"]["relay_active_low"] == "false"
+    press = next(o for o in raw["output"] if o["id"] == "press_output")
+    assert press["pin"] == {"number": f"GPIO{GPIO['press']}", "inverted": "${relay_active_low}"}
+
+
+def test_the_press_output_never_restores_an_on_state():
+    # A gpio output starts off at boot; nothing may hold it on across a restart.
+    press = next(o for o in _esphome_config()["output"] if o["id"] == "press_output")
+    assert "restore_mode" not in press
+    assert "power_supply" not in press

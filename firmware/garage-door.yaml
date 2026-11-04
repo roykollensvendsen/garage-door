@@ -16,6 +16,11 @@ substitutions:
   # Where the door state comes from: "reed" (contacts at each end) or "wire"
   # (the opener's own status on 0+2). The wire is logged either way.
   state_from: "reed"
+  # The press output's level. "false": a high pin closes the relay, as with the
+  # AQY212EH. Roy's first-test module (Songle SRD-03VDC-SL-C board) may trigger
+  # on a low input: set "true" only after the bench check in the build guide
+  # shows it. Either way "off" is relay open, at boot and between presses.
+  relay_active_low: "false"
 
 esphome:
   name: garage-door
@@ -146,10 +151,14 @@ binary_sensor:
       - delayed_on_off: 50ms
 
 output:
-  # The PhotoMOS relay across terminals 1 and 2.
+  # The relay across terminals 1 and 2: the AQY212EH, or for the first test
+  # Roy's relay module. ESPHome drives it off during setup; before that, from
+  # reset, GPIO25 floats (not a strapping pin), which these inputs read as off.
   - platform: gpio
     id: press_output
-    pin: GPIO25
+    pin:
+      number: GPIO25
+      inverted: ${relay_active_low}
 
 text_sensor:
   - platform: template
