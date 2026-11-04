@@ -222,6 +222,12 @@ TEST(Names, EveryStateAndResultHasAName) {
   EXPECT_STREQ(garage::to_string(PressResult::RefusedTooSoon), "refused: too soon after the last press");
 }
 
+TEST(Names, AValueOutsideTheListIsNamedAsTheSafeOne) {
+  // A corrupted value must never read as "closed", "open" or "accepted".
+  EXPECT_STREQ(garage::to_string(static_cast<DoorState>(99)), "unknown");
+  EXPECT_STREQ(garage::to_string(static_cast<PressResult>(99)), "refused: door state not known");
+}
+
 // --- The single Door the controller uses ---------------------------------------
 
 #include "esphome_glue.h"
