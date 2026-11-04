@@ -34,6 +34,11 @@ controller (`allow_close: "false"`).
 
 ## Consequences
 
+- **It goes against the manufacturer's instruction.** The manual says to
+  operate the opener only when the whole door area can be seen (manual
+  114A4C095B, PDF p. 17 and p. 21, section 22). Closing by voice from
+  elsewhere does not meet that. This was found after the decision and is
+  recorded here so it can be weighed whenever the decision is revisited.
 - Something in the doorway is touched before the door reverses. Photocells
   would prevent that, and they stay recommended (README, "Safety").
 - The force-reversal test in the manual (section 24, a 50 mm obstacle)
