@@ -93,5 +93,33 @@ jobs:
         # Coverage is measured and printed, with no threshold yet: a number
         # picked before there is data is a guess with a gate on it.
         run: uv run pytest -q -p no:cacheprovider --strict-markers --cov
+      - name: Each safety rule's own test goes red when the rule is switched off
+        run: uv run python scripts/mutate.py
       # - name: The project's own check
       #   run: uv run garage-door check .
+
+  # The controller's safety logic, compiled and tested on the runner: the same
+  # header the board runs, with no board attached.
+  firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compiler, CMake, Ninja and GoogleTest
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake ninja-build libgtest-dev
+      - name: Controller logic tests
+        run: sh scripts/firmware-tests.sh
+
+  # ESPHome's own validation of the controller configuration, with the example
+  # secrets. It does not compile for the board; that needs the ESP-IDF toolchain.
+  esphome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.13"
+      - name: ESPHome configuration is valid
+        run: sh scripts/esphome-config.sh

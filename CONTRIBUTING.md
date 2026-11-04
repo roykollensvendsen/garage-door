@@ -26,8 +26,15 @@ because they are the same lines:
 uv run ruff check . && uv run ruff format --check .
 uv run mypy src
 uv run pytest -q --cov
+uv run python scripts/mutate.py
+sh scripts/firmware-tests.sh
+sh scripts/esphome-config.sh
 committed --no-merge-commit origin/main..HEAD
 ```
+
+The two firmware gates need a C++17 compiler, CMake, Ninja and GoogleTest
+(`libgtest-dev` on Debian and Ubuntu, `gtest` on Arch); the ESPHome one
+fetches a pinned ESPHome through `uvx`. None of them needs the board.
 
 Run them after the last edit, not before it. A file edited after the format
 gate ran will fail in continuous integration, which is the cheapest possible

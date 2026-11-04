@@ -47,6 +47,8 @@ uv run ruff format --check .   # layout
 uv run mypy src                # types
 uv run pytest -q               # behaviour
 python scripts/mutate.py       # that each rule's own test can fail
+sh scripts/firmware-tests.sh   # the controller's logic, on this machine
+sh scripts/esphome-config.sh   # the controller's ESPHome configuration
 ```
 
 `CONTRIBUTING.md` says what each one is for, and

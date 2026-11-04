@@ -15,7 +15,7 @@ HEADER = f"SPDX-License-Identifier: {SPDX}"
 SOURCES = {
     "src": ("*.py",),
     "tests": ("*.py",),
-    "scripts": ("*.py",),
+    "scripts": ("*.py", "*.sh"),
     "firmware": ("*.h", "*.cpp", "*.yaml", "CMakeLists.txt"),
 }
 # Written by the build from the Git tag; never edited or committed.
