@@ -79,6 +79,11 @@ The controller learns three things, each switched on in its configuration.
    ahead by a margin, so a code is never used twice. The controller waits
    for 1.3 ms of idle line before it sends.
 
+**The relay stays the way to press** (`press_by: relay`, the default) until
+pressing on the wire has passed a bench test with Roy watching (Roy,
+2026-11-04). Until then, the wire is used only to read the state, and at
+most to ask for it.
+
 The secplus C code is taken in unchanged, at a fixed commit (in
 `firmware/third_party/secplus/`), rather than rewritten. It is the code
 ratgdo uses, and it is tested upstream.
