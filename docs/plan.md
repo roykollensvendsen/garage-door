@@ -158,6 +158,27 @@ waveform to USB (CSV) as well, so it can be decoded off the scope.
    message start, not as data. Try `0x55 0x01
    0x00` as the start, and decode with secplus.
 
+*First bench test: a resistor divider (Roy's choice, 2026-11-04; not the
+final build).* It loads the line least and needs no parts beyond resistors,
+but it is **not isolated**: it ties the ESP32's ground to terminal 2. Run the
+laptop on battery for the test, and use the optocoupler below in the build.
+- Terminal 0 → **39 kΩ** → node A → **12 kΩ** → terminal 2 (ESP32 GND).
+  Node A → **1 kΩ** → GPIO36. Add a Schottky diode (BAT85 or BAT54, or a
+  1N5819) from GPIO36 to 3V3, cathode at 3V3, and 100 pF from GPIO36 to GND.
+- Ratio 12/51 = 0.235. A high at 11.2 V gives 2.64 V, and 12 V gives 2.82 V.
+  Both are above the ESP32's input-high level, 0.75 × 3.3 = 2.48 V. A worst
+  case of 15 V gives 3.53 V. That is under the 3.6 V absolute maximum, and
+  the clamp holds it near 3.3–3.5 V through the 1 kΩ. No E12 pair meets ≥ 2.5
+  V at 11.2 V and ≤ 3.3 V at 15 V at once, so the clamp covers the margin.
+- The load is 51 kΩ, about 0.24 mA at 12 V. The source impedance is about
+  10 kΩ, which with 100 pF gives 1 µs. That is negligible beside a 250 µs bit.
+- The divider does not invert the signal. Use `inverted: false` on the
+  UART's `rx_pin`, or with `remote_receiver`.
+- GPIO36 is input-only, not a strapping pin, and works for UART RX (through
+  the GPIO matrix) and for the RMT peripheral. ESP32 errata: GPIO36 and
+  GPIO39 can show a glitch of about 80 ns when the ADC or Wi-Fi power saving
+  is on. Keep the ADC off that pin and set `power_save_mode: none`.
+
 *Listen-only input on the ESP32 (proposed, not in the pin plan yet).* Use a
 **low-input-current optocoupler**, chosen from its datasheet. It should be
 fully on at 0.5 mA or less of input current, fast enough for 20 kbit/s or
