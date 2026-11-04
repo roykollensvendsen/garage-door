@@ -48,6 +48,9 @@ covers.
   test, photocells, auto-close, what one press does.
 - [references/accessories-and-ratings.md](references/accessories-and-ratings.md):
   accessories and how they connect, specifications, diagnostic flash codes.
+- [references/door-state.md](references/door-state.md): whether the opener
+  itself can report open, closed or moving (mostly from outside the manual,
+  each line marked with its source).
 
 ## What the manual does not say
 

@@ -65,6 +65,29 @@ The photos are in `docs/photos/`, which git ignores.
   broken out; headers are not soldered yet; micro-USB and the JST battery
   socket as expected.
 
+### Door state from the opener itself
+
+Checked 2026-11-04, because reading the state from the opener would save two
+sensors. Facts from the LM80EVF manual are marked with a page. Everything
+else comes from **outside the manual** and is marked with its source and
+how sure it is.
+
+| Source of state | What it can tell us | How sure |
+|---|---|---|
+| Terminals 6+7, warning-light output (FLA1-LED) | **Moving**, not where. About 24 V while the door moves, with a short lead before and lag after. | The manual lists the FLA1-LED on 6+7 (PDF p. 269). The FLA1-LED manual describes it (<https://manuals.easygates.co.uk/PDF/misc/chamberlain-liftmaster-fla1-led-manual.pdf>). A measurement on the related LM100EVS: <https://www.cavelab.dev/posts/garage-door-flashing-light/>. Not measured on Roy's opener. |
+| 30 VDC output, max 50 mA | Nothing about the door. Likely switched off in standby, so not even usable as power. | Rating on the label and in the manual. Standby behaviour is an **inference** from a related model's manual (LM750EVGB, <https://manualmachine.com/chamberlain/lm750evgb/2593509-operation-manual>), not stated for the LM80EVF. |
+| Terminals 0+2, the opener's digital bus (Security+ 2.0) | Possibly open, closed and position, the way ratgdo boards read it. | **Community reports only**, on related EU models: <https://github.com/ratgdo/esphome-ratgdo/issues/179> and <https://github.com/konnected-io/konnected-esphome/issues/128>. State reporting dropped out for some users and was later fixed upstream (April 2026, per those threads). Nobody has reported an LM80EVF. Unofficial protocol: the maker could change it. |
+| 828EV internet gateway | Open/closed, through the maker's cloud. | Needs the myQ cloud, which has been closed to third parties since 2023 (<https://www.home-assistant.io/blog/2023/11/06/removal-of-myq-integration/>). **Excluded**: nothing may leave the LAN. Gateway manual: <https://cdn.shopify.com/s/files/1/0574/2601/8495/files/114-5696-000-828EV.pdf>. |
+| 829EV radio receiver | No state output. | Manual: <https://manuals.easygates.co.uk/PDF/liftmaster/829ev.pdf>. |
+
+**Decision: reed contacts stay the primary source.** They say exactly where
+the door is, need nothing from the opener, and fail safe (no signal reads as
+"unknown", and nothing is pressed). **Optional later:** an optocoupler on 6+7
+as a third input, to see "moving" directly, including after a press from the
+remote. **Not planned:** the 0+2 bus. It is unproven on this model, and
+talking on the opener's bus is a bigger change than closing a contact. If an
+LM80EVF report appears, revisit it in a decision record.
+
 ## 2. Circuit
 
 ```
