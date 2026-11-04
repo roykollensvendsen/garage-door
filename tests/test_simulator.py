@@ -112,3 +112,27 @@ def test_every_simulated_press_is_logged_with_the_state_before_and_after(tmp_pat
     pressed = [e for e in events if e["event"] == "pressed"]
     assert len(pressed) == 1
     assert pressed[0]["before"] == str(start)
+
+
+def test_a_press_while_moving_stops_the_door_and_the_next_runs_the_other_way():
+    clock = Clock()
+    controller = simulated_controller(start=Start.CLOSED, travel_seconds=12.0, clock=clock)
+    door = controller.door
+    door.press()
+    clock.now += 6
+    door.press()
+    door.advance()
+    assert door.direction == 0
+    assert 0 < door.position < 1
+    door.press()
+    assert door.direction == -1
+
+
+def test_the_simulated_controller_refuses_like_the_firmware():
+    clock = Clock()
+    halfway = simulated_controller(start=Start.HALFWAY, clock=clock)
+    assert asyncio.run(halfway.press()) == "refused: door state not known"
+    shut_off = simulated_controller(start=Start.OPEN, clock=clock)
+    shut_off.allow_close = False
+    assert asyncio.run(shut_off.press()) == "refused: closing is switched off"
+    assert halfway.door.presses == shut_off.door.presses == 0

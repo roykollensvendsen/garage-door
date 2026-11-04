@@ -302,3 +302,16 @@ def test_status_reports_the_door_and_never_presses(tmp_path):
     device.reachable = False
     assert run(service.status()) is DoorState.UNKNOWN
     assert device.presses == 0
+
+
+def test_a_confirm_is_refused_when_the_controller_stops_answering(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    assert isinstance(question, Question)
+    device.reachable = False
+    answer = run(service.confirm(question.token))
+    assert isinstance(answer, Refused)
+    assert answer.state is DoorState.UNKNOWN
+    assert "not reachable" in answer.reason
+    assert device.presses == 0

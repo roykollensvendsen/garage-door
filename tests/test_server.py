@@ -128,3 +128,12 @@ def test_the_simulated_server_says_it_is_simulated_and_logs_apart(tmp_path):
     assert asked["outcome"] == "question"
     assert (tmp_path / "garage-door/simulated.jsonl").exists()
     assert not (tmp_path / "garage-door/presses.jsonl").exists()
+
+
+def test_a_confirm_with_a_wrong_token_is_refused_through_the_tools(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, DoorState.OPEN)
+    server = server_for(device, tmp_path)
+    call(server, "garage_request", {"action": "open"})
+    refused = call(server, "garage_confirm", {"token": "not-the-token"})
+    assert refused["outcome"] == "refused"
+    assert device.presses == 0
