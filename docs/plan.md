@@ -112,7 +112,8 @@ position is lost until the door reaches an end that something can detect.
 not enough on its own.
 
 **Next step for 0+2: decode it, listen-only.** The bit time measured on
-the scope is about 126.6 µs, which is about 7900 baud (7812.5 or 8000 nominal).
+the scope is about 126 µs, which is about 7900 baud (7812.5 or 8000 nominal). Each
+message starts with a break of 2.624 ms, about 21 bit times.
 
 *What is known about the rate.* ratgdo's ESPHome firmware opens Security+
 2.0 at **9600 baud, 8N1** and Security+ 1.0 at **1200 baud, 8E1**
@@ -134,7 +135,9 @@ regular pulses" may be one.
 *Decode on the scope (MSO2024).* This needs the serial decode option (DPO2COMP).
 B1 → RS-232, source CH1, threshold 6 V, polarity normal (idle high), bit
 rate **custom 7900** (between the two nominal rates), 8 data bits, parity
-none. Then try even parity, and then 9600 to compare. The break shows as one framing error. Decoded bytes
+none. Then try even parity, and then 9600 to compare. The 2.6 ms break shows as one framing error (a
+0x00 byte with no stop bit) at the start of each message: that marks where a
+message begins. Decoded bytes
 with no further framing or parity errors confirm the format. Save the
 waveform to USB (CSV) as well, so it can be decoded off the scope.
 
@@ -146,7 +149,9 @@ waveform to USB (CSV) as well, so it can be decoded off the scope.
 2. **Then bytes:** an ESPHome `uart` with only `rx_pin` (GPIO36,
    `inverted: true`), `baud_rate: 7900` and the parity that worked on the
    scope. Add a `debug:` block (`direction: RX`, `dummy_receiver: true`,
-   `after: timeout: 3ms`) that logs each message in hex. Try `0x55 0x01
+   `after: timeout: 3ms`) that logs each message in hex. The break arrives
+   as a 0x00 byte with a framing error before each message; treat it as the
+   message start, not as data. Try `0x55 0x01
    0x00` as the start, and decode with secplus.
 
 *Listen-only input on the ESP32 (proposed, not in the pin plan yet).* Use a
@@ -192,7 +197,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 0+2 (78EV wall control), idle | **about 10 V DC**; after the door had run, **about 11.17 V**, and it stayed there | Powered, like 1+2. The rise is probably the opener leaving standby. The earlier 0 V reading was poor probe contact. |
 | 0+2 while the door ran | DC dipped slightly, then returned to 11.17 V. Frequency mode reads **0 Hz while the door moves**. A reading appears only briefly **around each change of state**: about **285 Hz** around the start, **27.27 Hz** at a stop part-way, **17.51 Hz** when it stopped closed (hand-held probes) | **Bursts of traffic at each change of state, quiet in between**, as a bus that sends status on change (Security+ 2.0-style) would show. A multimeter cannot resolve serial data, so the figures are artefacts of the bursts, not baud rates. **Not proven** until captured. |
 | 0+2 on an oscilloscope, triggered by the remote | Tektronix MSO2024, 10x probe, ground clip on 2, tip on 0, 5 V/div, 1 ms/div, falling edge at 6 V, Normal, Single. Idle **steady at about 10–12 V**. At the trigger the line drops **sharply to about 0 V and stays low for about 2–3 ms**. Then **a burst of short pulses**, pulled low and released, open-drain style | **A data line, not a plain button input.** A long low "break" and then bytes is what a Security+ 2.0-style one-wire serial bus looks like. Bits not resolved at 1 ms/div. **Bit rate and protocol not yet measured**; next capture below. |
-| 0+2, pulse widths (scope cursors in the zoom window) | Idle high about 12 V. Break low for about **2.5–3 ms**. Then high **128.4 µs**, low **254 µs**, high **252.4 µs**. After that, a run of fairly regular pulses, then longer lows and some wider highs, one of them **504.4 µs**. The message lasts **more than about 10 ms** | The widths are 1, 2, 2 and 4 bits: 1139.2 µs over 9 bits is **about 126.6 µs per bit, about 7900 baud**. Nominal is probably **7812.5 baud** (8 MHz / 1024, 128 µs) or **8000 baud** (125 µs). Both are within about 1.3 % of the measured rate, which a UART tolerates. Either way it is **not the 9600 baud** that ratgdo uses for Security+ 2.0. It could be a variant, or another encoding (Manchester at 128 µs per half-bit is also possible). **Not decoded yet.** |
+| 0+2, pulse widths (scope cursors in the zoom window) | Idle high about 12 V. Break low for **2.624 ms**. Then high **128.4 µs**, low **254 µs**, high **252.4 µs**. After that, a run of fairly regular pulses, then longer lows and some wider highs: **504.4 µs** and **754.4 µs**. The message lasts **more than about 10 ms** | The widths are 1, 2, 2, 4 and 6 bits: 1893.6 µs over 15 bits is **about 126.2 µs per bit, about 7920 baud**. The break is about 21 bit times, a little longer than two 8N1 frames (20 bits): a classic UART break marking the start of a message. Nominal is probably **7812.5 baud** (8 MHz / 1024, 128 µs) or **8000 baud** (125 µs). Both are within about 1.3 % of the measured rate, which a UART tolerates. Either way it is **not the 9600 baud** that ratgdo uses for Security+ 2.0. It could be a variant, or another encoding (Manchester at 128 µs per half-bit is also possible). **Not decoded yet.** |
 | 6+7 (warning light) | not measured yet | Measure idle and while the door moves. |
 
 ## 2. Circuit
