@@ -86,3 +86,27 @@ docs = [
     "mkdocs==1.6.1",
     "mkdocs-material==9.8.0",
 ]
+
+# The shape of the code, checked by scripts/structure.py and held by the
+# quality ratchet (scripts/ratchet.py, quality.json).
+[tool.quality]
+package = "src/garage_door"
+# The most lines a module may have, per folder. Tools may be longer than the
+# product's own code, which has to stay easy to review for safety.
+max_lines = { "src" = 300, "firmware/door_logic" = 300, "firmware/sim" = 300, "scripts" = 400 }
+# Where copied blocks are looked for: the product, not its tests.
+duplication = ["src", "firmware/door_logic", "firmware/sim"]
+block = 6
+
+# The layers of docs/design.md, lowest first. A module may import, when it
+# loads, only from lower layers: the core never reaches a driver, and a
+# driver never reaches the MCP server.
+[tool.quality.layers]
+_version = 0        # generated from the Git tag; imports nothing
+door = 1            # hardware abstraction: the door's states, the Device interface
+service = 2         # core: confirm, refuse, log
+esphome_device = 3  # drivers behind the Device interface: the real controller
+simulator = 3       #   and the simulated one
+server = 4          # adapters: the MCP server and the command line
+cli = 4
+# Layer 0 is the opener profiles (hardware/openers/*.yaml), data only so far.

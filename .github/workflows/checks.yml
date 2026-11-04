@@ -188,3 +188,13 @@ jobs:
       - name: The skills pass the skill linter and the ratchet
         run: python3 scripts/skill_lint.py check
 
+
+  # No module past its size limit, no import that breaks the layers of
+  # docs/design.md, no import cycle ([tool.quality] in pyproject.toml).
+  structure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Module size, layers and import cycles
+        run: python3 scripts/structure.py

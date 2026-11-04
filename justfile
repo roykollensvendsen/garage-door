@@ -55,8 +55,12 @@ simulate start="closed":
 skills:
     python3 scripts/skill_lint.py check
 
+# Module size, layers, import cycles and copied code.
+structure:
+    python3 scripts/structure.py
+
 # Everything CI runs that needs no hardware.
-check: lint test mutate skills
+check: lint test mutate skills structure
     uv run python scripts/openers.py --check
     python3 scripts/schematic.py --check
     uv run --group docs mkdocs build --strict

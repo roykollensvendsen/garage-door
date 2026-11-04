@@ -32,6 +32,7 @@ sh scripts/esphome-config.sh
 uv run python scripts/openers.py --check
 uv run --group docs mkdocs build --strict
 python3 scripts/skill_lint.py check
+python3 scripts/structure.py
 committed --no-merge-commit origin/main..HEAD
 ```
 
