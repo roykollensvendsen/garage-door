@@ -301,9 +301,12 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   60 V, 0.5 A, 5000 V isolation, AC/DC output so the polarity of 1–2 does not
   matter). Its LED is driven straight from GPIO25 through 330 Ω (≈6 mA; the
   part switches on at ≤3 mA). No coil, no click, no flyback diode, and full
-  galvanic isolation from the opener. Fallback if the bench measurement shows
-  more than 60 V or anything odd: a 3.3 V-triggerable one-channel relay module
-  powered from the Thing's VUSB pin, contacts across 1–2.
+  galvanic isolation from the opener. **For the first door test**, Roy uses a
+  relay module he already has (Songle SRD-03VDC-SL-C, 3 V coil, about
+  120 mA, onboard driver, 2026-11-04): VCC to 3V3, CTL to GPIO25, COM and NO
+  across 1–2, NC empty. Its trigger level is unknown, so the firmware's
+  `relay_active_low` sets it, after a bench check with the opener
+  disconnected (build guide, "First door test").
 - **Pulse length:** 500 ms, enforced on the ESP32 itself (the output switches
   itself off after 500 ms whatever the laptop asks), well under the 4 s that
   the opener treats as a stuck button.
@@ -342,6 +345,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 |---|---|---|
 | Panasonic AQY212EH PhotoMOS relay (DIP-4) | 2 | one spare |
 | DIP-4 socket | 1 | so the relay can be swapped |
+| Relay module, Songle SRD-03VDC-SL-C on a red board (Roy has one) | 1 | first door test only; the AQY212EH is for keeps |
 | Resistors 330 Ω, 1 kΩ ×2, 10 kΩ ×2 | | 1/4 W |
 | Capacitors 100 nF ×2 | | ceramic |
 | Reed contact, surface mount, normally open with magnet | 1 | fully-open position |

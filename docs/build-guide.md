@@ -158,6 +158,52 @@ It runs from a USB power bank in the garage.
    ESP32's GND to terminal 2. The controller logs every packet under the tag
    `wire` (`esphome logs firmware/garage-door.yaml`).
 
+## First door test: Roy's relay module
+
+For the first test on the door, Roy uses a relay module he already has
+instead of the AQY212EH. The PhotoMOS stays the part for the permanent build:
+it is isolated, silent and draws about 6 mA.
+
+![Relay module wired to the ESP32 and the opener](wiring/bench-relay.svg)
+
+The module is a red board with a Songle SRD-03VDC-SL-C relay. The coil is 3 V
+and draws about 120 mA. The contacts are rated 10 A at 250 V AC or 30 V DC.
+The board has its own driver transistor, flyback diode and LEDs.
+- **Input terminal (CTL, COM, GND, VCC):** VCC to the Thing's 3V3, GND to
+  GND, CTL to GPIO25. The input-side COM is unknown (it probably selects the
+  trigger level); leave it open until the check below.
+- **Output terminal (NO, COM, NC):** COM to opener terminal 1, NO to
+  terminal 2. NC stays empty, so a dead or unpowered module never presses.
+- **Power:** the coil's 120 mA comes from the Thing's 3.3 V regulator (rated
+  600 mA), next to the ESP32's Wi-Fi peaks of about 250 mA. That fits. Some
+  power banks switch off when little is drawn; use one that stays on at about
+  80 mA, and watch that it does not cut out when the relay clicks.
+
+### Bench check, with the opener disconnected
+
+The module may switch on a high input or on a low one, and nothing on it
+says which. Find out before it is ever wired to the opener:
+
+1. **Nothing on NO and COM** but a multimeter on continuity (beep).
+2. **Power only:** VCC and GND connected, CTL unconnected. The relay must
+   not click, its LED must stay off, and the meter must stay silent. If it
+   clicks on its own, stop: this module is not safe to use as it is.
+3. **CTL to GND** with a wire, then **CTL to 3V3**. Note which one clicks
+   and beeps. If neither does, try again with the input COM joined to VCC,
+   then to GND, and note what changes.
+4. Set `relay_active_low` in `firmware/garage-door.yaml`: `"false"` if CTL
+   to 3V3 clicks it, `"true"` if CTL to GND does. "Off" then always means
+   relay open.
+5. Flash, with the controller **unarmed**. Watch the LED and the meter
+   through power-up, a restart from the laptop, and unplugging and plugging
+   the power bank. It must never click. GPIO25 is not a strapping pin. It
+   floats from reset until ESPHome drives it off, and the module must read
+   that as off (step 2).
+6. Arm it (`garage-door arm`) and press once by voice. The meter beeps for
+   half a second, once. Then disarm.
+
+Only then wire COM and NO to opener terminals 1 and 2.
+
 ## Step by step
 
 1. **Measure first** (opener plugged in, door clear, a meter on DC volts).

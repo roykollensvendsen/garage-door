@@ -46,6 +46,29 @@ line_idle_min = 10.1        # volts, mean high on 0+2 on the scope (with 50 Hz r
 line_max = 15.0             # volts, assumed worst case
 clamp_drop = 0.6            # 1N4148 at a fraction of a milliampere; a Schottky is about 0.3
 
+[bench_relay]
+# Roy's relay module for the first bench and door test (2026-11-04, from a
+# photo); the AQY212EH in [parts] stays the part for the permanent build.
+# Red board, Songle SRD-03VDC-SL-C, onboard driver transistor, flyback diode
+# and LEDs. Drawn by scripts/bench_relay.py.
+relay = "Songle SRD-03VDC-SL-C"
+coil = "3 V, about 120 mA"
+contacts = "10 A 250 VAC / 10 A 30 VDC"
+# input screw terminal -> where it goes
+input = [
+  { terminal = "VCC", to = "3V3" },
+  { terminal = "GND", to = "GND" },
+  { terminal = "CTL", to = "GPIO25" },
+  { terminal = "COM", to = "unknown: probably selects the trigger level; leave open until the bench check" },
+]
+# output screw terminal -> where it goes; NC stays empty, so a dead module leaves the door alone
+output = [
+  { terminal = "COM", to = "opener terminal 1" },
+  { terminal = "NO", to = "opener terminal 2" },
+  { terminal = "NC", to = "not connected" },
+]
+active_low = "unknown"      # set relay_active_low in firmware/garage-door.yaml after the bench check
+
 [bench_breadboard]
 # Roy's test board as built (2026-11-04): a half-size breadboard, rows 1-30,
 # holes a-e of each row joined; "gnd" is the blue rail beside them. Each part

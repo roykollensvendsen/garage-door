@@ -114,3 +114,19 @@ def test_the_as_built_board_puts_node_a_gpio36_and_3v3_on_their_rows():
 def test_the_as_built_picture_is_drawn_from_the_current_values():
     board = _board()
     assert board.OUTPUT.read_text() == board.breadboard(), "run python3 scripts/bench_breadboard.py"
+
+
+def test_the_relay_module_picture_is_drawn_from_the_current_values():
+    spec = importlib.util.spec_from_file_location("bench_relay", ROOT / "scripts/bench_relay.py")
+    assert spec
+    assert spec.loader
+    relay = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(relay)
+    assert relay.OUTPUT.read_text() == relay.drawing(), "run python3 scripts/bench_relay.py"
+
+
+def test_the_relay_module_leaves_nc_empty_so_a_dead_module_never_presses():
+    plan = bench.tomllib.loads(bench.PLAN.read_text())["bench_relay"]
+    out = {o["terminal"]: o["to"] for o in plan["output"]}
+    assert out["NC"] == "not connected"
+    assert {out["COM"], out["NO"]} == {"opener terminal 1", "opener terminal 2"}

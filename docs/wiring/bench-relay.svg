@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 388" width="840" height="388" font-family="sans-serif" font-size="13">
+<title>First door test: relay module</title>
+<style>.v{font-size:12px;text-anchor:middle}.l{font-size:13px}.s{font-size:11px;fill:#444}.h{font-size:16px;font-weight:bold}</style>
+<rect width="840" height="388" fill="#fff"/>
+<text x="20" y="28" class="h">First door test: Roy's relay module on GPIO25</text>
+<rect x="40" y="80" width="130" height="150" fill="#fff" stroke="#222" stroke-width="2"/>
+<text x="105" y="100" class="v">SparkFun</text><text x="105" y="116" class="v">ESP32 Thing</text>
+<rect x="300" y="80" width="260" height="150" fill="#fff" stroke="#222" stroke-width="2"/>
+<text x="435" y="150" class="v">Songle SRD-03VDC-SL-C</text>
+<text x="435" y="166" class="v">coil 3 V, about 120 mA</text>
+<text x="435" y="182" class="v">driver, flyback diode, LEDs</text>
+<text x="306" y="109" class="s">VCC</text>
+<polyline points="170,105 300,105" fill="none" stroke="#26d" stroke-width="3"/>
+<text x="164" y="101" class="s" text-anchor="end">3V3</text>
+<text x="306" y="143" class="s">GND</text>
+<polyline points="170,139 300,139" fill="none" stroke="#222" stroke-width="3"/>
+<text x="164" y="135" class="s" text-anchor="end">GND</text>
+<text x="306" y="177" class="s">CTL</text>
+<polyline points="170,173 300,173" fill="none" stroke="#e0b000" stroke-width="3"/>
+<text x="164" y="169" class="s" text-anchor="end">GPIO25</text>
+<text x="306" y="211" class="s">COM</text>
+<text x="294" y="211" class="s" text-anchor="end">COM: open for now</text>
+<text x="554" y="124" class="s" text-anchor="end">COM</text>
+<polyline points="560,120 680,120" fill="none" stroke="#222" stroke-width="3"/>
+<circle cx="680" cy="120" r="5" fill="#222"/>
+<text x="690" y="124" class="l">opener terminal 1</text>
+<text x="554" y="164" class="s" text-anchor="end">NO</text>
+<polyline points="560,160 680,160" fill="none" stroke="#222" stroke-width="3"/>
+<circle cx="680" cy="160" r="5" fill="#222"/>
+<text x="690" y="164" class="l">opener terminal 2</text>
+<text x="554" y="204" class="s" text-anchor="end">NC</text>
+<text x="570" y="204" class="s">empty</text>
+<text x="20" y="270" class="s">Contacts 10 A 250 VAC / 10 A 30 VDC; the opener's input is about 10 V DC, a few mA.</text>
+<text x="20" y="288" class="s">Off = relay open. NC is left empty, so a dead or unpowered module never presses.</text>
+<text x="20" y="306" class="s">Trigger level unknown: do the bench check in the build guide before the opener is connected.</text>
+<text x="20" y="324" class="s">120 mA coil from the Thing's 3V3 regulator (600 mA) next to Wi-Fi peaks of about 250 mA: fine.</text>
+<text x="20" y="342" class="s">A power bank may switch off at low draw; one that stays on near 80 mA is needed.</text>
+<text x="20" y="360" class="s">Permanent build: the AQY212EH PhotoMOS (isolated, silent, about 6 mA).</text>
+</svg>
