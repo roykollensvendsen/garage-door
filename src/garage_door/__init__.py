@@ -1,0 +1,1 @@
+"""The garage-door package."""
