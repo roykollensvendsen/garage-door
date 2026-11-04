@@ -51,6 +51,10 @@ diagrams:
 esphome:
     sh scripts/esphome-config.sh
 
+# Build the firmware as an update would, with the example secrets (slow the first time).
+esphome-build:
+    sh scripts/esphome-config.sh compile
+
 # The MCP server against a simulated door; touches no hardware.
 simulate start="closed":
     uv run garage-door-mcp --simulate --start {{start}}
