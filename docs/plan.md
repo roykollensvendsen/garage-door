@@ -111,14 +111,49 @@ position is lost until the door reaches an end that something can detect.
 "Did it close?" is exactly the question it cannot answer reliably, so it is
 not enough on its own.
 
-**Next step for 0+2: capture it, listen-only.** Record the line between
-0 (signal) and 2 (ground) while the door runs from the remote. Use either a
-cheap USB logic analyser behind a divider (about 12 V down to 3.3 V), or an
-ESP32 input behind a divider or optocoupler sized for about 12 V. The tap must
-have a high input impedance, so it cannot load the line, and must never drive
-it. Then decode the capture with the Security+ 2.0 decoder secplus
-(<https://github.com/argilo/secplus>, GPL-3.0) or ratgdo's code. If door-state
-messages decode reliably over a few days, the state needs no extra sensors.
+**Next step for 0+2: measure the bit rate, then decode it, listen-only.**
+
+*Scope settings (MSO2024).* Probe on 10X in the channel menu. CH1 DC
+coupling, 2 V/div, position about −3 div, so 0–12 V fills the screen. Edge
+trigger, falling, 6 V, Normal, Single, as before.
+1. **One whole burst:** 2 ms/div (20 ms on screen), trigger position about
+   10 %, longest record length. A Security+ 2.0 packet is about 19 bytes,
+   about 20 ms at 9600 baud.
+2. **The bit time:** zoom in on the stored capture (Wave Inspector) to about
+   100 µs/div, or capture again at 200 µs/div. Put the time cursors across
+   the **narrowest** low or high pulse. 104 µs is 9600 baud and 208 µs is
+   4800. Also measure how long the break lasts.
+3. **Decode it:** B1 → bus type RS-232 (the UART decoder), source CH1,
+   threshold 6 V, the bit rate just measured, 8 data bits, no parity,
+   polarity normal (idle high). Show it as hex, or in the event table. This
+   needs the serial-decode option for RS-232 (DPO2COMP on the MSO/DPO2000
+   series). Check that it is installed (Utility → About shows the modules).
+   The break will show as a framing error, which is expected. Clean bytes
+   with no other errors confirm a UART at that rate. Without the option,
+   read the bits by hand from the zoomed trace (start bit low, then LSB
+   first), or use the ESP32 below.
+
+*Listen-only input on the ESP32 (proposed, not in the pin plan yet).* Use a
+**low-input-current optocoupler**, chosen from its datasheet. It should be
+fully on at 0.5 mA or less of input current, fast enough for 20 kbit/s or
+more, with an output that runs on 3.3 V. That keeps the galvanic isolation
+the plan already uses for the press output.
+- **Bus side.** Terminal 0 → 22 kΩ → optocoupler LED anode. LED cathode →
+  terminal 2. A reverse diode (1N4148) across the LED, and a 15 V TVS diode
+  from 0 to 2 at the terminals. At 12 V that is about 0.5 mA, and only while
+  the line is high. That is a light load beside the bus's own pull-up. If
+  the datasheet says less current is enough, use a bigger resistor. Check on
+  the scope that the idle level and the edges do not change with the input
+  connected.
+- **ESP32 side.** Optocoupler output → **GPIO36**, with 10 kΩ to 3.3 V and
+  100 pF to ground. GPIO36 is input-only, so this circuit **cannot drive the
+  bus even by mistake**. Take care: some module pinouts mark GPIO36 as
+  "VP". The optocoupler inverts the signal (line high → output low), so set
+  the ESPHome UART `rx_pin` to `inverted: true`, and set no `tx_pin`.
+- **Then decode.** Read the bytes with the bit rate and format the scope
+  found, and decode them with secplus (<https://github.com/argilo/secplus>,
+  GPL-3.0) or ratgdo's code. If door-state messages decode reliably over a
+  few days, the state needs no extra sensors.
 
 **Fallback sensor without long wires: VL53L1X time-of-flight at the opener
 head, aimed at the trolley.** ST rates it to 4 m indoors. An ST engineer
@@ -140,6 +175,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 30 VDC output, idle | **about 1.1 V** | Switched off in the opener's under-1-watt standby, as the manual's note on standby suggests (PDF p. 23, section 26 O). Not usable as power or as a signal while idle. |
 | 0+2 (78EV wall control), idle | **about 10 V DC**; after the door had run, **about 11.17 V**, and it stayed there | Powered, like 1+2. The rise is probably the opener leaving standby. The earlier 0 V reading was poor probe contact. |
 | 0+2 while the door ran | DC dipped slightly, then returned to 11.17 V. Frequency mode reads **0 Hz while the door moves**. A reading appears only briefly **around each change of state**: about **285 Hz** around the start, **27.27 Hz** at a stop part-way, **17.51 Hz** when it stopped closed (hand-held probes) | **Bursts of traffic at each change of state, quiet in between**, as a bus that sends status on change (Security+ 2.0-style) would show. A multimeter cannot resolve serial data, so the figures are artefacts of the bursts, not baud rates. **Not proven** until captured. |
+| 0+2 on an oscilloscope, triggered by the remote | Tektronix MSO2024, 10x probe, ground clip on 2, tip on 0, 5 V/div, 1 ms/div, falling edge at 6 V, Normal, Single. Idle **steady at about 10–12 V**. At the trigger the line drops **sharply to about 0 V and stays low for about 2–3 ms**. Then **a burst of short pulses**, pulled low and released, open-drain style | **A data line, not a plain button input.** A long low "break" and then bytes is what a Security+ 2.0-style one-wire serial bus looks like. Bits not resolved at 1 ms/div. **Bit rate and protocol not yet measured**; next capture below. |
 | 6+7 (warning light) | not measured yet | Measure idle and while the door moves. |
 
 ## 2. Circuit

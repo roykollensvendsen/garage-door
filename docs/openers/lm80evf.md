@@ -20,6 +20,7 @@
 
 - Roy, 2026-11-04: 1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door.
 - Roy, 2026-11-04: 0+2 measured at about 10 V idle, 11.17 V after running; 0 Hz while moving; brief readings only at state changes: about 285 Hz around the start, 27.27 Hz at a stop part-way, 17.51 Hz stopped closed (status bursts, not yet decoded).
+- Roy, 2026-11-04: 0+2 on an oscilloscope (MSO2024, 1 ms/div), triggered by the remote: idle about 10-12 V, a sharp drop to about 0 V held 2-3 ms, then a burst of short open-drain-style pulses. A data line, consistent with a Security+ 2.0-style serial bus; bit rate not measured yet.
 
 ## Leave alone
 

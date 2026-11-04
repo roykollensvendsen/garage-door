@@ -16,6 +16,11 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   a value only briefly around each change of state: about 285 Hz around the
   start, 27.27 Hz at a stop part-way, 17.51 Hz when stopped closed. So:
   bursts at state changes, quiet in between, like status packets
-  (Security+ 2.0?). Not proven; next is a listen-only capture, decoded with
-  secplus or ratgdo.
+  (Security+ 2.0?).
+- **0+2 on an oscilloscope** (MSO2024, 10x probe, ground on 2, 1 ms/div,
+  falling trigger at 6 V, from the remote): idle about 10-12 V, a sharp
+  drop to about 0 V held for 2-3 ms, then a burst of short pulses pulled
+  low. A serial data line, not a button input. Bit rate and protocol not
+  measured yet. The plan's "Next step for 0+2" has the scope settings and the
+  listen-only input.
 - **6+7:** not measured yet. Measure idle and while moving.
