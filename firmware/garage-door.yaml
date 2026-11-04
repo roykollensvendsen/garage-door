@@ -23,8 +23,23 @@ esp32:
   board: esp32thing
   framework:
     type: esp-idf
+    advanced:
+      # Two app slots: an update goes into the idle one, and if it does not
+      # boot and connect, the bootloader falls back to the slot that worked.
+      # Needs both ota and safe_mode below.
+      enable_ota_rollback: true
+    sdkconfig_options:
+      # Roy's board reports a 26 MHz main crystal (esptool, 2026-11-04);
+      # ESP-IDF assumes 40 MHz, which garbles the serial log and Wi-Fi.
+      CONFIG_XTAL_FREQ_26: y
 
+# Logs go to USB serial when plugged in, and stream over the same encrypted
+# API connection otherwise: `esphome logs firmware/garage-door.yaml`.
 logger:
+
+# After repeated failed boots, start with only Wi-Fi and OTA so a fixed
+# build can still be sent. Also what marks a new build as good for rollback.
+safe_mode:
 
 wifi:
   ssid: !secret wifi_ssid

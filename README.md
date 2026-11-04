@@ -15,6 +15,23 @@ Planning. The plan, with the opener's terminals traced to the manufacturer's
 manual, the circuit, the parts list and the safety rules, is
 [`docs/plan.md`](docs/plan.md). Nothing has been bought, wired or flashed.
 
+## Updating the controller
+
+The first build goes in over micro-USB. Every update after that goes over the
+home Wi-Fi, needs a password and works only from the LAN. The board keeps two
+copies of its app and falls back to the last one that worked if an update
+does not boot. The controller's log streams over the same encrypted
+connection the laptop uses. USB stays the way back in if everything else
+fails, so keep the socket reachable. Details are in
+[`docs/plan.md`](docs/plan.md), section 3.
+
+<!-- not run: needs the board, Wi-Fi and firmware/secrets.yaml -->
+```bash
+esphome run firmware/garage-door.yaml --device /dev/ttyUSB0   # first time, over USB
+esphome run firmware/garage-door.yaml                         # afterwards, over Wi-Fi
+esphome logs firmware/garage-door.yaml                        # the controller's log
+```
+
 ## The gates
 
 Every one of these runs in continuous integration, and all of them run here:

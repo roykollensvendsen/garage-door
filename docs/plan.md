@@ -162,6 +162,27 @@ from home (a tailnet subnet router or an always-on box at home running the
 module) is a later decision for Roy, listed in
 [`decisions/deferred.md`](../decisions/deferred.md).
 
+**Updates and logs.**
+
+- **USB once.** The first build goes in over the board's micro-USB socket.
+  The board is identified, read-only, as an ESP32-D0WDQ6 (silicon revision
+  v0.0) with a 26 MHz crystal and 4 MB of flash, on an FTDI FT231X USB
+  serial chip. The firmware is told about the 26 MHz crystal; ESP-IDF
+  otherwise assumes 40 MHz.
+- **Over Wi-Fi after that.** Later builds go over the home network with
+  ESPHome's OTA, which needs a password and is reachable from the LAN only.
+- **Two app slots, with rollback.** The 4 MB flash holds two copies of the
+  app. An update is written to the idle one. If it does not boot and come up
+  properly, the bootloader goes back to the one that worked
+  (`enable_ota_rollback` together with `safe_mode`).
+- **Logs over the network.** The controller streams its log over the same
+  encrypted API connection (`esphome logs`), and over USB serial when
+  plugged in. No separate syslog server is needed. ESPHome's `syslog`
+  component can be added if Roy wants the logs kept centrally.
+- **USB stays the recovery path.** If neither slot boots, or the OTA
+  password is lost, the board is reflashed over USB. So the micro-USB
+  socket must stay reachable in the enclosure.
+
 **Never on the internet:** no port forwarding, no cloud service, ESPHome's
 web server and captive portal left out, and the router can block the ESP32's
 address from the internet entirely.
