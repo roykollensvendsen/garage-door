@@ -6,6 +6,7 @@ so a new file without one fails here rather than going unnoticed.
 """
 
 import pathlib
+import subprocess
 import tomllib
 
 ROOT = pathlib.Path(__file__).parent.parent
@@ -25,8 +26,17 @@ GENERATED = {"_version.py"}
 VENDORED = "third_party"
 
 
+def _ignored(paths: set[pathlib.Path]) -> set[pathlib.Path]:
+    """Of these, what git ignores: build output, secrets, ESPHome's toolchain."""
+    names = "\n".join(str(p.relative_to(ROOT)) for p in paths)
+    out = subprocess.run(
+        ["git", "check-ignore", "--stdin"], cwd=ROOT, input=names, capture_output=True, text=True, check=False
+    ).stdout
+    return {ROOT / n for n in out.splitlines()}
+
+
 def source_files() -> list[pathlib.Path]:
-    """Every source file, found by walking rather than listed."""
+    """Every source file git would see, found by walking rather than listed."""
     found: set[pathlib.Path] = set()
     for folder, patterns in SOURCES.items():
         for pattern in patterns:
@@ -38,7 +48,7 @@ def source_files() -> list[pathlib.Path]:
                     part.startswith("build") or part == VENDORED for part in p.relative_to(ROOT).parts
                 )
             )
-    return sorted(found)
+    return sorted(found - _ignored(found))
 
 
 def test_every_source_file_names_its_licence_in_its_first_lines():
