@@ -80,13 +80,16 @@ how sure it is.
 | 828EV internet gateway | Open/closed, through the maker's cloud. | Needs the myQ cloud, which has been closed to third parties since 2023 (<https://www.home-assistant.io/blog/2023/11/06/removal-of-myq-integration/>). **Excluded**: nothing may leave the LAN. Gateway manual: <https://cdn.shopify.com/s/files/1/0574/2601/8495/files/114-5696-000-828EV.pdf>. |
 | 829EV radio receiver | No state output. | Manual: <https://manuals.easygates.co.uk/PDF/liftmaster/829ev.pdf>. |
 
-**Decision: reed contacts stay the primary source.** They say exactly where
-the door is, need nothing from the opener, and fail safe (no signal reads as
-"unknown", and nothing is pressed). **Optional later:** an optocoupler on 6+7
-as a third input, to see "moving" directly, including after a press from the
-remote. **Not planned:** the 0+2 bus. It is unproven on this model, and
-talking on the opener's bus is a bigger change than closing a contact. If an
-LM80EVF report appears, revisit it in a decision record.
+**Decision (revised, proposed in [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md)):**
+the 0+2 bus works on this opener. Roy's captures decode as Security+ 2.0
+status messages with the door state in them (see the measurements below).
+So the controller can take its state from the wire (`state_from: wire`) or
+from reed contacts (`state_from: reed`). It can press through the relay or
+by a command on the wire (`press_by: relay | wire`). A status older than
+2 s counts as unknown, and on the wire only open and close are ever sent.
+The original reasoning, for the record: reed contacts say exactly where the
+door is and need nothing from the opener; the bus was unproven on this model.
+The optocoupler on 6+7 stays an option.
 
 ### Without extra sensors? (checked 2026-11-04, before buying anything)
 
@@ -355,6 +358,8 @@ address from the internet entirely.
 | Rule | Enforced by |
 |---|---|
 | Never press without Roy's spoken yes | The MCP module has two tools: `garage_request(action)` returns the current state and a one-time token valid for 30 s together with the question to read aloud; `garage_confirm(token)` presses. No single call can press. The voice session must only call confirm after Roy says yes. |
+| Door state from the opener's wire | ESP32 (`state_from: wire`): only status packets that decode count. Open and closed map to open and closed, opening and closing to moving, and everything else (stopped part way included) to unknown. A status older than 2 s is unknown, so a press needs a fresh one; with the sender fitted, the controller asks for it. [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md). |
+| A press on the opener's wire | ESP32 (`press_by: wire`): the same refusals as the relay. Directional: open sends open and close sends close, never toggle. Only status and door-action commands are ever sent. The rolling code is saved before each send and jumps ahead at boot; the controller waits for an idle line. Off until a bench test with Roy watching. |
 | Refuse when the state is unknown | MCP module: refuses on unknown, moving, fault or controller offline. Also refuses "open" when already open and "close" when already closed, since one press would do the opposite. |
 | Log every press | MCP module appends one line per request and per press to a local log: time, who asked, state before, state after, result. Kept on the laptop. |
 | Report state before and after | `garage_confirm` waits for the door to settle (or 30 s) and returns before and after. If it did not reach the expected end state, it says so. |
