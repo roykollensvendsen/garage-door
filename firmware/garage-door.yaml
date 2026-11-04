@@ -80,10 +80,9 @@ api:
             id(last_press_result).publish_state(garage::to_string(result));
 
 ota:
-  # Updates from the laptop over Wi-Fi, encrypted with their own key.
+  # Updates from the laptop over Wi-Fi, encrypted with the API's key: ESPHome
+  # 2026.10 refuses a separate OTA key that differs from it.
   - platform: esphome
-    encryption:
-      key: !secret ota_encryption_key
 
 # Deliberately absent: web_server, captive_portal, mqtt.
 

@@ -140,3 +140,11 @@ def test_the_press_output_never_restores_an_on_state():
     press = next(o for o in _esphome_config()["output"] if o["id"] == "press_output")
     assert "restore_mode" not in press
     assert "power_supply" not in press
+
+
+def test_ota_updates_use_the_api_key_not_a_second_one():
+    # ESPHome 2026.10 refuses an OTA key that differs from the API key; the
+    # example secrets used one key for both, so CI never saw it (Roy's flash).
+    ota = _esphome_config()["ota"][0]
+    assert "encryption" not in ota
+    assert "ota_encryption_key" not in (ROOT / "firmware/secrets.example.yaml").read_text()
