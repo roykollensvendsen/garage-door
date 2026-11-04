@@ -25,3 +25,6 @@ firmware/build/
 firmware/.esphome/
 # Wi-Fi password and keys for the controller; secrets.example.yaml shows the shape.
 firmware/secrets.yaml
+
+# Manufacturer documents (copyright): kept locally, never committed. Sources: docs/vendor-sources.md
+docs/vendor/
