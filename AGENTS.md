@@ -97,3 +97,17 @@ stops being true, and prune what is no longer needed. Current skills:
 - `liftmaster-lm80evf`: the opener's terminals, safety features and ratings,
   each traced to a manual page.
 - `add-opener-model`: add a new opener to the compatibility list.
+
+Keep each skill small and to one task: a precise description of what it does
+and when to use it, a short `SKILL.md`, details in `references/` loaded only
+when needed, scripts for deterministic steps, concrete examples, and links
+instead of copied text. `just skills` checks this (`scripts/skill_lint.py`):
+size, front matter, description, links, text copied between skills, and a
+ratchet against `.claude/skills/baseline.json`. CI runs it too.
+
+To be asked at the end of a session whether a lesson belongs in a skill, add
+this to your own `.claude/settings.local.json` (not committed):
+
+```json
+{"hooks": {"Stop": [{"hooks": [{"type": "command", "command": "sh scripts/skill-lesson-prompt.sh"}]}]}}
+```

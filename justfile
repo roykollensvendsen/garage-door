@@ -51,8 +51,12 @@ esphome:
 simulate start="closed":
     uv run garage-door-mcp --simulate --start {{start}}
 
+# The project skills: size, description, links, copied text, ratchet.
+skills:
+    python3 scripts/skill_lint.py check
+
 # Everything CI runs that needs no hardware.
-check: lint test mutate
+check: lint test mutate skills
     uv run python scripts/openers.py --check
     python3 scripts/schematic.py --check
     uv run --group docs mkdocs build --strict

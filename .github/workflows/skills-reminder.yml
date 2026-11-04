@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# A soft reminder, never a failure: when a pull request changes the code
+# (firmware, laptop side, hardware) but no project skill, leave one comment
+# asking whether it taught anything a skill should keep. See AGENTS.md,
+# "Living skills".
+name: skills-reminder
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - name: Comment if code changed without a skill
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          files=$(gh pr diff "$PR" --repo "$REPO" --name-only)
+          echo "$files" | grep -qE '^(firmware|src|hardware|scripts)/' || exit 0
+          echo "$files" | grep -q '^\.claude/skills/' && exit 0
+          marker='<!-- skills-reminder -->'
+          gh pr view "$PR" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$marker" && exit 0
+          gh pr comment "$PR" --repo "$REPO" --body "$marker
+          This changes code but no project skill. If it taught anything non-obvious (a fix, a pitfall, a procedure), please add it to the matching skill in \`.claude/skills/\`. If not, ignore this: it is a reminder, not a check."

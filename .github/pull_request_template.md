@@ -32,3 +32,5 @@
 - [ ] A lesson this change taught is written where the next person doing this
       task will read it: a test or a check where the mistake is checkable, a
       skill or a rule where it is not. Not only in the commit message.
+- [ ] New lesson captured in a skill? Either a skill in `.claude/skills/` changed
+      in this pull request, or there was nothing non-obvious to learn.

@@ -1,0 +1,12 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# When a commit touches a project skill, check the skills before it is made:
+# size, description, links, copied text and the ratchet. CI runs the same
+# check; this only catches it sooner. Enabled with the commit-msg hook by
+#
+#     git config core.hooksPath .githooks
+set -e
+if git diff --cached --name-only | grep -q '^\.claude/skills/'; then
+    root="$(git rev-parse --show-toplevel)"
+    cd "$root" && python3 scripts/skill_lint.py check
+fi

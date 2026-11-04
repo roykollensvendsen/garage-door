@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Once a month, list every project skill with its size, errors and warnings,
+# including skills nothing has changed for a year, in one issue. Someone (or
+# an agent) then merges duplicates, prunes what is outdated and closes it.
+name: skill-review
+
+on:
+  schedule:
+    - cron: "17 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the report reads when each skill last changed
+      - name: Open or update the review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Monthly skill review. Merge duplicates, prune what is outdated, split what is too big, then close this."
+            echo
+            python3 scripts/skill_lint.py report
+          } > review.md
+          number=$(gh issue list --label skill-review --state open --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file review.md
+          else
+            gh label create skill-review --force --description "Monthly review of the project skills"
+            gh issue create --title "Skill review" --label skill-review --body-file review.md
+          fi

@@ -1,0 +1,14 @@
+{
+  "add-opener-model": {
+    "lines": 51,
+    "warnings": 0
+  },
+  "liftmaster-lm80evf": {
+    "lines": 67,
+    "warnings": 0
+  },
+  "write-commit": {
+    "lines": 269,
+    "warnings": 1
+  }
+}

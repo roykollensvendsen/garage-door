@@ -179,3 +179,13 @@ jobs:
       - name: The site has llms.txt and Markdown pages
         run: test -s site/llms.txt && test -s site/llms-full.txt && test -s site/build-guide.md
 
+  # Project skills stay small, say when to use them, link rather than copy,
+  # and never get worse than .claude/skills/baseline.json.
+  skills:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The skills pass the skill linter and the ratchet
+        run: python3 scripts/skill_lint.py check
+
