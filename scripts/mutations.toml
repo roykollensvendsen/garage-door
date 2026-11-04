@@ -103,7 +103,7 @@ name = "pulse does not come back on when the clock wraps around later"
 suite = "firmware"
 file = "firmware/door_logic/door_logic.h"
 find = 'if \(pressed_ && \(now - press_start_\) >= config_\.min_gap_ms\) \{'
-replace = 'if (false) {'
+replace = 'if (false && now) {'
 
 [[rule]]
 name = "door state is a fault when both sensors see a magnet at once"
@@ -118,3 +118,33 @@ suite = "firmware"
 file = "firmware/door_logic/door_logic.h"
 find = 'const bool within_travel = seen_at_end_ && \(now - last_at_end_\) < config_\.travel_ms;'
 replace = 'const bool within_travel = seen_at_end_;'
+
+# --- The opener's data wire (firmware/door_logic/opener_wire.h, ADR-GD-003) ---
+
+[[rule]]
+name = "wire state is unknown when the last status is older than two seconds"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(\(now - heard_at\) >= config_\.status_max_age_ms\) \{'
+replace = 'if (false && heard_at) {'
+
+[[rule]]
+name = "wire press opens a closed door and closes an open one"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'wire_action_ = state_ == DoorState::Closed \? WireAction::Open : WireAction::Close;'
+replace = 'wire_action_ = WireAction::Open;'
+
+[[rule]]
+name = "wire reads only status packets as the door state"
+suite = "firmware"
+file = "firmware/door_logic/opener_wire.h"
+find = 'if \(command != kStatus\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "rolling code is saved before a code past the saved one is sent"
+suite = "firmware"
+file = "firmware/door_logic/opener_wire.h"
+find = 'bool save_due\(\) const \{ return .*'
+replace = 'bool save_due() const { return false; }'

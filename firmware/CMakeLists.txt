@@ -7,7 +7,7 @@
 #   ctest --test-dir firmware/build --output-on-failure
 
 cmake_minimum_required(VERSION 3.20)
-project(garage_door_firmware_tests CXX)
+project(garage_door_firmware_tests C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,6 +34,18 @@ target_include_directories(door_sim_test PRIVATE door_logic sim)
 target_compile_options(door_sim_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
 target_link_libraries(door_sim_test PRIVATE GTest::gtest_main)
 
+# Security+ 2.0 encoding, taken in unchanged from argilo/secplus
+# (third_party/secplus/README.md). Upstream code, so built without -Werror.
+add_library(secplus STATIC third_party/secplus/secplus.c)
+target_include_directories(secplus PUBLIC third_party/secplus)
+
+# The opener's data wire (terminals 0+2), against Roy's own captures.
+add_executable(opener_wire_test tests/opener_wire_test.cpp)
+target_include_directories(opener_wire_test PRIVATE door_logic)
+target_compile_options(opener_wire_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
+target_link_libraries(opener_wire_test PRIVATE secplus GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(door_logic_test)
 gtest_discover_tests(door_sim_test)
+gtest_discover_tests(opener_wire_test)

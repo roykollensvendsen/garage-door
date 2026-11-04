@@ -35,6 +35,24 @@ enum class PressResult : std::uint8_t {
   RefusedTooSoon,  // the last press started less than min_gap_ms ago
 };
 
+// The opener's door state, as it sends it (ratgdo's DoorState),
+// on the data wire (opener_wire.h).
+enum class WireState : std::uint8_t {
+  Unknown = 0,
+  Open = 1,
+  Closed = 2,
+  Stopped = 3,
+  Opening = 4,
+  Closing = 5,
+};
+
+// The two door actions the controller may send (ratgdo's DoorAction). Toggle
+// (2) and stop (3) exist on the wire and are deliberately left out.
+enum class WireAction : std::uint8_t {
+  Close = 0,
+  Open = 1,
+};
+
 struct Config {
   // How long the push-button input is closed. The opener reports a fault if
   // terminals 1 and 2 are shorted for more than 4 s (manual, code 5-1).
@@ -46,6 +64,9 @@ struct Config {
   std::uint32_t travel_ms = 30000;
   // Off until photocells are fitted (see docs/plan.md, section 4).
   bool allow_close = false;
+  // With the state from the opener's data wire: a status older than this is
+  // not trusted (decisions/ADR-GD-003).
+  std::uint32_t status_max_age_ms = 2000;
 };
 
 inline const char* to_string(DoorState s) {
@@ -87,12 +108,7 @@ class Door {
   // Feed the debounced sensors. `at_closed` and `at_open` are true when that
   // sensor sees its magnet.
   void update(std::uint32_t now, bool at_closed, bool at_open) {
-    // Forget a press once its gap has passed. Remembered for ever, it would
-    // look new again when the clock wraps, and press the door on its own.
-    // RULE: pulse does not come back on when the clock wraps around later
-    if (pressed_ && (now - press_start_) >= config_.min_gap_ms) {
-      pressed_ = false;
-    }
+    forget_old_press(now);
     // RULE: door state is a fault when both sensors see a magnet at once
     if (at_closed && at_open) {
       state_ = DoorState::Fault;
@@ -109,7 +125,36 @@ class Door {
     state_ = within_travel ? DoorState::Moving : DoorState::Unknown;
   }
 
+  // Feed the opener's last status from its data wire, heard at `heard_at`.
+  // Used instead of update() when the state comes from the wire.
+  void update_from_wire(std::uint32_t now, WireState said, std::uint32_t heard_at) {
+    forget_old_press(now);
+    // RULE: wire state is unknown when the last status is older than two seconds
+    if ((now - heard_at) >= config_.status_max_age_ms) {
+      state_ = DoorState::Unknown;
+      return;
+    }
+    switch (said) {
+      case WireState::Open:
+        state_ = DoorState::Open;
+        return;
+      case WireState::Closed:
+        state_ = DoorState::Closed;
+        return;
+      case WireState::Opening:
+      case WireState::Closing:
+        state_ = DoorState::Moving;
+        return;
+      default:  // stopped part way, unknown, or a value this code does not know
+        state_ = DoorState::Unknown;
+        return;
+    }
+  }
+
   DoorState state() const { return state_; }
+
+  // On the data wire, the accepted press as a direction: never a toggle.
+  WireAction wire_action() const { return wire_action_; }
 
   // Ask for a press. On Accepted, output() is true for pulse_ms from `now`.
   PressResult request_press(std::uint32_t now) {
@@ -131,6 +176,8 @@ class Door {
     }
     pressed_ = true;
     press_start_ = now;
+    // RULE: wire press opens a closed door and closes an open one
+    wire_action_ = state_ == DoorState::Closed ? WireAction::Open : WireAction::Close;
     return PressResult::Accepted;
   }
 
@@ -142,12 +189,22 @@ class Door {
   }
 
  private:
+  // Forget a press once its gap has passed. Remembered for ever, it would
+  // look new again when the clock wraps, and press the door on its own.
+  void forget_old_press(std::uint32_t now) {
+    // RULE: pulse does not come back on when the clock wraps around later
+    if (pressed_ && (now - press_start_) >= config_.min_gap_ms) {
+      pressed_ = false;
+    }
+  }
+
   Config config_;
   DoorState state_ = DoorState::Unknown;
   bool seen_at_end_ = false;
   std::uint32_t last_at_end_ = 0;
   bool pressed_ = false;
   std::uint32_t press_start_ = 0;
+  WireAction wire_action_ = WireAction::Open;
 };
 
 }  // namespace garage
