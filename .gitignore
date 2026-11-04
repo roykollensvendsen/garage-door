@@ -16,3 +16,6 @@ src/*/_version.py
 coverage.xml
 htmlcov/
 scripts/.mutate-recovery.json
+
+# Roy's photos of the opener and board: may show private details
+docs/photos/

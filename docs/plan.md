@@ -43,6 +43,27 @@ Also noted: the manual says "Always use LiftMaster accessories. External
 products can cause malfunctions." A contact that only closes like the 75EV
 button does is the lowest-risk way to add one.
 
+### Checked against Roy's photos (2026-11-04)
+
+The photos are in `docs/photos/`, which git ignores.
+
+- **Type plate:** LM80EVF, date 15-07-2021, 220–240 V, 50/60 Hz, 210 W,
+  Fmax 800 N, rated load 6 Nm, KB 4 min, −30 °C to 55 °C, Chamberlain GmbH.
+  This is one of the four models the manual covers.
+- **Terminal block:** labelled 0, 1, 2, 2, 3, 4, 5, 6, 7 and a separate
+  2-pin block "+ − OUT: 30VDC / <50mA", exactly as in the manual's figure.
+  The colours match the figure's grouping too: 0 green, 1 red, 2 2 white,
+  3 grey, 4 5 green, 6 black, 7 white.
+- **4–5 bridge:** a black wire loop across 4 and 5, which is the factory
+  bridge for the door-in-door contact. It stays.
+- **Nothing else is connected.** No wall button on 1+2, and **no photocells
+  on 2+3**. Closing therefore relies only on the opener's force-based
+  reversal, which is why section 4 holds remote closing back until
+  photocells are fitted.
+- **ESP32 Thing:** pins 25, 34, 35, 3V3, GND and VUSB are all labelled and
+  broken out; headers are not soldered yet; micro-USB and the JST battery
+  socket as expected.
+
 ## 2. Circuit
 
 ```
@@ -53,9 +74,9 @@ button does is the lowest-risk way to add one.
   │                  output 3,4 ───▶ 1                     │
   │                             ───▶ 2   (polarity free)   │
   │                                 │ 4═5 bridge: untouched│
-  │ 3V3 ─10k─┬─1k── GPIO32 ◀── reed "fully closed" ── GND  │
+  │ 3V3 ─10k─┬─1k── GPIO34 ◀── reed "fully closed" ── GND  │
   │          └100nF─GND                                    │
-  │ 3V3 ─10k─┬─1k── GPIO33 ◀── reed "fully open"   ── GND  │
+  │ 3V3 ─10k─┬─1k── GPIO35 ◀── reed "fully open"   ── GND  │
   │          └100nF─GND                                    │
   │ micro-USB ◀── 5 V USB charger (wall socket)            │
   └──────────────┘                  └──────────────────────┘
@@ -76,9 +97,13 @@ button does is the lowest-risk way to add one.
   open. Each closes to ground when its magnet is near. External 10 kΩ pull-ups
   to 3.3 V, 1 kΩ series and 100 nF to ground for the long cable run, so a
   cable that picks up noise near the motor does not flicker the state.
-- **Pins:** GPIO25 (output), GPIO32 and GPIO33 (inputs). None is a strapping
-  pin (0, 2, 12, 15) and none is input-only (34–39), so the board boots the
-  same whether or not the opener is connected. GPIO5 (the on-board LED) shows
+- **Pins:** GPIO25 (output), GPIO34 and GPIO35 (inputs). None is a strapping
+  pin (0, 2, 12, 15), so the board boots the same whether or not the opener is
+  connected. 34 and 35 are input-only and have no internal pull-ups, which
+  suits a sensor input with the external pull-ups above: firmware cannot
+  drive them by mistake. GPIO32 and GPIO33 are avoided because the Thing has a
+  32 kHz crystal fitted next to them (seen in Roy's photo), and 36–39 because
+  the board ties them to the ADC's capacitors. GPIO5 (the on-board LED) shows
   a pulse.
 - **Power:** a 5 V USB charger into the Thing's micro-USB socket, from the
   ceiling socket the opener already plugs into. Not the opener's 30 V output:
@@ -151,13 +176,14 @@ address from the internet entirely.
 | Report state before and after | `garage_confirm` waits for the door to settle (or 30 s) and returns before and after. If it did not reach the expected end state, it says so. |
 | A press cannot stick | ESP32: the output turns itself off after 500 ms; boots with the output off; ignores a second press within 2 s. |
 | Nothing on the internet | ESPHome native API only, LAN only, encrypted and keyed; no web server. |
-| The opener's own safety stays | Nothing touches the photocell input (2+3), the 4–5 bridge, or the force and obstruction reversal. Remote closing relies on them, so before going live Roy runs the manual's monthly reversal test (section 24: 50 mm obstacle). If photocells are not fitted (terminals 2+3 empty), we recommend fitting them before allowing remote close. |
+| The opener's own safety stays | Nothing touches the photocell input (2+3), the 4–5 bridge, or the force and obstruction reversal. Before going live Roy runs the manual's monthly reversal test (section 24: 50 mm obstacle). |
+| No closing out of sight without photocells | Roy's photo shows no photocells on 2+3. Proposed: the MCP module offers **open only** until photocells (e.g. 771EV) are fitted, then enables close. Roy decides. |
 
 ## Order of work, once approved
 
 1. Bench check at the opener (Roy, with a multimeter, door clear): voltage
    across 1–2, current with 1–2 shorted, and a 0.5 s touch with an insulated
-   wire to confirm the door starts. Note whether 2+3 has photocells.
+   wire to confirm the door starts.
 2. Order parts.
 3. Solder the Thing's headers and the small board; test on the desk with an
    LED in place of the opener.
