@@ -224,6 +224,15 @@ output:
   resetting the chip. The firmware then ran with no panic or watchdog
   message. It is a real problem only if it shows up later without anyone
   touching the board, with the uptime starting again from zero.
+- With "closed" faked (GPIO34 to GND, GPIO35 through 10 kΩ to 3V3), the
+  door read **closed**. Armed, two "open" requests by voice, each confirmed
+  with a spoken yes, were accepted by the controller, and the relay
+  **clicked** (Roy, about 23:00). The service answered "pressed, but the
+  door did not reach open: it is closed". That is right on the bench, with
+  nothing on the relay's output and the reed inputs held by wires.
+- Found on the way: the first request after the laptop connected always
+  read "unknown", because the door was read before the controller's first
+  report arrived. Fixed on the laptop, with a test; the controller was fine.
 
 ## Step by step
 
