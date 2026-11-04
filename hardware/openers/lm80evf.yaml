@@ -21,8 +21,10 @@ notes: >-
   do not reach the contacts. The 30 VDC output reads about 1.1 V while idle
   (standby). Listed as untested until the controller itself has opened and
   closed the door. Terminals 0+2 carry about 10-11 V and show short bursts
-  of traffic at each change of state, quiet in between, which suggests a
-  Security+ 2.0-style status bus; not yet decoded.
+  of traffic at each change of state, quiet in between: a Security+ 2.0
+  serial bus at about 4000 baud. Decoded with secplus, the opener sends its
+  own status messages there, with the door state (opening, closing,
+  stopped) in them.
 reported_by: roykollensvendsen
 checks:
   - by: Roy
@@ -40,4 +42,7 @@ checks:
   - by: Roy
     date: 2026-11-04
     what: "0+2 capture saved from the scope and decoded with scripts/decode_capture.py: the bit is about 250 us (about 4000 baud, 8N1, idle high); the 126 us pulse was the half-bit after the break; the message reads [break] 55 01 00 86 0E BD (capture ends), and 55 01 00 is the Security+ 2.0 sync ratgdo looks for"
+  - by: Roy
+    date: 2026-11-04
+    what: "0+2, four whole 19-byte packets at 10 ms/div, triggered by the remote, decoded with argilo's secplus (decode_wireline_command): all four are command 0x081 (status) from the same device id 0x405d056056, the rolling code counts up (0x2ce51, 53, 55, 58), and only the door state changes: closing, opening, closing, stopped; light on, not locked. Event order open, close, stop for the last three is Roy's recollection, and the decode agrees"
 build: ""

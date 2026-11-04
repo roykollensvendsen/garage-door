@@ -23,6 +23,7 @@
 - Roy, 2026-11-04: 0+2 on an oscilloscope (MSO2024, 1 ms/div), triggered by the remote: idle about 10-12 V, a sharp drop to about 0 V held 2-3 ms, then a burst of short open-drain-style pulses. A data line, consistent with a Security+ 2.0-style serial bus; bit rate not measured yet.
 - Roy, 2026-11-04: 0+2 pulse widths with scope cursors: break low 2.624 ms (about 21 bit times, a UART break), then high 128.4 us, low 254 us, high 252.4 us, later highs of 504.4 and 754.4 us; 1, 2, 2, 4 and 6 bits give about 126 us per bit, about 7900 baud (7812.5 or 8000 nominal), not ratgdo's 9600; message longer than 10 ms; not decoded yet.
 - Roy, 2026-11-04: 0+2 capture saved from the scope and decoded with scripts/decode_capture.py: the bit is about 250 us (about 4000 baud, 8N1, idle high); the 126 us pulse was the half-bit after the break; the message reads [break] 55 01 00 86 0E BD (capture ends), and 55 01 00 is the Security+ 2.0 sync ratgdo looks for.
+- Roy, 2026-11-04: 0+2, four whole 19-byte packets at 10 ms/div, triggered by the remote, decoded with argilo's secplus (decode_wireline_command): all four are command 0x081 (status) from the same device id 0x405d056056, the rolling code counts up (0x2ce51, 53, 55, 58), and only the door state changes: closing, opening, closing, stopped; light on, not locked. Event order open, close, stop for the last three is Roy's recollection, and the decode agrees.
 
 ## Leave alone
 
@@ -30,7 +31,7 @@
 
 ## Notes
 
-The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Listed as untested until the controller itself has opened and closed the door. Terminals 0+2 carry about 10-11 V and show short bursts of traffic at each change of state, quiet in between, which suggests a Security+ 2.0-style status bus; not yet decoded.
+The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Listed as untested until the controller itself has opened and closed the door. Terminals 0+2 carry about 10-11 V and show short bursts of traffic at each change of state, quiet in between: a Security+ 2.0 serial bus at about 4000 baud. Decoded with secplus, the opener sends its own status messages there, with the door state (opening, closing, stopped) in them.
 
 Source: [`hardware/openers/lm80evf.yaml`](https://github.com/roykollensvendsen/garage-door/blob/main/hardware/openers/lm80evf.yaml).
 To correct it, edit that file; see [Add your opener](../compatibility.md#add-your-opener).

@@ -34,4 +34,29 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   bytes are `[break] 55 01 00 86 0E BD`, cut off by the end of the 20 ms
   capture. `55 01 00` is the Security+ 2.0 sync ratgdo looks for, so this is
   Security+ 2.0 framing at about 4000 baud, not ratgdo's 9600.
+- **0+2, four full packets** (10 ms/div, 100 ms window; saved 14:21-14:24,
+  each triggered by the remote). One complete 19-byte packet per capture,
+  sync `55 01 00`, about 3970 baud (252 us bit), nothing else in 100 ms.
+  Events by file order are Roy's recollection: the last three were OPEN,
+  CLOSE, STOP; the first one is unlabelled.
+  - T0001 (?): `55 01 00 8A 28 2E BF 6C E4 D7 75 04 39 EB 87 B5 DF FE 7A`
+  - T0002 open: `55 01 00 24 38 B3 DF FA F6 7B 9F 55 27 8E AE 4C 32 EB A8`
+  - T0003 close: `55 01 00 01 17 2C 34 14 4D A6 B0 25 29 AA A3 FC F6 5A 2A`
+  - T0004 stop: `55 01 00 A1 14 05 84 96 60 A0 B3 22 0C 1C 7A 99 76 12 67`
+  Every raw byte after the sync differs (the payload is scrambled with the
+  rolling code). Unscrambled with argilo's secplus (`decode_wireline_command`):
+
+  | File | Rolling | Command | Door state | Rest |
+  |---|---|---|---|---|
+  | T0001 | 0x2ce51 | 0x081 status | closing (5) | light 1, lock 0 |
+  | T0002 | 0x2ce53 | 0x081 status | opening (4) | light 1, lock 0 |
+  | T0003 | 0x2ce55 | 0x081 status | closing (5) | light 1, lock 0 |
+  | T0004 | 0x2ce58 | 0x081 status | stopped (3) | light 1, lock 0 |
+
+  Same device id `0x405d056056` in all four: the opener's own status
+  messages, not the remote's command. Only the door-state field (top of the
+  payload) changes; the rest (`0x6802`) stays the same. The rolling code
+  counts up; the gaps are messages between captures. The decode agrees with
+  Roy's order for T0002-T0004. So listening on 0+2 gives the door state
+  without extra sensors. The 6-byte T0000 capture is too short to decode.
 - **6+7:** not measured yet. Measure idle and while moving.
