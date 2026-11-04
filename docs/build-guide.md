@@ -86,6 +86,54 @@ WireViz.
 | J4 pin 1 (SENSE_OPEN, GPIO35) | W3 green | fully-open reed, either side |
 | J4 pin 2 (GND) | W3 yellow | fully-open reed, other side |
 
+## Bench test: listening on the opener's data wire (0+2)
+
+A first, listen-only test on a breadboard, before anything is soldered. It
+lets the controller hear the opener's own status messages (see the plan,
+"First bench test"). It is **not isolated**: it joins the ESP32's ground to
+terminal 2, so run the laptop on battery while the USB cable is in.
+
+| Qty | Part | Where it goes |
+|---|---|---|
+| 1 | Resistor 22 kΩ | terminal 0 to the 10 kΩ below |
+| 2 | Resistor 10 kΩ | one in series with the 22 kΩ (top), one from node A to ground (bottom) |
+| 1 | Resistor 1 kΩ | node A to GPIO36 |
+| 1 | Schottky diode BAT85 (or BAT54, 1N5819) | GPIO36 to 3V3, band (cathode) at 3V3 |
+| 1 | Capacitor 100 pF (optional) | GPIO36 to ground |
+| | Breadboard and jumper wires | |
+
+39 kΩ over 12 kΩ in place of 22 + 10 over 10 kΩ works the same.
+
+![Schematic of the bench divider](wiring/bench-divider-schematic.svg)
+
+In words: terminal 0 → 22 kΩ → 10 kΩ → node A → 10 kΩ → terminal 2, which is
+also the ESP32's GND. Node A → 1 kΩ → GPIO36 (marked VP on some boards).
+The diode runs from GPIO36 up to 3V3, band towards 3V3.
+
+![Breadboard layout of the bench divider](wiring/bench-divider-breadboard.svg)
+
+On the breadboard: a yellow wire from terminal 0 to the 22 kΩ, the 22 kΩ
+and a 10 kΩ in a row to node A, the other 10 kΩ from node A down to the
+ground rail, the 1 kΩ from node A to a column with a green wire to GPIO36,
+and the diode from that column up to the 3V3 rail. Black wires join terminal
+2 and the ESP32's GND to the ground rail, and a red wire joins the ESP32's
+3V3 to the 3V3 rail. Each resistor's colour bands are printed under the
+picture: 22 kΩ red-red-orange-gold, 10 kΩ brown-black-orange-gold, 1 kΩ
+brown-black-red-gold (5 %). 1 % resistors have five bands instead.
+
+1. **Opener unplugged.** Measure each resistor on the ohms range.
+2. **Divider only, ESP32 off the board.** Wire terminal 0 and terminal 2 to
+   the divider through the orange levers. Plug the opener in.
+3. **Measure 0 to 2** on DC volts: still about 11–12 V, as without the
+   divider. A drop of more than about 0.1 V means the divider loads the
+   line too much.
+4. **Measure node A to terminal 2:** about 2.67 V at 11.2 V idle, 2.86 V at
+   12 V. Run the door once from the remote. Node A must never read above
+   about 3.6 V, and never negative.
+5. **Only then** add the 1 kΩ, the diode and the wire to GPIO36, and join the
+   ESP32's GND to terminal 2. The controller logs every packet under the tag
+   `wire` (`esphome logs firmware/garage-door.yaml`).
+
 ## Step by step
 
 1. **Measure first** (opener plugged in, door clear, a meter on DC volts).

@@ -165,16 +165,25 @@ waveform to USB (CSV) as well, so it can be decoded off the scope.
 final build).* It loads the line least and needs no parts beyond resistors,
 but it is **not isolated**: it ties the ESP32's ground to terminal 2. Run the
 laptop on battery for the test, and use the optocoupler below in the build.
-- Terminal 0 → **39 kΩ** → node A → **12 kΩ** → terminal 2 (ESP32 GND).
-  Node A → **1 kΩ** → GPIO36. Add a Schottky diode (BAT85 or BAT54, or a
-  1N5819) from GPIO36 to 3V3, cathode at 3V3, and 100 pF from GPIO36 to GND.
-- Ratio 12/51 = 0.235. A high at 11.2 V gives 2.64 V, and 12 V gives 2.82 V.
+- Terminal 0 → **22 kΩ + 10 kΩ** in series → node A → **10 kΩ** → terminal 2
+  (ESP32 GND). Node A → **1 kΩ** → GPIO36. Add a Schottky diode (BAT85 or
+  BAT54, or a 1N5819) from GPIO36 to 3V3, cathode at 3V3, and optionally
+  100 pF from GPIO36 to GND. These are the values in Roy's SparkFun resistor
+  kit (2026-11-04). **39 kΩ over 12 kΩ** gives nearly the same ratio and is
+  an equivalent alternative.
+- Ratio 10/42 = 0.238. A high at 11.2 V gives 2.67 V, and 12 V gives 2.86 V.
   Both are above the ESP32's input-high level, 0.75 × 3.3 = 2.48 V. A worst
-  case of 15 V gives 3.53 V. That is under the 3.6 V absolute maximum, and
-  the clamp holds it near 3.3–3.5 V through the 1 kΩ. No E12 pair meets ≥ 2.5
-  V at 11.2 V and ≤ 3.3 V at 15 V at once, so the clamp covers the margin.
-- The load is 51 kΩ, about 0.24 mA at 12 V. The source impedance is about
-  10 kΩ, which with 100 pF gives 1 µs. That is negligible beside a 250 µs bit.
+  case of 15 V gives 3.57 V, just under the 3.6 V absolute maximum. The
+  clamp holds it near 3.3–3.5 V through the 1 kΩ. No standard pair meets
+  ≥ 2.5 V at 11.2 V and ≤ 3.3 V at 15 V at once, so the clamp covers the margin.
+- The load is 42 kΩ, about 0.29 mA at 12 V. The source impedance is about
+  7.6 kΩ, which with 100 pF gives under 1 µs. That is negligible beside a
+  250 µs bit.
+- Drawn from the values in `hardware/pins.toml` (`[bench_divider]`) by
+  `scripts/bench_divider.py`, with each resistor's colour bands and where to
+  put the meter: [schematic](wiring/bench-divider-schematic.svg),
+  [breadboard](wiring/bench-divider-breadboard.svg).
+  `tests/test_bench_divider.py` checks the levels against the ESP32's limits.
 - The divider does not invert the signal. Use `inverted: false` on the
   UART's `rx_pin`, or with `remote_receiver`.
 - GPIO36 is input-only, not a strapping pin, and works for UART RX (through
@@ -303,6 +312,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 4-core alarm cable, about 10 m | | the two reed contacts |
 | 5 V 1 A USB charger and micro-USB cable | 1 | |
 | Multimeter | | for the bench measurements |
+| Bench test on 0+2: resistors 22 kΩ, 10 kΩ ×2, 1 kΩ; BAT85 Schottky; 100 pF (optional); breadboard | | listen-only, first test (39 kΩ + 12 kΩ also do) |
 
 ## 3. Firmware and how the laptop talks to it
 
