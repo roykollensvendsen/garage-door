@@ -166,29 +166,43 @@ final build).* It loads the line least and needs no parts beyond resistors,
 but it is **not isolated**: it ties the ESP32's ground to terminal 2. Power the
 ESP32 from a USB power bank, not the laptop, and use the optocoupler below in
 the build.
-- Terminal 0 → **22 kΩ + 10 kΩ** in series → node A → **10 kΩ** → terminal 2
-  (ESP32 GND). Node A → **1 kΩ** → GPIO36. Add a Schottky diode (BAT85 or
-  BAT54, or a 1N5819) from GPIO36 to 3V3, cathode at 3V3, and optionally
-  100 pF from GPIO36 to GND. These are the values in Roy's SparkFun resistor
-  kit (2026-11-04). **39 kΩ over 12 kΩ** gives nearly the same ratio and is
-  an equivalent alternative. For the first test Roy uses a **1N4148**, the
-  diode he has. It clamps only at about 3.9 V (3.3 V plus its 0.6 V), above
-  the pin's 3.6 V maximum, so it guards against spikes rather than the
-  steady level. That is acceptable here because the divider alone stays at
-  3.57 V even at 15 V. A permanent build uses a Schottky (1N5819, BAT85).
-- Ratio 10/42 = 0.238. A high at 11.2 V gives 2.67 V, and 12 V gives 2.86 V.
-  Both are above the ESP32's input-high level, 0.75 × 3.3 = 2.48 V. A worst
-  case of 15 V gives 3.57 V, just under the 3.6 V absolute maximum. The
-  clamp holds it near 3.3–3.5 V through the 1 kΩ. No standard pair meets
-  ≥ 2.5 V at 11.2 V and ≤ 3.3 V at 15 V at once, so the clamp covers the margin.
-- The load is 42 kΩ, about 0.29 mA at 12 V. The source impedance is about
-  7.6 kΩ, which with 100 pF gives under 1 µs. That is negligible beside a
-  250 µs bit.
+- Terminal 0 → **22 kΩ** → node A → **10 kΩ** → terminal 2 (ESP32 GND).
+  Node A → **1 kΩ** → GPIO36. A **1N4148** from GPIO36 to 3V3, cathode
+  (black stripe) at 3V3. **1 nF** from GPIO36 to GND (`102`; see below).
+- **Why 22k alone on top** (Roy, scope, 2026-11-04). With 22 kΩ + 10 kΩ over
+  10 kΩ, node A read **2.4 V mean**, too close to the ESP32's input-high
+  level of 2.48 V. With the second 10 kΩ jumpered out it read **3.17 V mean**,
+  min about 2.1 V, about 2.0 V peak to peak. So the line's high level is
+  about **10.1 V mean**, with a 50 Hz sawtooth ripple from the opener's
+  rectified supply and short spikes at each recharge. That is not data.
+- Ratio 10/32 = 0.3125. Node A is 3.16 V at 10.1 V and 3.75 V at 12 V. At a
+  worst-case 15 V it is 4.69 V. From about 11.5 V up, the diode conducts and
+  holds GPIO36 near 3.9 V (3.3 V plus a 1N4148's 0.6 V). The current through
+  it is at most 0.1 mA, limited by the 7.9 kΩ feeding it (22k ∥ 10k, plus
+  1k). That is a small current, but 3.9 V is above the pin's 3.6 V maximum,
+  so a **Schottky (BAT85, 1N5819) is needed for a permanent build**: it holds
+  the pin near 3.55 V.
+- **The ripple's low points matter more than its peaks.** If the 2.1 V
+  minimum is the ripple's trough, not a spike, the pin sits below 2.48 V for
+  part of every 20 ms while the line is idle. A UART can then see false
+  start bits. Check on the scope at GPIO36 with the 1 nF fitted. If the
+  troughs stay below 2.5 V, no plain divider fits both ends: for the ESP32,
+  the ripple's span (about 6.7–13 V on the line) needs a ratio above 0.37 at
+  the bottom and below 0.28 at the top. A switching input does fit: the
+  6N136 below, or a ULN2803 channel (line → 10 kΩ → input, output → GPIO36
+  with a 22 kΩ pull-up, inverted). Either switches on cleanly anywhere above
+  a few volts.
+- **The filter is 1 nF, not 10 nF.** The capacitor is fed through the 1 kΩ
+  and the divider together, about 7.9 kΩ. 1 nF gives 8 µs, which removes the
+  spikes and leaves a 250 µs bit square. 10 nF would give 79 µs and round
+  the bits off. 1–2.2 nF is the range.
+- The load is 32 kΩ, about 0.38 mA at 12 V.
 - Drawn from the values in `hardware/pins.toml` (`[bench_divider]`) by
   `scripts/bench_divider.py`, with each resistor's colour bands and where to
   put the meter: [schematic](wiring/bench-divider-schematic.svg),
   [breadboard](wiring/bench-divider-breadboard.svg).
-  `tests/test_bench_divider.py` checks the levels against the ESP32's limits.
+  `tests/test_bench_divider.py` checks the levels, the clamp current and the
+  filter against the ESP32's limits.
 - The divider does not invert the signal. Use `inverted: false` on the
   UART's `rx_pin`, or with `remote_receiver`.
 - GPIO36 is input-only, not a strapping pin, and works for UART RX (through
@@ -338,7 +352,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 4-core alarm cable, about 10 m | | the two reed contacts |
 | 5 V 1 A USB charger and micro-USB cable | 1 | |
 | Multimeter | | for the bench measurements |
-| Bench test on 0+2: resistors 22 kΩ, 10 kΩ ×2, 1 kΩ; BAT85 Schottky; 100 pF (optional); breadboard | | listen-only, first test (39 kΩ + 12 kΩ also do) |
+| Bench test on 0+2: resistors 22 kΩ, 10 kΩ, 1 kΩ; 1N4148 (a Schottky, BAT85 or 1N5819, for keeps); 1 nF ceramic; breadboard | | listen-only, first test |
 
 ## 3. Firmware and how the laptop talks to it
 

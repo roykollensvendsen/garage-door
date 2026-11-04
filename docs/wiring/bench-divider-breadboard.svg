@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 982 520" width="982" height="520" font-family="sans-serif" font-size="13">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 982 538" width="982" height="538" font-family="sans-serif" font-size="13">
 <title>Bench divider: breadboard</title>
 <style>.v{font-size:12px;text-anchor:middle}.l{font-size:13px}.s{font-size:11px;fill:#444}.h{font-size:16px;font-weight:bold}</style>
-<rect width="982" height="520" fill="#fff"/>
+<rect width="982" height="538" fill="#fff"/>
 <text x="20" y="28" class="h">Breadboard: listen on the opener's data wire (0+2)</text>
 <rect x="70" y="80" width="748" height="130" rx="8" fill="#f3f3ee" stroke="#bbb"/>
 <text x="94" y="96" class="s" text-anchor="middle">1</text>
@@ -135,11 +135,8 @@
 <rect x="108" y="139" width="108" height="14" rx="6" fill="#e8d3a8" stroke="#555"/><rect x="120" y="139" width="5" height="14" fill="#d22"/><rect x="130" y="139" width="5" height="14" fill="#d22"/><rect x="140" y="139" width="5" height="14" fill="#f80"/><rect x="202" y="139" width="5" height="14" fill="#c9a227"/><text x="162.0" y="135" class="v">22k</text>
 <circle cx="94" cy="146" r="3" fill="#444"/>
 <circle cx="230" cy="146" r="3" fill="#444"/>
-<polyline points="230,146 244,146" fill="none" stroke="#888" stroke-width="2"/>
-<polyline points="352,146 366,146" fill="none" stroke="#888" stroke-width="2"/>
-<rect x="244" y="139" width="108" height="14" rx="6" fill="#e8d3a8" stroke="#555"/><rect x="256" y="139" width="5" height="14" fill="#7b4a12"/><rect x="266" y="139" width="5" height="14" fill="#222"/><rect x="276" y="139" width="5" height="14" fill="#f80"/><rect x="338" y="139" width="5" height="14" fill="#c9a227"/><text x="298.0" y="135" class="v">10k</text>
-<circle cx="230" cy="146" r="3" fill="#444"/>
-<circle cx="366" cy="146" r="3" fill="#444"/>
+<polyline points="230,146 230,134 366,134 366,146" fill="none" stroke="#555" stroke-width="3"/>
+<text x="298.0" y="130" class="v">jumper</text>
 <polyline points="366,110 380,110" fill="none" stroke="#888" stroke-width="2"/>
 <polyline points="488,110 502,110" fill="none" stroke="#888" stroke-width="2"/>
 <rect x="380" y="103" width="108" height="14" rx="6" fill="#e8d3a8" stroke="#555"/><rect x="392" y="103" width="5" height="14" fill="#7b4a12"/><rect x="402" y="103" width="5" height="14" fill="#222"/><rect x="412" y="103" width="5" height="14" fill="#f80"/><rect x="474" y="103" width="5" height="14" fill="#c9a227"/><text x="434.0" y="99" class="v">10k</text>
@@ -157,6 +154,10 @@
 <circle cx="638" cy="146" r="3" fill="#444"/>
 <circle cx="774" cy="146" r="3" fill="#444"/>
 <text x="706.0" y="135" class="v">1N4148</text>
+<polyline points="502,128 562.0,128" fill="none" stroke="#888" stroke-width="2"/>
+<polyline points="578.0,128 638,128" fill="none" stroke="#888" stroke-width="2"/>
+<circle cx="570.0" cy="128" r="9" fill="#e9a23b" stroke="#555"/>
+<text x="570.0" y="116" class="v">1n</text>
 <text x="366" y="70" class="l" text-anchor="middle">node A (column 9)</text>
 <polyline points="94,188 94,326 124,326" fill="none" stroke="#d22" stroke-width="4"/>
 <text x="130" y="330" class="s">red wire: terminal 0</text>
@@ -168,7 +169,7 @@
 <text x="810" y="264" class="s">blue wire: 3V3</text>
 <rect x="536" y="18" width="120" height="46" rx="6" fill="#ffd400" stroke="#333"/>
 <text x="596" y="37" class="v">DC volts</text>
-<text x="596" y="55" class="v">~2.67 V</text>
+<text x="596" y="55" class="v">~3.16 V</text>
 <polyline points="536,32 370,104" fill="none" stroke="#d22" stroke-width="2"/>
 <polyline points="536,52 506,104" fill="none" stroke="#222" stroke-width="2"/>
 <text x="662" y="36" class="s">red probe: column 9 (node A)</text>
@@ -176,6 +177,7 @@
 <text x="20" y="410" class="s">22k: red-red-orange-gold  (5 %)   or  red-red-black-red-brown  (1 %)</text>
 <text x="20" y="428" class="s">10k: brown-black-orange-gold  (5 %)   or  brown-black-black-red-brown  (1 %)</text>
 <text x="20" y="446" class="s">1k: brown-black-red-gold  (5 %)   or  brown-black-black-brown-brown  (1 %)</text>
-<text x="20" y="464" class="s">Check before the ESP32 is connected: node A to terminal 2 reads about 2.67 V at 11.2 V idle, never above 3.57 V, never negative.</text>
-<text x="20" y="482" class="s">Optional 100p from GPIO36 to GND. Not isolated: ESP32 on a USB power bank, not the laptop.</text>
+<text x="20" y="464" class="s">Check before the ESP32 is connected: node A to terminal 2 reads about 3.16 V at 10.1 V idle, never negative. With the diode in, GPIO36 stays near 3.9 V even at 15 V.</text>
+<text x="20" y="482" class="s">1n from GPIO36 to GND (not 10n: 7.9 kOhm feeds it, so 10n would round the bits off).</text>
+<text x="20" y="500" class="s">Not isolated: ESP32 on a USB power bank, not the laptop.</text>
 </svg>

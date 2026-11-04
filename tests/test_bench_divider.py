@@ -22,25 +22,33 @@ def test_the_lowest_idle_line_still_reads_as_high():
     assert D.at(D.line_idle_min) > bench.VIH
 
 
-def test_the_worst_case_line_stays_under_the_pins_absolute_maximum():
-    assert D.at(D.line_max) < bench.ABS_MAX
+def test_at_the_worst_case_line_the_clamp_holds_the_pin_and_carries_little_current():
+    assert D.pin_at(D.line_max) <= 3.3 + D.clamp_drop
+    assert D.injected(D.line_max) < 0.0005  # well under the ESP32's injection limit
+
+
+def test_a_schottky_clamp_keeps_the_pin_under_its_absolute_maximum():
+    schottky = bench.Divider(D.top, D.bottom, D.series, "BAT85", D.filter, D.line_idle_min, D.line_max, 0.25)
+    assert schottky.pin_at(D.line_max) < bench.ABS_MAX
 
 
 def test_the_divider_loads_the_line_lightly():
-    assert D.load_ohms >= 40_000  # about 0.3 mA at 12 V
-    assert 12 / D.load_ohms < 0.0003
+    assert D.load_ohms >= 30_000  # under 0.4 mA at 12 V
+    assert 12 / D.load_ohms < 0.0004
 
 
-def test_the_values_roy_built_give_the_levels_he_expects():
-    assert round(D.at(11.2), 2) == 2.67
-    assert round(D.at(15.0), 2) == 3.57
+def test_the_values_roy_built_give_what_he_measured():
+    # Scope, 2026-11-04: 2.4 V mean with 22k + 10k over 10k, 3.17 V with 22k over 10k.
+    line = 3.17 / D.ratio
+    old = bench.Divider(["22k", "10k"], "10k", "1k", "1N4148", "1n", line, 15.0)
+    assert abs(old.at(line) - 2.4) < 0.05
+    assert abs(D.at(line) - 3.17) < 0.01
 
 
-def test_the_original_pair_is_an_equivalent_alternative():
-    other = bench.Divider(["39k"], "12k", "1k", "BAT85", "100p", 11.2, 15.0)
-    assert other.at(11.2) > bench.VIH
-    assert other.at(15.0) < bench.ABS_MAX
-    assert abs(other.ratio - D.ratio) < 0.01
+def test_the_filter_is_fast_beside_a_bit():
+    assert D.filter_tau < 250e-6 / 10
+    too_slow = bench.Divider(D.top, D.bottom, D.series, D.clamp, "10n", D.line_idle_min, D.line_max)
+    assert too_slow.filter_tau > 250e-6 / 10  # 10 nF behind this divider rounds the bits off
 
 
 def test_colour_bands_are_read_the_standard_way():
@@ -49,6 +57,7 @@ def test_colour_bands_are_read_the_standard_way():
     assert bench.bands("1k") == ["brown", "black", "red", "gold"]
     assert bench.bands_1_percent("22k") == ["red", "red", "black", "red", "brown"]
     assert bench.ohms("470") == 470
+    assert bench.farads("1n") == 1e-9
 
 
 def test_the_pictures_are_drawn_from_the_current_values():

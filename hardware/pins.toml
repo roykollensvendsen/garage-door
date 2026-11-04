@@ -32,16 +32,19 @@ filter = "100n"             # with the 1k, filters noise picked up near the moto
 # The first, listen-only bench test on the opener's data wire (docs/plan.md,
 # "First bench test"): terminal 0 -> top -> node A -> bottom -> terminal 2
 # (ESP32 GND), node A -> series -> wire_rx, clamp diode to 3V3. Not isolated.
-# Values from Roy's SparkFun resistor kit; 39k over 12k is an equivalent pair.
+# Roy measured on the scope (2026-11-04): with 22k + 10k over 10k node A read
+# 2.4 V mean, too close to the ESP32's input-high level, so the top is 22k
+# alone (the second 10k jumpered): 3.17 V mean. The line's mean is about 10.1 V.
 # Drawn by scripts/bench_divider.py; tests/test_bench_divider.py checks the levels.
-top = ["22k", "10k"]        # in series
+top = ["22k"]               # Roy jumpers the 10k that sat in series here
 bottom = "10k"
 series = "1k"
 clamp = "1N4148"            # cathode at 3V3; what Roy has for the first test. A Schottky
                             # (1N5819, BAT85) clamps lower and is the one for a permanent build
-filter = "100p"             # optional, GPIO36 to GND
-line_idle_min = 11.2        # volts, measured high on 0+2
+filter = "1n"               # GPIO36 to GND; with the ~7.9k feeding it, about 8 us
+line_idle_min = 10.1        # volts, mean high on 0+2 on the scope (with 50 Hz ripple)
 line_max = 15.0             # volts, assumed worst case
+clamp_drop = 0.6            # 1N4148 at a fraction of a milliampere; a Schottky is about 0.3
 
 [opto_input]
 # The permanent, isolated input on the opener's data wire (docs/plan.md):

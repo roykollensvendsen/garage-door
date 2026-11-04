@@ -96,31 +96,32 @@ from the laptop.
 
 | Qty | Part | Where it goes |
 |---|---|---|
-| 1 | Resistor 22 kΩ | terminal 0 to the 10 kΩ below |
-| 2 | Resistor 10 kΩ | one in series with the 22 kΩ (top), one from node A to ground (bottom) |
+| 1 | Resistor 22 kΩ | terminal 0 to node A |
+| 1 | Resistor 10 kΩ | node A to ground |
 | 1 | Resistor 1 kΩ | node A to GPIO36 |
 | 1 | Diode 1N4148 for this test; a Schottky (1N5819, BAT85) for a permanent build | GPIO36 to 3V3, band (cathode) at 3V3 |
-| 1 | Capacitor 100 pF (optional) | GPIO36 to ground |
+| 1 | Capacitor 1 nF (102), ceramic | GPIO36 to ground; not 10 nF, which would round the bits off |
 | | Breadboard and jumper wires | |
 
-39 kΩ over 12 kΩ in place of 22 + 10 over 10 kΩ works the same.
+Roy first tried 22 kΩ + 10 kΩ over 10 kΩ. Node A then read only 2.4 V,
+too close to the ESP32's threshold, so the top is 22 kΩ alone.
 
 ![Schematic of the bench divider](wiring/bench-divider-schematic.svg)
 
-In words: terminal 0 → 22 kΩ → 10 kΩ → node A → 10 kΩ → terminal 2, which is
+In words: terminal 0 → 22 kΩ → node A → 10 kΩ → terminal 2, which is
 also the ESP32's GND. Node A → 1 kΩ → GPIO36 (marked VP on some boards).
 The diode runs from GPIO36 up to 3V3, band towards 3V3.
 
 ![Breadboard layout of the bench divider](wiring/bench-divider-breadboard.svg)
 
 On the breadboard (Roy's layout, by column number): 22 kΩ in columns 1–5,
-10 kΩ in 5–9, so node A is column 9. The second 10 kΩ goes from 9 to 13
-(ground), the 1 kΩ from 9 to 17 (GPIO36), and the 1N4148 from 17 to 21 (3V3)
-with its black stripe at 21. Wires: **red** from terminal 0 to column 1,
-**black** from column 13 to terminal 2 and on to the ESP32's GND, **yellow**
-from column 17 to GPIO36, **blue** from column 21 to the ESP32's 3V3. Measure
-node A with the red probe in column 9 and the black probe in column 13. Each
-resistor's colour bands are printed under the picture: 22 kΩ
+a jumper from 5 to 9 (where a second 10 kΩ sat first), so node A is column 9.
+The 10 kΩ goes from 9 to 13 (ground), the 1 kΩ from 9 to 17 (GPIO36), the
+1 nF from 13 to 17, and the 1N4148 from 17 to 21 (3V3) with its black stripe
+at 21. Wires: **red** from terminal 0 to column 1, **black** from column 13
+to terminal 2 and on to the ESP32's GND, **yellow** from column 17 to GPIO36,
+**blue** from column 21 to the ESP32's 3V3. Measure node A with the red probe
+in column 9 and the black probe in column 13. Colour bands: 22 kΩ
 red-red-orange-gold, 10 kΩ brown-black-orange-gold, 1 kΩ brown-black-red-gold
 (5 %). 1 % resistors have five bands instead.
 
@@ -130,9 +131,9 @@ red-red-orange-gold, 10 kΩ brown-black-orange-gold, 1 kΩ brown-black-red-gold
 3. **Measure 0 to 2** on DC volts: still about 11–12 V, as without the
    divider. A drop of more than about 0.1 V means the divider loads the
    line too much.
-4. **Measure node A to terminal 2:** about 2.67 V at 11.2 V idle, 2.86 V at
-   12 V. Run the door once from the remote. Node A must never read above
-   about 3.6 V, and never negative.
+4. **Measure node A to terminal 2:** about 3.2 V mean while idle (Roy
+   measured 3.17 V). Run the door once from the remote. Node A must never be
+   negative. Above about 11.5 V on the line the diode holds GPIO36 near 3.9 V.
 5. **Only then** add the 1 kΩ, the diode and the wire to GPIO36, and join the
    ESP32's GND to terminal 2. The controller logs every packet under the tag
    `wire` (`esphome logs firmware/garage-door.yaml`).

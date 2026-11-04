@@ -49,6 +49,11 @@ def ohms(value: str) -> float:
     return float(value[:-1] if scale != 1.0 else value) * scale
 
 
+def farads(value: str) -> float:
+    """'1n' -> 1e-9, '100p' -> 1e-10."""
+    return float(value[:-1]) * {"p": 1e-12, "n": 1e-9, "u": 1e-6}[value[-1]]
+
+
 def bands(value: str) -> list[str]:
     """The four colour bands of a 5 % resistor: two digits, a multiplier, gold."""
     digits = str(round(ohms(value)))
@@ -72,6 +77,7 @@ class Divider:
     filter: str
     line_idle_min: float
     line_max: float
+    clamp_drop: float = 0.6  # volts across the clamp diode when it conducts
 
     @property
     def ratio(self) -> float:
@@ -88,19 +94,31 @@ class Divider:
         """Node A, in volts, for a line voltage."""
         return line * self.ratio
 
+    @property
+    def source_ohms(self) -> float:
+        """What GPIO36 sees looking back: the divider's two halves in parallel, plus the series resistor."""
+        top = sum(ohms(r) for r in self.top)
+        return top * ohms(self.bottom) / (top + ohms(self.bottom)) + ohms(self.series)
+
+    def pin_at(self, line: float) -> float:
+        """GPIO36, in volts: node A, held by the clamp to 3V3 plus its drop."""
+        return min(self.at(line), 3.3 + self.clamp_drop)
+
+    def injected(self, line: float) -> float:
+        """Amperes the clamp carries to 3V3 at a line voltage; 0 while it is off."""
+        return max(0.0, (self.at(line) - 3.3 - self.clamp_drop) / self.source_ohms)
+
+    @property
+    def filter_tau(self) -> float:
+        """Seconds: the filter capacitor against everything feeding it."""
+        return self.source_ohms * farads(self.filter)
+
 
 def divider(plan: dict | None = None) -> Divider:
     """The bench divider in the plan."""
     d = (plan or tomllib.loads(PLAN.read_text()))["bench_divider"]
-    return Divider(
-        d["top"],
-        d["bottom"],
-        d["series"],
-        d["clamp"],
-        d["filter"],
-        float(d["line_idle_min"]),
-        float(d["line_max"]),
-    )
+    numbers = {k: float(d[k]) for k in ("line_idle_min", "line_max", "clamp_drop") if k in d}
+    return Divider(d["top"], d["bottom"], d["series"], d["clamp"], d["filter"], **numbers)
 
 
 def _resistor_h(x: float, y: float, value: str, w: float = 60) -> str:
@@ -203,7 +221,11 @@ def _levels(d: Divider, x: float, y: float) -> list[str]:
             f"Node A: {d.at(d.line_idle_min):.2f} V at {d.line_idle_min} V, {d.at(12):.2f} V at 12 V, "
             f"{d.at(d.line_max):.2f} V at {d.line_max:.0f} V."
         ),
-        f"ESP32 reads high above {VIH:.2f} V; absolute maximum {ABS_MAX:.1f} V (clamp through {d.series}).",
+        (
+            f"ESP32 reads high above {VIH:.2f} V. At {d.line_max:.0f} V the {d.clamp} holds GPIO36 near "
+            f"{d.pin_at(d.line_max):.1f} V, {d.injected(d.line_max) * 1000:.2f} mA into 3V3."
+        ),
+        f"Filter {d.filter}: {d.filter_tau * 1e6:.0f} us against a 250 us bit.",
         "Not isolated: power the ESP32 from a USB power bank, not the laptop.",
     ]
     return [f'<text x="{x}" y="{y + i * 18}" class="s">{t}</text>' for i, t in enumerate(lines)]
@@ -217,6 +239,7 @@ LAYOUT = {
     "bottom": (9, 13, 0),
     "series": (9, 17, 3),
     "clamp": (17, 21, 2),
+    "filter": (13, 17, 1),
 }
 WIRES = {  # column, colour, where it goes
     "terminal 0": (1, "#d22", "red"),
@@ -235,6 +258,20 @@ def _part(first: int, last: int, row: int, label: str, value: str | None) -> lis
     """A resistor (with bands) or the diode (with its stripe at `last`), lead to lead."""
     (x1, y), (x2, _) = _hole(first, row), _hole(last, row)
     out = [_wire([(x1, y), (x1 + 14, y)], "#888", 2), _wire([(x2 - 14, y), (x2, y)], "#888", 2)]
+    if value == "jumper":
+        return [
+            _wire([(x1, y), (x1, y - 12), (x2, y - 12), (x2, y)], "#555", 3),
+            f'<text x="{(x1 + x2) / 2}" y="{y - 16}" class="v">{label}</text>',
+        ]
+    if value == "cap":
+        mid = (x1 + x2) / 2
+        return [
+            *out[:0],
+            _wire([(x1, y), (mid - 8, y)], "#888", 2),
+            _wire([(mid + 8, y), (x2, y)], "#888", 2),
+            f'<circle cx="{mid}" cy="{y}" r="9" fill="#e9a23b" stroke="#555"/>',
+            f'<text x="{mid}" y="{y - 12}" class="v">{label}</text>',
+        ]
     if value is None:  # the diode: glass body, black stripe at the cathode end
         out += [
             f'<rect x="{x1 + 14}" y="{y - 6}" width="{x2 - x1 - 28}" height="12" rx="4" fill="#e66"/>',
@@ -265,9 +302,11 @@ def breadboard(d: Divider) -> str:
         x, _ = _hole(col, 0)
         body.append(f'<text x="{x}" y="{TOP - 14}" class="s" text-anchor="middle">{col}</text>')
         body += [f'<circle cx="{x}" cy="{_hole(col, r)[1]}" r="2" fill="#bbb"/>' for r in range(HOLE_ROWS)]
+    second = (d.top[1], d.top[1]) if len(d.top) > 1 else ("jumper", "jumper")
     names = {
         "top0": (d.top[0], d.top[0]),
-        "top1": (d.top[1], d.top[1]),
+        "top1": second,
+        "filter": (d.filter, "cap"),
         "bottom": (d.bottom, d.bottom),
         "series": (d.series, d.series),
         "clamp": (d.clamp, None),
@@ -320,10 +359,14 @@ def _legend(d: Divider) -> list[str]:
     out += [
         (
             f"Check before the ESP32 is connected: node A to terminal 2 reads about "
-            f"{d.at(d.line_idle_min):.2f} V at {d.line_idle_min} V idle, never above "
-            f"{d.at(d.line_max):.2f} V, never negative."
+            f"{d.at(d.line_idle_min):.2f} V at {d.line_idle_min} V idle, never negative. With the "
+            f"diode in, GPIO36 stays near {d.pin_at(d.line_max):.1f} V even at {d.line_max:.0f} V."
         ),
-        f"Optional {d.filter} from GPIO36 to GND. Not isolated: ESP32 on a USB power bank, not the laptop.",
+        (
+            f"{d.filter} from GPIO36 to GND (not 10n: {d.source_ohms / 1000:.1f} kOhm feeds it, "
+            "so 10n would round the bits off)."
+        ),
+        "Not isolated: ESP32 on a USB power bank, not the laptop.",
     ]
     return out
 
