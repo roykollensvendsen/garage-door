@@ -148,3 +148,10 @@ suite = "firmware"
 file = "firmware/door_logic/opener_wire.h"
 find = 'bool save_due\(\) const \{ return .*'
 replace = 'bool save_due() const { return false; }'
+
+[[rule]]
+name = "pulse stays off while the controller is not armed"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(!config_\.armed\) \{'
+replace = 'if (false) {'

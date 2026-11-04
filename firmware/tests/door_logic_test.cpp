@@ -242,3 +242,31 @@ TEST(Glue, StartsWithClosingAsConfiguredAndTheOutputOff) {
   d.update(0, false, true);  // open
   EXPECT_EQ(d.request_press(0), PressResult::RefusedClose);
 }
+
+// --- Test mode: everything but the relay ----------------------------------------
+
+TEST(Pulse, StaysOffWhileTheControllerIsNotArmed) {
+  Door d = closed_door();
+  d.set_armed(false);
+  ASSERT_EQ(d.request_press(2000), PressResult::Accepted);  // judged and logged as usual
+  EXPECT_FALSE(d.output(2000));
+  EXPECT_FALSE(d.output(2250));
+  EXPECT_FALSE(d.armed());
+}
+
+TEST(Pulse, IsCutTheMomentTheControllerIsDisarmed) {
+  Door d = closed_door();
+  ASSERT_EQ(d.request_press(2000), PressResult::Accepted);
+  EXPECT_TRUE(d.output(2100));
+  d.set_armed(false);
+  EXPECT_FALSE(d.output(2101));
+}
+
+TEST(Glue, StartsDisarmedSoAnUpdateNeverPressesBeforeRoySaysSo) {
+  EXPECT_FALSE(garage_door::door(false).armed());
+}
+
+TEST(Glue, GivesTheSameWireListenerEveryTimeAndItStartsDeaf) {
+  EXPECT_EQ(&garage_door::wire(), &garage_door::wire());
+  EXPECT_FALSE(garage_door::wire().heard());
+}

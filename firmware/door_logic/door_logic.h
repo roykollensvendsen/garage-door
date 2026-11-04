@@ -67,6 +67,10 @@ struct Config {
   // With the state from the opener's data wire: a status older than this is
   // not trusted (decisions/ADR-GD-003).
   std::uint32_t status_max_age_ms = 2000;
+  // Whether an accepted press switches the relay. Off is test mode: every
+  // press is judged and reported, the relay stays open. The controller
+  // starts with it off after every boot (esphome_glue.h).
+  bool armed = true;
 };
 
 inline const char* to_string(DoorState s) {
@@ -153,6 +157,10 @@ class Door {
 
   DoorState state() const { return state_; }
 
+  // Test mode (armed off): presses are judged as usual, nothing switches.
+  void set_armed(bool armed) { config_.armed = armed; }
+  bool armed() const { return config_.armed; }
+
   // On the data wire, the accepted press as a direction: never a toggle.
   WireAction wire_action() const { return wire_action_; }
 
@@ -184,6 +192,10 @@ class Door {
   // Whether the push-button input should be closed right now. Computed from
   // the clock alone, so the press ends on time even if update() stalls.
   bool output(std::uint32_t now) const {
+    // RULE: pulse stays off while the controller is not armed
+    if (!config_.armed) {
+      return false;
+    }
     // RULE: pulse is off at half a second
     return pressed_ && (now - press_start_) < config_.pulse_ms;
   }
