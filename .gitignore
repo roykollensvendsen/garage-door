@@ -28,3 +28,10 @@ firmware/secrets.yaml
 
 # Manufacturer documents (copyright): kept locally, never committed. Sources: docs/vendor-sources.md
 docs/vendor/
+
+# KiCad local state
+hardware/*-backups/
+hardware/*.kicad_prl
+hardware/fp-info-cache
+hardware/.history/
+hardware/~*.lck

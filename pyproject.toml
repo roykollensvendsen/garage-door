@@ -20,7 +20,14 @@ garage-door = "garage_door.cli:main"
 garage-door-mcp = "garage_door.server:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.13", "mypy>=1.11"]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.13",
+    "mypy>=1.11",
+    "pyyaml>=6",
+    "types-pyyaml>=6.0.12.20261103",
+]
 
 # One source for the version: the Git tag. A literal here would drift from it.
 [tool.hatch.version]

@@ -126,3 +126,36 @@ jobs:
           python-version: "3.13"
       - name: ESPHome configuration is valid
         run: sh scripts/esphome-config.sh
+
+  # The schematic as KiCad itself reads it: no electrical-rule violations, and
+  # every net joins exactly the pins the plan intends. Also proves the
+  # committed pictures can be re-rendered from their sources.
+  hardware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: kicad/kicad:10.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The schematic is current
+        run: python3 scripts/schematic.py --check
+      - name: No electrical-rule violations
+        run: kicad-cli sch erc --severity-all --exit-code-violations -o /tmp/erc.rpt hardware/garage-door.kicad_sch
+      - name: KiCad's netlist matches the plan
+        run: python3 scripts/check_netlist.py
+
+  # WireViz renders the cable diagram from its YAML on every change, so a
+  # source that no longer renders fails here.
+  wiring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.13"
+      - name: Graphviz
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends graphviz
+      - name: The cable diagram renders
+        run: uvx wireviz==0.4.1 -f s -o "$RUNNER_TEMP" hardware/harness.yaml
+
