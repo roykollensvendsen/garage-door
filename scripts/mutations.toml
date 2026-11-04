@@ -56,3 +56,4 @@ name = "every request and press is logged"
 file = "src/garage_door/service.py"
 find = 'log\.write\(json\.dumps\(entry\) \+ "\\n"\)'
 replace = 'pass'
+
