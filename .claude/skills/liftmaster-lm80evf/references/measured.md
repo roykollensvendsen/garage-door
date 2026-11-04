@@ -11,5 +11,8 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
 - **Joining 1+2 for about 0.5 s:** opened, then stopped, then closed, one
   step per press.
 - **30 VDC output:** about 1.1 V idle, so switched off in standby.
-- **0+2 and 6+7:** not measured yet. A first reading of 0 V on 0+2 is not
-  trusted (poor probe contact, maybe standby). Measure idle and while moving.
+- **0+2:** about 10 V DC idle, about 11.17 V after the door had run (likely
+  out of standby). While moving: a small dip in DC, and about 285 Hz briefly
+  in frequency mode. That suggests bursts of serial data (Security+ 2.0?),
+  not proven. The next step is a listen-only capture, decoded with secplus or ratgdo.
+- **6+7:** not measured yet. Measure idle and while moving.

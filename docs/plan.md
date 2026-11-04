@@ -111,6 +111,15 @@ position is lost until the door reaches an end that something can detect.
 "Did it close?" is exactly the question it cannot answer reliably, so it is
 not enough on its own.
 
+**Next step for 0+2: capture it, listen-only.** Record the line between
+0 (signal) and 2 (ground) while the door runs from the remote. Use either a
+cheap USB logic analyser behind a divider (about 12 V down to 3.3 V), or an
+ESP32 input behind a divider or optocoupler sized for about 12 V. The tap must
+have a high input impedance, so it cannot load the line, and must never drive
+it. Then decode the capture with the Security+ 2.0 decoder secplus
+(<https://github.com/argilo/secplus>, GPL-3.0) or ratgdo's code. If door-state
+messages decode reliably over a few days, the state needs no extra sensors.
+
 **Fallback sensor without long wires: VL53L1X time-of-flight at the opener
 head, aimed at the trolley.** ST rates it to 4 m indoors. An ST engineer
 reports about 30 cm in strong sunlight
@@ -129,7 +138,8 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 1+2, push-button input, idle | **about 10 V DC** | Well under the AQY212EH's 60 V. A small PhotoMOS or relay across 1+2 is fine. |
 | Joining 1+2 by hand for about 0.5 s, three times | 1st: **opened**, 2nd: **stopped**, 3rd: **closed** | Confirms one input that steps open → stop → close (manual PDF p. 24, section 27). The controller can't know what the next press will do unless it knows the state, so a press stays refused unless the door is fully open or fully closed. |
 | 30 VDC output, idle | **about 1.1 V** | Switched off in the opener's under-1-watt standby, as the manual's note on standby suggests (PDF p. 23, section 26 O). Not usable as power or as a signal while idle. |
-| 0+2 (78EV wall control) | not measured yet | A first try read 0 V, but the probe contact was unreliable, and standby may matter. Measure again through a wire in the lever, idle **and** while the door moves. |
+| 0+2 (78EV wall control), idle | **about 10 V DC**; after the door had run, **about 11.17 V**, and it stayed there | Powered, like 1+2. The rise is probably the opener leaving standby. The earlier 0 V reading was poor probe contact. |
+| 0+2 while the door moved | DC dipped slightly, then returned to 11.17 V; frequency mode briefly showed **about 285 Hz** (hand-held probes) | **Signs of bursts of activity during movement**, as a Security+ 2.0 bus would show. A multimeter cannot resolve serial data, so 285 Hz is an artefact, not a baud rate. **Not proven.** |
 | 6+7 (warning light) | not measured yet | Measure idle and while the door moves. |
 
 ## 2. Circuit

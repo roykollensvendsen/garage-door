@@ -20,10 +20,15 @@ notes: >-
   fully closed. Measure on a wire inserted through the orange lever; probe tips
   do not reach the contacts. The 30 VDC output reads about 1.1 V while idle
   (standby). Listed as untested until the controller itself has opened and
-  closed the door.
+  closed the door. Terminals 0+2 carry about 10-11 V and show bursts of
+  activity while the door moves, which suggests a Security+ 2.0 bus; not yet
+  decoded.
 reported_by: roykollensvendsen
 checks:
   - by: Roy
     date: 2026-11-04
     what: "1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door"
+  - by: Roy
+    date: 2026-11-04
+    what: "0+2 measured at about 10 V idle, 11.17 V after running; bursts of activity while moving (not yet decoded)"
 build: ""
