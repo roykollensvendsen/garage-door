@@ -148,3 +148,15 @@ def test_ota_updates_use_the_api_key_not_a_second_one():
     ota = _esphome_config()["ota"][0]
     assert "encryption" not in ota
     assert "ota_encryption_key" not in (ROOT / "firmware/secrets.example.yaml").read_text()
+
+
+def test_manual_mode_is_off_after_every_boot_and_has_its_own_press_action():
+    # decisions/ADR-GD-004: the manual press is a separate action, allowed only
+    # while the "Manual mode" switch is on, and that switch never survives a boot.
+    config = _esphome_config()
+    switches = {s["id"]: s for s in config["switch"]}
+    assert switches["manual"]["restore_mode"] == "ALWAYS_OFF"
+    assert switches["manual"]["name"] == "Manual mode"
+    actions = {a["action"]: a for a in config["api"]["actions"]}
+    assert "request_manual_press(millis())" in actions["manual_press"]["then"][0]["lambda"]
+    assert "request_manual_press" not in actions["press"]["then"][0]["lambda"]

@@ -270,3 +270,102 @@ TEST(Glue, GivesTheSameWireListenerEveryTimeAndItStartsDeaf) {
   EXPECT_EQ(&garage_door::wire(), &garage_door::wire());
   EXPECT_FALSE(garage_door::wire().heard());
 }
+
+// --- Manual press: Roy watches the door (decisions/ADR-GD-004) -----------------
+
+namespace {
+
+constexpr std::uint32_t kTenMinutes = 10U * 60U * 1000U;
+
+// Armed, in manual mode since t=1000 ms, with the door's state never seen.
+Door manual_door() {
+  Door d(Config{});
+  d.set_manual(true, 1000);
+  return d;
+}
+
+}  // namespace
+
+TEST(Manual, IsOffAtStartUp) {
+  Door d(Config{});
+  EXPECT_FALSE(d.manual(0));
+}
+
+TEST(Manual, PressIsAcceptedWithTheStateUnknownWhenArmedAndInManualMode) {
+  Door d = manual_door();
+  ASSERT_EQ(d.state(), DoorState::Unknown);
+  EXPECT_EQ(d.request_manual_press(1000), PressResult::Accepted);
+  EXPECT_TRUE(d.output(1000));
+}
+
+TEST(Manual, PressIsAcceptedOnASensorFaultBecauseRoyIsTheCheck) {
+  Door d = manual_door();
+  d.update(1000, true, true);
+  EXPECT_EQ(d.request_manual_press(1000), PressResult::Accepted);
+}
+
+TEST(Manual, PressIsRefusedWhenManualModeIsOff) {
+  Door d(Config{});
+  EXPECT_EQ(d.request_manual_press(1000), PressResult::RefusedManualOff);
+  EXPECT_FALSE(d.output(1000));
+}
+
+TEST(Manual, PressIsRefusedWhileTheControllerIsNotArmed) {
+  Door d = manual_door();
+  d.set_armed(false);
+  EXPECT_EQ(d.request_manual_press(1000), PressResult::RefusedNotArmed);
+}
+
+TEST(Manual, PressIsRefusedWhileTheDoorIsKnownToBeMoving) {
+  Door d = manual_door();
+  d.update(1000, true, false);
+  d.update(1500, false, false);  // left the closed end: moving
+  ASSERT_EQ(d.state(), DoorState::Moving);
+  EXPECT_EQ(d.request_manual_press(1500), PressResult::RefusedState);
+}
+
+TEST(Manual, ModeSwitchesItselfOffAfterTenMinutes) {
+  Door d = manual_door();
+  EXPECT_TRUE(d.manual(1000 + kTenMinutes - 1));
+  EXPECT_FALSE(d.manual(1000 + kTenMinutes));
+  EXPECT_EQ(d.request_manual_press(1000 + kTenMinutes), PressResult::RefusedManualOff);
+}
+
+TEST(Manual, ModeStillEndsWhenTheClockWrapsAround) {
+  Door d(Config{});
+  const std::uint32_t near_wrap = 0xFFFFFFFFU - 1000U;
+  d.set_manual(true, near_wrap);
+  EXPECT_TRUE(d.manual(near_wrap + 2000U));  // wrapped, one second later
+  EXPECT_FALSE(d.manual(near_wrap + kTenMinutes));
+}
+
+TEST(Manual, ModeCanBeSwitchedOffAtOnce) {
+  Door d = manual_door();
+  d.set_manual(false, 2000);
+  EXPECT_EQ(d.request_manual_press(2000), PressResult::RefusedManualOff);
+}
+
+TEST(Manual, PressLastsHalfASecond) {
+  Door d = manual_door();
+  ASSERT_EQ(d.request_manual_press(1000), PressResult::Accepted);
+  EXPECT_TRUE(d.output(1499));
+  EXPECT_FALSE(d.output(1500));
+}
+
+TEST(Manual, PressKeepsTheTwoSecondGap) {
+  Door d = manual_door();
+  ASSERT_EQ(d.request_manual_press(1000), PressResult::Accepted);
+  EXPECT_EQ(d.request_manual_press(1200), PressResult::RefusedBusy);
+  EXPECT_EQ(d.request_manual_press(2999), PressResult::RefusedTooSoon);
+  d.update(3000, false, false);
+  EXPECT_EQ(d.request_manual_press(3000), PressResult::Accepted);
+}
+
+TEST(Manual, ModeDoesNotLetAnOrdinaryPressThroughWithTheStateUnknown) {
+  Door d = manual_door();
+  EXPECT_EQ(d.request_press(1000), PressResult::RefusedState);
+}
+
+TEST(Glue, StartsWithManualModeOffSoAnUpdateNeverAllowsOne) {
+  EXPECT_FALSE(garage_door::door(false).manual(0));
+}

@@ -78,6 +78,13 @@ api:
         - lambda: |-
             const auto result = garage_door::door(${allow_close}).request_press(millis());
             id(last_press_result).publish_state(garage::to_string(result));
+    # A press with no direction, while Roy watches the door (ADR-GD-004).
+    # Refused unless armed and in manual mode.
+    - action: manual_press
+      then:
+        - lambda: |-
+            const auto result = garage_door::door(${allow_close}).request_manual_press(millis());
+            id(last_press_result).publish_state(std::string("manual: ") + garage::to_string(result));
 
 ota:
   # Updates from the laptop over Wi-Fi, encrypted with the API's key: ESPHome
@@ -112,6 +119,17 @@ switch:
       - lambda: garage_door::door(${allow_close}).set_armed(true);
     turn_off_action:
       - lambda: garage_door::door(${allow_close}).set_armed(false);
+  # Manual mode (decisions/ADR-GD-004): allows a manual press with the door's
+  # state unknown. Off after every boot and update, and by itself after 10 min.
+  - platform: template
+    id: manual
+    name: Manual mode
+    restore_mode: ALWAYS_OFF
+    lambda: return garage_door::door(${allow_close}).manual(millis());
+    turn_on_action:
+      - lambda: garage_door::door(${allow_close}).set_manual(true, millis());
+    turn_off_action:
+      - lambda: garage_door::door(${allow_close}).set_manual(false, millis());
 
 button:
   # Restarts the controller only; it boots with the relay open and unarmed.

@@ -155,3 +155,31 @@ suite = "firmware"
 file = "firmware/door_logic/door_logic.h"
 find = 'if \(!config_\.armed\) \{'
 replace = 'if (false) {'
+
+[[rule]]
+name = "manual mode switches itself off after ten minutes"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'return manual_on_ && \(now - manual_since_\) < config_\.manual_ms;'
+replace = 'return manual_on_ || now == manual_since_;'
+
+[[rule]]
+name = "manual press is refused when manual mode is off"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(!manual\(now\)\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "manual press is refused while the controller is not armed"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(!armed\(\)\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "manual press is refused while the door is known to be moving"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(state_ == DoorState::Moving\) \{'
+replace = 'if (false) {'

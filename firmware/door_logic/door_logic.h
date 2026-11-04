@@ -33,6 +33,8 @@ enum class PressResult : std::uint8_t {
   RefusedClose,    // the door is open and closing is switched off
   RefusedBusy,     // a press is still in progress
   RefusedTooSoon,  // the last press started less than min_gap_ms ago
+  RefusedManualOff,  // a manual press, with manual mode off or expired
+  RefusedNotArmed,   // a manual press while in test mode
 };
 
 // The opener's door state, as it sends it (ratgdo's DoorState),
@@ -71,6 +73,8 @@ struct Config {
   // press is judged and reported, the relay stays open. The controller
   // starts with it off after every boot (esphome_glue.h).
   bool armed = true;
+  // How long manual mode stays on once switched on (decisions/ADR-GD-004).
+  std::uint32_t manual_ms = 10U * 60U * 1000U;
 };
 
 inline const char* to_string(DoorState s) {
@@ -101,6 +105,10 @@ inline const char* to_string(PressResult r) {
       return "refused: a press is in progress";
     case PressResult::RefusedTooSoon:
       return "refused: too soon after the last press";
+    case PressResult::RefusedManualOff:
+      return "refused: manual mode is off";
+    case PressResult::RefusedNotArmed:
+      return "refused: not armed";
   }
   return "refused: door state not known";
 }
@@ -161,18 +169,48 @@ class Door {
   void set_armed(bool armed) { config_.armed = armed; }
   bool armed() const { return config_.armed; }
 
+  // Manual mode (decisions/ADR-GD-004): Roy watches the door and is the check.
+  void set_manual(bool on, std::uint32_t now) {
+    manual_on_ = on;
+    manual_since_ = now;
+  }
+  bool manual(std::uint32_t now) const {
+    // RULE: manual mode switches itself off after ten minutes
+    return manual_on_ && (now - manual_since_) < config_.manual_ms;
+  }
+
+  // A press with no direction, while Roy watches the door. It skips only the
+  // rule that the door's state must be known; never use it for open or close.
+  PressResult request_manual_press(std::uint32_t now) {
+    // RULE: manual press is refused when manual mode is off
+    if (!manual(now)) {
+      return PressResult::RefusedManualOff;
+    }
+    // RULE: manual press is refused while the controller is not armed
+    if (!armed()) {
+      return PressResult::RefusedNotArmed;
+    }
+    const PressResult timing = timing_refusal(now);
+    if (timing != PressResult::Accepted) {
+      return timing;
+    }
+    // RULE: manual press is refused while the door is known to be moving
+    if (state_ == DoorState::Moving) {
+      return PressResult::RefusedState;
+    }
+    pressed_ = true;
+    press_start_ = now;
+    return PressResult::Accepted;
+  }
+
   // On the data wire, the accepted press as a direction: never a toggle.
   WireAction wire_action() const { return wire_action_; }
 
   // Ask for a press. On Accepted, output() is true for pulse_ms from `now`.
   PressResult request_press(std::uint32_t now) {
-    // RULE: pulse cannot be restarted while it is on
-    if (pressed_ && (now - press_start_) < config_.pulse_ms) {
-      return PressResult::RefusedBusy;
-    }
-    // RULE: pulse a second press within two seconds is refused
-    if (pressed_ && (now - press_start_) < config_.min_gap_ms) {
-      return PressResult::RefusedTooSoon;
+    const PressResult timing = timing_refusal(now);
+    if (timing != PressResult::Accepted) {
+      return timing;
     }
     // RULE: press is refused when the door state is unknown
     if (state_ != DoorState::Closed && state_ != DoorState::Open) {
@@ -201,6 +239,19 @@ class Door {
   }
 
  private:
+  // The two timing rules every press keeps, ordinary or manual.
+  PressResult timing_refusal(std::uint32_t now) const {
+    // RULE: pulse cannot be restarted while it is on
+    if (pressed_ && (now - press_start_) < config_.pulse_ms) {
+      return PressResult::RefusedBusy;
+    }
+    // RULE: pulse a second press within two seconds is refused
+    if (pressed_ && (now - press_start_) < config_.min_gap_ms) {
+      return PressResult::RefusedTooSoon;
+    }
+    return PressResult::Accepted;
+  }
+
   // Forget a press once its gap has passed. Remembered for ever, it would
   // look new again when the clock wraps, and press the door on its own.
   void forget_old_press(std::uint32_t now) {
@@ -217,6 +268,8 @@ class Door {
   bool pressed_ = false;
   std::uint32_t press_start_ = 0;
   WireAction wire_action_ = WireAction::Open;
+  bool manual_on_ = false;
+  std::uint32_t manual_since_ = 0;
 };
 
 }  // namespace garage

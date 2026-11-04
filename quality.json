@@ -4,15 +4,15 @@
     "door.py": 2,
     "esphome_device.py": 12,
     "server.py": 4,
-    "service.py": 8,
+    "service.py": 12,
     "simulator.py": 7
   },
   "coverage": 100.0,
   "cycles": 0,
   "duplication": 0.0,
-  "firmware_branch_coverage": 99.0,
-  "firmware_line_coverage": 99.4,
-  "firmware_tests": 64,
+  "firmware_branch_coverage": 97.4,
+  "firmware_line_coverage": 97.4,
+  "firmware_tests": 77,
   "layer_violations": 0,
   "lint_errors": 0,
   "mutation": {
@@ -24,7 +24,7 @@
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 4.9,
-  "tests": 196,
+  "test_seconds": 4.0,
+  "tests": 207,
   "type_errors": 0
 }
