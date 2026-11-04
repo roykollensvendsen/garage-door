@@ -61,4 +61,5 @@ nav:
       - Builds: gallery.md
   - Design:
       - The plan: plan.md
+      - "Design: many openers": design.md
       - Vendor documents: vendor-sources.md
