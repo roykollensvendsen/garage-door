@@ -10,7 +10,9 @@ requires-python = ">=3.12"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 dynamic = ["version"]
-dependencies = []
+dependencies = [
+    "aioesphomeapi>=46.25",
+]
 
 [project.scripts]
 garage-door = "garage_door.cli:main"
