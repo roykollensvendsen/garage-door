@@ -23,21 +23,21 @@ if(GARAGE_COVERAGE)
 endif()
 enable_testing()
 
+# Security+ 2.0 encoding, taken in unchanged from argilo/secplus
+# (third_party/secplus/README.md). Upstream code, so built without -Werror.
+add_library(secplus STATIC third_party/secplus/secplus.c)
+target_include_directories(secplus PUBLIC third_party/secplus)
+
 add_executable(door_logic_test tests/door_logic_test.cpp)
 target_include_directories(door_logic_test PRIVATE door_logic)
 target_compile_options(door_logic_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
-target_link_libraries(door_logic_test PRIVATE GTest::gtest_main)
+target_link_libraries(door_logic_test PRIVATE secplus GTest::gtest_main)
 
 # The same logic driving a simulated door (sim/door_sim.h), end to end.
 add_executable(door_sim_test tests/door_sim_test.cpp)
 target_include_directories(door_sim_test PRIVATE door_logic sim)
 target_compile_options(door_sim_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
 target_link_libraries(door_sim_test PRIVATE GTest::gtest_main)
-
-# Security+ 2.0 encoding, taken in unchanged from argilo/secplus
-# (third_party/secplus/README.md). Upstream code, so built without -Werror.
-add_library(secplus STATIC third_party/secplus/secplus.c)
-target_include_directories(secplus PUBLIC third_party/secplus)
 
 # The opener's data wire (terminals 0+2), against Roy's own captures.
 add_executable(opener_wire_test tests/opener_wire_test.cpp)

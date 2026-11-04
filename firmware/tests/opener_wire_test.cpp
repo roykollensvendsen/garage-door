@@ -216,3 +216,99 @@ TEST(RollingCode, WrapsWithinTwentyEightBits) {
   garage::RollingCode code(0x0FFFFFFF, 1);
   EXPECT_LT(code.next(), 1u << 28);
 }
+
+// --- Finding packets in the byte stream -----------------------------------------
+
+TEST(Framer, FindsAPacketAfterTheBreakAndNoise) {
+  // What the UART hands over: the break reads as 0x00, then noise, then a packet.
+  garage::Framer f;
+  for (std::uint8_t b : std::array<std::uint8_t, 5>{0x00, 0xFF, 0x55, 0x55, 0x01}) {
+    EXPECT_FALSE(f.feed(b));
+  }
+  // The stray 55 01 above did not start a packet; this one does.
+  int done = 0;
+  for (std::uint8_t b : kOpening) {
+    done += f.feed(b) ? 1 : 0;
+  }
+  ASSERT_EQ(done, 1);
+  EXPECT_EQ(f.packet(), kOpening);
+}
+
+TEST(Framer, FindsTwoPacketsInARow) {
+  garage::Framer f;
+  int done = 0;
+  for (const Packet& p : {kClosing, kStopped}) {
+    for (std::uint8_t b : p) {
+      done += f.feed(b) ? 1 : 0;
+    }
+  }
+  EXPECT_EQ(done, 2);
+  EXPECT_EQ(f.packet(), kStopped);
+}
+
+TEST(Framer, StartsAgainAfterAGapInTheMiddleOfAPacket) {
+  garage::Framer f;
+  for (std::size_t i = 0; i < 10; ++i) {
+    f.feed(kOpening[i]);
+  }
+  f.gap();  // the line went quiet: what was collected is not a packet
+  int done = 0;
+  for (std::uint8_t b : kStopped) {
+    done += f.feed(b) ? 1 : 0;
+  }
+  EXPECT_EQ(done, 1);
+  EXPECT_EQ(f.packet(), kStopped);
+}
+
+TEST(Framer, WritesAPacketAsHex) {
+  EXPECT_EQ(garage::to_hex(kOpening), "55 01 00 24 38 B3 DF FA F6 7B 9F 55 27 8E AE 4C 32 EB A8");
+}
+
+// --- The listener: bytes in, the opener's last word out -------------------------
+
+namespace {
+// Feeds `p` one byte every 2.5 ms (4000 baud) from `start`; the last result.
+garage::Heard feed_all(garage::Listener& l, const Packet& p, std::uint32_t start) {
+  garage::Heard last = garage::Heard::Nothing;
+  for (std::size_t i = 0; i < p.size(); ++i) {
+    last = l.feed(start + static_cast<std::uint32_t>(i * 5 / 2), p[i]);
+  }
+  return last;
+}
+}  // namespace
+
+TEST(Listener, RemembersTheOpenersLastStatusAndWhenItCame) {
+  garage::Listener l;
+  EXPECT_FALSE(l.heard());
+  EXPECT_EQ(feed_all(l, kOpening, 1000), garage::Heard::Status);
+  ASSERT_TRUE(l.heard());
+  EXPECT_EQ(l.last().door, WireState::Opening);
+  EXPECT_EQ(l.heard_at(), 1045u);
+  EXPECT_EQ(feed_all(l, kStopped, 5000), garage::Heard::Status);
+  EXPECT_EQ(l.last().door, WireState::Stopped);
+}
+
+TEST(Listener, TellsOtherPacketsAndBrokenOnesApart) {
+  garage::Listener l;
+  Packet ask{};
+  ASSERT_TRUE(garage::build_get_status(7, 0x1234, ask));
+  EXPECT_EQ(feed_all(l, ask, 0), garage::Heard::Other);
+  Packet broken = kOpening;
+  broken[4] = static_cast<std::uint8_t>(broken[4] | 0xC0);
+  EXPECT_EQ(feed_all(l, broken, 1000), garage::Heard::Bad);
+  EXPECT_FALSE(l.heard());
+}
+
+TEST(Listener, DropsAPacketCutShortByAPause) {
+  garage::Listener l;
+  for (std::size_t i = 0; i < 10; ++i) {
+    l.feed(static_cast<std::uint32_t>(i * 2), kOpening[i]);
+  }
+  // 100 ms later, the rest of a packet would complete it without the pause rule.
+  garage::Heard last = garage::Heard::Nothing;
+  for (std::size_t i = 10; i < kOpening.size(); ++i) {
+    last = l.feed(static_cast<std::uint32_t>(100 + i * 2), kOpening[i]);
+  }
+  EXPECT_EQ(last, garage::Heard::Nothing);
+  EXPECT_EQ(feed_all(l, kOpening, 200), garage::Heard::Status);
+}

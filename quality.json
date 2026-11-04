@@ -10,21 +10,21 @@
   "coverage": 100.0,
   "cycles": 0,
   "duplication": 0.0,
-  "firmware_branch_coverage": 98.6,
-  "firmware_line_coverage": 100.0,
-  "firmware_tests": 53,
+  "firmware_branch_coverage": 99.0,
+  "firmware_line_coverage": 99.4,
+  "firmware_tests": 64,
   "layer_violations": 0,
   "lint_errors": 0,
   "mutation": {
-    "killed": 19,
-    "total": 19
+    "killed": 20,
+    "total": 20
   },
   "oversized_modules": 0,
   "test_budget": {
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 2.7,
+  "test_seconds": 2.8,
   "tests": 159,
   "type_errors": 0
 }
