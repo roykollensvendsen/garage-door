@@ -20,6 +20,9 @@ SOURCES = {
 }
 # Written by the build from the Git tag; never edited or committed.
 GENERATED = {"_version.py"}
+# Copied in unchanged, with the licence in the upstream header further down
+# (checked by tests/test_third_party.py).
+VENDORED = "third_party"
 
 
 def source_files() -> list[pathlib.Path]:
@@ -31,7 +34,9 @@ def source_files() -> list[pathlib.Path]:
                 p
                 for p in (ROOT / folder).rglob(pattern)
                 if p.name not in GENERATED
-                and not any(part.startswith("build") for part in p.relative_to(ROOT).parts)
+                and not any(
+                    part.startswith("build") or part == VENDORED for part in p.relative_to(ROOT).parts
+                )
             )
     return sorted(found)
 
