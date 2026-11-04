@@ -205,6 +205,26 @@ The board has its own driver transistor, flyback diode and LEDs.
 
 Only then wire COM and NO to opener terminals 1 and 2.
 
+**Roy's bench results (2026-11-04),** with the ESP32 Thing wired straight
+to the module (VCC to 3V3, GND to GND, CTH to GPIO25) and nothing on its
+output:
+- CTH touched to 3V3 clicks the relay: the input triggers on high, as its
+  label says.
+- Flashed over USB with ESPHome 2026.10.2. It joined Wi-Fi at about −55 dB
+  at the desk (−63 dB on the next check).
+- The relay did not click at power-up, after flashing, or on the RST
+  button.
+- `garage-door check` over Wi-Fi reported: not armed, door state **fault**.
+  With no reed contacts fitted, GPIO34 and GPIO35 float and both read
+  "on"; both ends at once is a fault, so every press is refused. That is the
+  intended fail-closed answer, not a bug. Fit the pull-ups or tie the pins
+  (GPIO34 to GND, GPIO35 to 3V3 through 10 kΩ) before a press test.
+- Last restart reason: "other watchdogs" (`RTCWDT_RTC_RESET`). The serial
+  log shows it straight after a power-on reset, from the USB adapter
+  resetting the chip. The firmware then ran with no panic or watchdog
+  message. It is a real problem only if it shows up later without anyone
+  touching the board, with the uptime starting again from zero.
+
 ## Step by step
 
 1. **Measure first** (opener plugged in, door clear, a meter on DC volts).
