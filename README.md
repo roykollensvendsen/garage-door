@@ -13,7 +13,10 @@ Voice-controlled garage door: ESP32 + ESPHome on the opener's push-button input,
 
 Planning. The plan, with the opener's terminals traced to the manufacturer's
 manual, the circuit, the parts list and the safety rules, is
-[`docs/plan.md`](docs/plan.md). Nothing has been bought, wired or flashed.
+[`docs/plan.md`](docs/plan.md). How to build it, with the schematic, the
+cable diagram and the parts by part number, is
+[`docs/build-guide.md`](docs/build-guide.md). Nothing has been bought, wired
+or flashed.
 
 ## Safety
 
