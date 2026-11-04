@@ -9,7 +9,7 @@ Run over stdio by Roy's local MCP server. Settings come from the environment:
 
 - ``GARAGE_DOOR_HOST``: the controller's address on the home network.
 - ``GARAGE_DOOR_API_KEY``: the controller's API encryption key.
-- ``GARAGE_DOOR_ALLOW_CLOSE``: ``yes`` to allow closing; anything else leaves it off.
+- ``GARAGE_DOOR_ALLOW_CLOSE``: ``no`` switches closing by voice off; it is on otherwise.
 - ``GARAGE_DOOR_LOG``: where to log; default ``$XDG_STATE_HOME/garage-door/presses.jsonl``.
 """
 
@@ -56,7 +56,7 @@ def settings_from(env: Mapping[str, str]) -> Settings:
     return Settings(
         host=env["GARAGE_DOOR_HOST"],
         api_key=env["GARAGE_DOOR_API_KEY"],
-        allow_close=env.get("GARAGE_DOOR_ALLOW_CLOSE") == "yes",
+        allow_close=env.get("GARAGE_DOOR_ALLOW_CLOSE", "yes") != "no",
         log_path=log_path,
     )
 

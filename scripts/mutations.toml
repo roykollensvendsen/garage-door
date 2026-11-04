@@ -28,7 +28,7 @@ find = 'if state is action\.end_state:'
 replace = 'if False:'
 
 [[rule]]
-name = "closing is refused unless it is switched on"
+name = "closing is refused when it is switched off"
 file = "src/garage_door/service.py"
 find = 'if action is Action\.CLOSE and not self\._allow_close:'
 replace = 'if False:'

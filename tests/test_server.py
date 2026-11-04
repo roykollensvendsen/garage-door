@@ -102,11 +102,10 @@ def test_settings_need_the_controllers_address_and_key():
         settings_from({"GARAGE_DOOR_HOST": "garage-door.local"})
 
 
-def test_closing_is_off_unless_the_setting_says_exactly_yes():
+def test_closing_is_on_unless_the_setting_says_no():
     base = {"GARAGE_DOOR_HOST": "garage-door.local", "GARAGE_DOOR_API_KEY": "k"}
-    assert settings_from(base).allow_close is False
-    assert settings_from({**base, "GARAGE_DOOR_ALLOW_CLOSE": "true"}).allow_close is False
-    assert settings_from({**base, "GARAGE_DOOR_ALLOW_CLOSE": "yes"}).allow_close is True
+    assert settings_from(base).allow_close is True
+    assert settings_from({**base, "GARAGE_DOOR_ALLOW_CLOSE": "no"}).allow_close is False
 
 
 def test_the_log_goes_under_the_users_state_folder_by_default():

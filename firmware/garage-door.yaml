@@ -9,8 +9,9 @@
 # Secrets come from firmware/secrets.yaml (git-ignored); see secrets.example.yaml.
 
 substitutions:
-  # Closing stays off until photocells are fitted (docs/plan.md, section 4).
-  allow_close: "false"
+  # Roy, 2026-11-04: closing by voice is allowed. The opener reverses on its
+  # own force limit as with the remote; photocells are recommended, not required.
+  allow_close: "true"
 
 esphome:
   name: garage-door

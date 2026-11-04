@@ -63,7 +63,7 @@ def make(
     device: FakeDevice,
     tmp_path: pathlib.Path,
     *,
-    allow_close: bool = False,
+    allow_close: bool = True,
 ) -> tuple[GarageService, FakeClock]:
     clock = FakeClock()
     tokens = iter(f"token-{n}" for n in range(100))
@@ -114,6 +114,22 @@ def test_a_confirmed_request_presses_once_and_reports_before_and_after(tmp_path)
     assert outcome.message == "Pressed. The garage door was closed and is now open."
 
 
+def test_a_close_that_does_not_finish_warns_that_the_door_may_have_reversed(tmp_path):
+    # The opener reverses on its own when the door meets something. The
+    # laptop's part is to say so plainly and not to press again.
+    device = FakeDevice(DoorState.OPEN, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path)
+    question = run(service.request(Action.CLOSE, requester="voice"))
+    assert isinstance(question, Question)
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert outcome.reached is False
+    assert outcome.message.startswith("The garage door did NOT close, possibly reversed.")
+    assert "it is open" in outcome.message
+    assert device.presses == 1  # never a second press on its own
+    assert log_lines(tmp_path)[-1]["after"] == "open"
+
+
 def test_a_press_that_does_not_reach_the_end_says_so(tmp_path):
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
     service, clock = make(device, tmp_path)
@@ -161,17 +177,17 @@ def test_a_request_the_door_already_satisfies_is_refused(tmp_path):
     assert answer.reason == "The garage door is already open."
 
 
-def test_closing_is_refused_unless_it_is_switched_on(tmp_path):
+def test_closing_is_refused_when_it_is_switched_off(tmp_path):
     device = FakeDevice(DoorState.OPEN)
-    service, _ = make(device, tmp_path)
+    service, _ = make(device, tmp_path, allow_close=False)
     answer = run(service.request(Action.CLOSE, requester="voice"))
     assert isinstance(answer, Refused)
-    assert "Closing is switched off" in answer.reason
+    assert "switched off" in answer.reason
 
 
-def test_closing_is_asked_about_when_it_is_switched_on(tmp_path):
+def test_closing_is_asked_about_by_default(tmp_path):
     device = FakeDevice(DoorState.OPEN)
-    service, _ = make(device, tmp_path, allow_close=True)
+    service, _ = make(device, tmp_path)
     answer = run(service.request(Action.CLOSE, requester="voice"))
     assert isinstance(answer, Question)
     assert answer.question == "The garage door is open. Close it?"
@@ -264,7 +280,7 @@ def test_a_wrong_token_cancels_the_open_question(tmp_path):
 
 def test_every_request_and_press_is_logged(tmp_path):
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
-    service, _ = make(device, tmp_path)
+    service, _ = make(device, tmp_path, allow_close=False)
     question = run(service.request(Action.OPEN, requester="voice"))
     assert isinstance(question, Question)
     run(service.confirm(question.token))

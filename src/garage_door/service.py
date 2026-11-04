@@ -85,7 +85,7 @@ class GarageService:
         device: Device,
         *,
         log_path: pathlib.Path,
-        allow_close: bool = False,
+        allow_close: bool = True,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         new_token: Callable[[], str] = lambda: secrets.token_urlsafe(16),
@@ -123,11 +123,9 @@ class GarageService:
         # RULE: a request the door already satisfies is refused
         if state is action.end_state:
             return self._refuse(state, f"The garage door is already {state}.", action, requester)
-        # RULE: closing is refused unless it is switched on
+        # RULE: closing is refused when it is switched off
         if action is Action.CLOSE and not self._allow_close:
-            return self._refuse(
-                state, "Closing is switched off until photocells are fitted.", action, requester
-            )
+            return self._refuse(state, "Closing by voice is switched off on this laptop.", action, requester)
         token = self._new_token()
         self._pending = _Pending(token, action, state, self._clock(), requester)
         self._log("asked", requester=requester, action=action, before=state)
@@ -173,8 +171,15 @@ class GarageService:
             after=after,
             controller=verdict,
         )
+        # A press is never repeated here: if the door stopped or reversed, a
+        # person has to look before anything moves it again.
         if reached:
             message = f"Pressed. The garage door was {before} and is now {after}."
+        elif pending.action is Action.CLOSE:
+            message = (
+                "The garage door did NOT close, possibly reversed. "
+                f"Something may be in the way: it is {after}. Please check it before trying again."
+            )
         else:
             message = (
                 f"Pressed, but the garage door did not reach {pending.action.end_state}: "

@@ -15,6 +15,20 @@ Planning. The plan, with the opener's terminals traced to the manufacturer's
 manual, the circuit, the parts list and the safety rules, is
 [`docs/plan.md`](docs/plan.md). Nothing has been bought, wired or flashed.
 
+## Safety
+
+A press always takes a spoken yes, and nothing is pressed while the door is
+moving, part-way or unknown. Closing by voice is allowed, but only from fully
+open. The opener reverses on its own if the door meets something, exactly as
+it does with the remote. If the door has not closed after the travel time,
+the answer says so plainly ("did NOT close, possibly reversed") and nothing
+is pressed again until someone has looked. Every press is logged with the
+door's state before and after.
+
+**Recommended later: photocells** (LiftMaster 771EV or similar on terminals 2
+and 3). They stop and reverse a closing door before it touches anything,
+rather than after. They are not required for this project.
+
 ## Updating the controller
 
 The first build goes in over micro-USB. Every update after that goes over the

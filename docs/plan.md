@@ -57,9 +57,10 @@ The photos are in `docs/photos/`, which git ignores.
 - **4–5 bridge:** a black wire loop across 4 and 5, which is the factory
   bridge for the door-in-door contact. It stays.
 - **Nothing else is connected.** No wall button on 1+2, and **no photocells
-  on 2+3**. Closing therefore relies only on the opener's force-based
-  reversal, which is why section 4 holds remote closing back until
-  photocells are fitted.
+  on 2+3**. Closing therefore relies on the opener's own force-based
+  reversal, exactly as it does with the remote. Roy decided on 2026-11-04
+  to allow closing by voice anyway; see section 4 and
+  [`decisions/ADR-GD-002`](../decisions/ADR-GD-002-close-without-photocells.md).
 - **ESP32 Thing:** pins 25, 34, 35, 3V3, GND and VUSB are all labelled and
   broken out; headers are not soldered yet; micro-USB and the JST battery
   socket as expected.
@@ -198,7 +199,7 @@ address from the internet entirely.
 | A press cannot stick | ESP32: the output turns itself off after 500 ms; boots with the output off; ignores a second press within 2 s. |
 | Nothing on the internet | ESPHome native API only, LAN only, encrypted and keyed; no web server. |
 | The opener's own safety stays | Nothing touches the photocell input (2+3), the 4–5 bridge, or the force and obstruction reversal. Before going live Roy runs the manual's monthly reversal test (section 24: 50 mm obstacle). |
-| No closing out of sight without photocells | Roy's photo shows no photocells on 2+3. Proposed: the MCP module offers **open only** until photocells (e.g. 771EV) are fitted, then enables close. Roy decides. |
+| Closing by voice, without photocells | Allowed (Roy, 2026-11-04). The controller presses the same input as the wall button and the remote, so the opener's force reversal works exactly as it does with them. Close is offered only from fully open, only after a spoken yes, and never repeated on its own. If the door is not fully closed after the travel time, the answer is "The garage door did NOT close, possibly reversed." Every press is logged with the state before and after. Can be switched off on the laptop (`GARAGE_DOOR_ALLOW_CLOSE=no`) or on the controller (`allow_close: "false"`). Photocells (e.g. 771EV) are recommended as a later improvement, not required. |
 
 ## Order of work, once approved
 

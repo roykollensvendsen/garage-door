@@ -30,6 +30,7 @@ decision nobody writes down.
 | Id | Decides | Status |
 |---|---|---|
 | [ADR-GD-001](ADR-GD-001-esphome-native-api.md) | ESPHome on the controller, its encrypted native API to the laptop | Proposed |
+| [ADR-GD-002](ADR-GD-002-close-without-photocells.md) | Closing by voice is allowed without photocells | Accepted |
 
 What is deliberately left undone, and what would make each worth doing, is
 [`deferred.md`](deferred.md). A thing left undone with no trigger is a thing
