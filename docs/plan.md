@@ -303,10 +303,11 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   part switches on at ≤3 mA). No coil, no click, no flyback diode, and full
   galvanic isolation from the opener. **For the first door test**, Roy uses a
   relay module he already has (Songle SRD-03VDC-SL-C, 3 V coil, about
-  120 mA, onboard driver, 2026-11-04): VCC to 3V3, CTL to GPIO25, COM and NO
-  across 1–2, NC empty. Its trigger level is unknown, so the firmware's
-  `relay_active_low` sets it, after a bench check with the opener
-  disconnected (build guide, "First door test").
+  120 mA, onboard driver, 2026-11-04): VCC to 3V3, **CTH** (the input that
+  triggers on high) to GPIO25, CTL empty, COM and NO across 1–2, NC empty.
+  A low or floating GPIO leaves it open, so a boot or crash cannot press.
+  Bench check with the opener disconnected first (build guide, "First door
+  test").
 - **Pulse length:** 500 ms, enforced on the ESP32 itself (the output switches
   itself off after 500 ms whatever the laptop asks), well under the 4 s that
   the opener treats as a stuck button.

@@ -17,7 +17,7 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "docs/wiring/bench-relay.svg"
-INK = {"3V3": "#26d", "GND": "#222", "GPIO25": "#e0b000"}
+INK = {"3V3": "#d22", "GND": "#222", "GPIO25": "#2a2"}  # Roy's wire colours
 
 
 def _bench():  # noqa: ANN202 - a module loaded by path
@@ -54,9 +54,7 @@ def drawing() -> str:
                 f'<text x="164" y="{y - 4}" class="s" text-anchor="end">{pin["to"]}</text>',
             ]
         else:
-            body.append(
-                f'<text x="{mod_x - 6}" y="{y + 4}" class="s" text-anchor="end">COM: open for now</text>'
-            )
+            body.append(f'<text x="{mod_x - 6}" y="{y + 4}" class="s" text-anchor="end">not connected</text>')
     for i, pin in enumerate(r["output"]):
         y = top + 40 + i * 40
         body.append(
@@ -73,7 +71,8 @@ def drawing() -> str:
     notes = [
         f"Contacts {r['contacts']}; the opener's input is about 10 V DC, a few mA.",
         "Off = relay open. NC is left empty, so a dead or unpowered module never presses.",
-        "Trigger level unknown: do the bench check in the build guide before the opener is connected.",
+        "CTH triggers on a high input: a low or floating GPIO25 (boot, crash) leaves it open. CTL unused.",
+        "Do the bench check in the build guide before the opener is connected.",
         "120 mA coil from the Thing's 3V3 regulator (600 mA) next to Wi-Fi peaks of about 250 mA: fine.",
         "A power bank may switch off at low draw; one that stays on near 80 mA is needed.",
         "Permanent build: the AQY212EH PhotoMOS (isolated, silent, about 6 mA).",

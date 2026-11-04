@@ -54,12 +54,14 @@ clamp_drop = 0.6            # 1N4148 at a fraction of a milliampere; a Schottky 
 relay = "Songle SRD-03VDC-SL-C"
 coil = "3 V, about 120 mA"
 contacts = "10 A 250 VAC / 10 A 30 VDC"
-# input screw terminal -> where it goes
+# input screw terminal, left to right -> where it goes (Roy, 2026-11-04).
+# CTH triggers on a high input, CTL on a low one. CTH is used: a low or
+# floating GPIO (boot, crash, reset) leaves the relay open.
 input = [
   { terminal = "VCC", to = "3V3" },
   { terminal = "GND", to = "GND" },
-  { terminal = "CTL", to = "GPIO25" },
-  { terminal = "COM", to = "unknown: probably selects the trigger level; leave open until the bench check" },
+  { terminal = "CTH", to = "GPIO25" },
+  { terminal = "CTL", to = "not connected" },
 ]
 # output screw terminal -> where it goes; NC stays empty, so a dead module leaves the door alone
 output = [
@@ -67,7 +69,7 @@ output = [
   { terminal = "NO", to = "opener terminal 2" },
   { terminal = "NC", to = "not connected" },
 ]
-active_low = "unknown"      # set relay_active_low in firmware/garage-door.yaml after the bench check
+active_low = false          # CTH: matches relay_active_low "false" in firmware/garage-door.yaml
 
 [bench_breadboard]
 # Roy's test board as built (2026-11-04): a half-size breadboard, rows 1-30,
@@ -91,6 +93,8 @@ wires = [
   { colour = "yellow", at = "a13", to = "ESP32 GPIO36 (not connected yet)" },
   { colour = "blue", at = "a17", to = "ESP32 3V3 (not connected yet)" },
   { colour = "black", at = "gnd", to = "ESP32 GND (not connected yet)" },
+  { colour = "red", at = "17", to = "relay module VCC (row 17, hole not given; not connected yet)" },
+  { colour = "black", at = "gnd", to = "relay module GND (not connected yet)" },
 ]
 measured = [
   "Node A (row 9): 3.17 V mean.",

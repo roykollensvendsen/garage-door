@@ -131,6 +131,8 @@ holes a–e of each row joined, and the blue rail beside them as ground.
 | wire | e15 to the rail | so the 10 nF is GPIO36 to ground |
 | green scope probe wire | b13 | ground clip on the black wire |
 | yellow wire to ESP32 GPIO36 | a13 | not connected yet |
+| red wire to the relay module's VCC | row 17 | 3V3; not connected yet |
+| black wire to the relay module's GND | rail | not connected yet |
 | blue wire to ESP32 3V3 | a17 | not connected yet |
 | black wire to ESP32 GND | rail | not connected yet |
 
@@ -169,9 +171,14 @@ it is isolated, silent and draws about 6 mA.
 The module is a red board with a Songle SRD-03VDC-SL-C relay. The coil is 3 V
 and draws about 120 mA. The contacts are rated 10 A at 250 V AC or 30 V DC.
 The board has its own driver transistor, flyback diode and LEDs.
-- **Input terminal (CTL, COM, GND, VCC):** VCC to the Thing's 3V3, GND to
-  GND, CTL to GPIO25. The input-side COM is unknown (it probably selects the
-  trigger level); leave it open until the check below.
+- **Input terminal (left to right VCC, GND, CTH, CTL):** CTH triggers on a
+  high input, CTL on a low one. **CTH is used**, so a low or floating GPIO25
+  (at boot, after a crash or a reset) leaves the relay open; CTL stays
+  empty. The firmware keeps `relay_active_low: "false"`, and the controller
+  starts unarmed after every boot. Planned wires: relay VCC to breadboard
+  row 17 (the 3V3 net, red), relay GND to the blue rail (black), relay CTH
+  straight to ESP32 GPIO25 (green). Not connected yet: the ESP32 still needs
+  headers and firmware.
 - **Output terminal (NO, COM, NC):** COM to opener terminal 1, NO to
   terminal 2. NC stays empty, so a dead or unpowered module never presses.
 - **Power:** the coil's 120 mA comes from the Thing's 3.3 V regulator (rated
@@ -181,25 +188,19 @@ The board has its own driver transistor, flyback diode and LEDs.
 
 ### Bench check, with the opener disconnected
 
-The module may switch on a high input or on a low one, and nothing on it
-says which. Find out before it is ever wired to the opener:
-
 1. **Nothing on NO and COM** but a multimeter on continuity (beep).
-2. **Power only:** VCC and GND connected, CTL unconnected. The relay must
-   not click, its LED must stay off, and the meter must stay silent. If it
-   clicks on its own, stop: this module is not safe to use as it is.
-3. **CTL to GND** with a wire, then **CTL to 3V3**. Note which one clicks
-   and beeps. If neither does, try again with the input COM joined to VCC,
-   then to GND, and note what changes.
-4. Set `relay_active_low` in `firmware/garage-door.yaml`: `"false"` if CTL
-   to 3V3 clicks it, `"true"` if CTL to GND does. "Off" then always means
-   relay open.
-5. Flash, with the controller **unarmed**. Watch the LED and the meter
-   through power-up, a restart from the laptop, and unplugging and plugging
-   the power bank. It must never click. GPIO25 is not a strapping pin. It
-   floats from reset until ESPHome drives it off, and the module must read
-   that as off (step 2).
-6. Arm it (`garage-door arm`) and press once by voice. The meter beeps for
+2. **Power only:** VCC and GND connected, CTH and CTL unconnected. The relay
+   must not click, its LED must stay off, and the meter must stay silent. If
+   it clicks on its own, stop.
+3. **CTH to 3V3** with a wire: it clicks and the meter beeps. **CTH to GND**:
+   it stays open. If not, the labels are not what they seem; stop and note
+   what it does.
+4. Wire CTH to GPIO25 and flash, with the controller **unarmed**. Watch the
+   LED and the meter through power-up, a restart from the laptop, and
+   unplugging and plugging the power bank. It must never click. GPIO25 is
+   not a strapping pin; it floats from reset until ESPHome drives it low,
+   and CTH reads floating as off (step 2).
+5. Arm it (`garage-door arm`) and press once by voice. The meter beeps for
    half a second, once. Then disarm.
 
 Only then wire COM and NO to opener terminals 1 and 2.

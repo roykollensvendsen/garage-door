@@ -40,6 +40,8 @@ def hole(name: str, near: str | None = None) -> tuple[float, float]:
     if name == "gnd":
         x, _ = hole(near or "a1")
         return x, RAIL
+    if name.isdigit():  # a row, hole not given: drawn at its last hole
+        return hole(f"e{name}")
     row, letter = int(name[1:]), name[0]
     if not (1 <= row <= ROWS and letter in LETTERS):
         msg = f"no hole {name} on a half-size breadboard"
@@ -111,7 +113,12 @@ def breadboard() -> str:
     placed = []
     for i, wire in enumerate(plan["wires"]):
         x, y = hole(wire["at"], "a2" if wire["at"] == "gnd" else None)
-        x += 8 * i if wire["at"] == "gnd" else 6 * LETTERS.index(wire["at"][0])
+        if wire["at"] == "gnd":
+            x += 8 * i
+        elif wire["at"].isdigit():
+            x += 12  # beside the row's other wires
+        else:
+            x += 6 * LETTERS.index(wire["at"][0])
         placed.append((x, y, wire))
     # rightmost wire turns highest, so no wire crosses another's label
     for n, (x, y, wire) in enumerate(sorted(placed, key=lambda p: -p[0])):
@@ -124,6 +131,7 @@ def breadboard() -> str:
         "Each part runs between two holes; every hole a-e in one numbered row is joined.",
         "The 10k in c5-c9 is still fitted but shorted by the green jumper a5-b9, so the top is 22k.",
         "Meter on node A: red probe in a9, black probe on the GND rail.",
+        "Relay module: CTH (trigger on high) green wire straight to ESP32 GPIO25; CTL unused.",
         *(f"Measured: {m}" for m in plan["measured"]),
         "Not isolated: ESP32 on a USB power bank in the garage, not the laptop.",
     ]

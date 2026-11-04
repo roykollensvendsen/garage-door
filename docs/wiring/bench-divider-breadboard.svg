@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 937 570" width="937" height="570" font-family="sans-serif" font-size="13">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 937 632" width="937" height="632" font-family="sans-serif" font-size="13">
 <title>Bench divider: breadboard as built</title>
 <style>.v{font-size:12px;text-anchor:middle}.l{font-size:13px}.s{font-size:11px;fill:#444}.h{font-size:16px;font-weight:bold}</style>
-<rect width="937" height="570" fill="#fff"/>
+<rect width="937" height="632" fill="#fff"/>
 <text x="20" y="28" class="h">Breadboard as built: listen on the opener's data wire (0+2)</text>
 <rect x="68" y="84" width="820" height="168" rx="8" fill="#f3f3ee" stroke="#bbb"/>
 <polyline points="74,232 882,232" fill="none" stroke="#26d" stroke-width="2"/>
@@ -247,23 +247,28 @@
 <circle cx="465" cy="232" r="3" fill="#333"/>
 <text x="303" y="76" class="l" text-anchor="middle">node A = row 9</text>
 <text x="471" y="76" class="l" text-anchor="middle">GPIO36 = row 13, 3V3 = row 17</text>
-<polyline points="519,120 519,272 543,272" fill="none" stroke="#26d" stroke-width="3"/>
-<text x="549" y="276" class="s">blue, a17: ESP32 3V3 (not connected yet)</text>
-<polyline points="417,138 417,294 441,294" fill="none" stroke="#2a2" stroke-width="3"/>
-<text x="447" y="298" class="s">green, b13: scope probe (its ground clip on the black wire)</text>
-<polyline points="411,120 411,316 435,316" fill="none" stroke="#e0b000" stroke-width="3"/>
-<text x="441" y="320" class="s">yellow, a13: ESP32 GPIO36 (not connected yet)</text>
-<polyline points="154,232 154,338 178,338" fill="none" stroke="#222" stroke-width="3"/>
-<text x="184" y="342" class="s">black, gnd: ESP32 GND (not connected yet)</text>
-<polyline points="122,232 122,360 146,360" fill="none" stroke="#222" stroke-width="3"/>
-<text x="152" y="364" class="s">black, gnd: opener terminal 2</text>
-<polyline points="87,120 87,382 111,382" fill="none" stroke="#d22" stroke-width="3"/>
-<text x="117" y="386" class="s">red, a1: opener terminal 0</text>
-<text x="20" y="434" class="s">Each part runs between two holes; every hole a-e in one numbered row is joined.</text>
-<text x="20" y="452" class="s">The 10k in c5-c9 is still fitted but shorted by the green jumper a5-b9, so the top is 22k.</text>
-<text x="20" y="470" class="s">Meter on node A: red probe in a9, black probe on the GND rail.</text>
-<text x="20" y="488" class="s">Measured: Node A (row 9): 3.17 V mean.</text>
-<text x="20" y="506" class="s">Measured: Row 13 (GPIO36) with the 10n: idle min about 2.7 V, 0.8 V peak to peak of 50 Hz ripple.</text>
-<text x="20" y="524" class="s">Measured: Packets swing about 0 V to 3.4 V; min -240 mV during packets.</text>
-<text x="20" y="542" class="s">Not isolated: ESP32 on a USB power bank in the garage, not the laptop.</text>
+<polyline points="531,192 531,272 555,272" fill="none" stroke="#d22" stroke-width="3"/>
+<text x="561" y="276" class="s">red, 17: relay module VCC (row 17, hole not given; not connected yet)</text>
+<polyline points="519,120 519,294 543,294" fill="none" stroke="#26d" stroke-width="3"/>
+<text x="549" y="298" class="s">blue, a17: ESP32 3V3 (not connected yet)</text>
+<polyline points="417,138 417,316 441,316" fill="none" stroke="#2a2" stroke-width="3"/>
+<text x="447" y="320" class="s">green, b13: scope probe (its ground clip on the black wire)</text>
+<polyline points="411,120 411,338 435,338" fill="none" stroke="#e0b000" stroke-width="3"/>
+<text x="441" y="342" class="s">yellow, a13: ESP32 GPIO36 (not connected yet)</text>
+<polyline points="170,232 170,360 194,360" fill="none" stroke="#222" stroke-width="3"/>
+<text x="200" y="364" class="s">black, gnd: relay module GND (not connected yet)</text>
+<polyline points="154,232 154,382 178,382" fill="none" stroke="#222" stroke-width="3"/>
+<text x="184" y="386" class="s">black, gnd: ESP32 GND (not connected yet)</text>
+<polyline points="122,232 122,404 146,404" fill="none" stroke="#222" stroke-width="3"/>
+<text x="152" y="408" class="s">black, gnd: opener terminal 2</text>
+<polyline points="87,120 87,426 111,426" fill="none" stroke="#d22" stroke-width="3"/>
+<text x="117" y="430" class="s">red, a1: opener terminal 0</text>
+<text x="20" y="478" class="s">Each part runs between two holes; every hole a-e in one numbered row is joined.</text>
+<text x="20" y="496" class="s">The 10k in c5-c9 is still fitted but shorted by the green jumper a5-b9, so the top is 22k.</text>
+<text x="20" y="514" class="s">Meter on node A: red probe in a9, black probe on the GND rail.</text>
+<text x="20" y="532" class="s">Relay module: CTH (trigger on high) green wire straight to ESP32 GPIO25; CTL unused.</text>
+<text x="20" y="550" class="s">Measured: Node A (row 9): 3.17 V mean.</text>
+<text x="20" y="568" class="s">Measured: Row 13 (GPIO36) with the 10n: idle min about 2.7 V, 0.8 V peak to peak of 50 Hz ripple.</text>
+<text x="20" y="586" class="s">Measured: Packets swing about 0 V to 3.4 V; min -240 mV during packets.</text>
+<text x="20" y="604" class="s">Not isolated: ESP32 on a USB power bank in the garage, not the laptop.</text>
 </svg>
