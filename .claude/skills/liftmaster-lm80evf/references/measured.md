@@ -20,7 +20,11 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
 - **0+2 on an oscilloscope** (MSO2024, 10x probe, ground on 2, 1 ms/div,
   falling trigger at 6 V, from the remote): idle about 10-12 V, a sharp
   drop to about 0 V held for 2-3 ms, then a burst of short pulses pulled
-  low. A serial data line, not a button input. Bit rate and protocol not
-  measured yet. The plan's "Next step for 0+2" has the scope settings and the
+  low. A serial data line, not a button input.
+- **0+2 pulse widths** (scope cursors): break 2.5-3 ms, then high 128.4 us,
+  low 254 us, high 252.4 us, and later a high of 504.4 us. These are 1, 2,
+  2 and 4 bits: about 126.6 us per bit, about 7900 baud (7812.5 or 8000
+  nominal), not the 9600 baud ratgdo uses for Security+ 2.0. The
+  message lasts more than 10 ms. Not decoded yet. The plan's "Next step for 0+2" has the scope settings and the
   listen-only input.
 - **6+7:** not measured yet. Measure idle and while moving.
