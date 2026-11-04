@@ -24,7 +24,13 @@ These are not style. A change that breaks one is wrong, even if the tests pass.
    `# RULE:` in `src/` or `// RULE:` in `firmware/door_logic/` must keep
    failing its named test when turned off (`just mutate`).
 3. **Fail closed.** When the door's state is unknown, the controller does not
-   answer, or anything is uncertain: refuse, and say why.
+   answer, or anything is uncertain: refuse, and say why. **One exception**
+   ([ADR-GD-004](decisions/ADR-GD-004-manual-press.md)): a *manual press*
+   may go through with the state unknown, but only when the controller is
+   armed, manual mode is switched on (off at every boot, and by itself after
+   10 minutes), and Roy says yes while he can see the door. It never names a
+   direction or a result, and it is logged as manual. Never widen this
+   exception, and never use it for open or close.
 4. **Never press automatically.** No retries, no re-press after a failed
    close, nothing scheduled.
 5. **Nothing leaves the home network.** No cloud services, no listening on

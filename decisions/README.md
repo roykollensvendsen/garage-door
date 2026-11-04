@@ -32,6 +32,7 @@ decision nobody writes down.
 | [ADR-GD-001](ADR-GD-001-esphome-native-api.md) | ESPHome on the controller, its encrypted native API to the laptop | Proposed |
 | [ADR-GD-002](ADR-GD-002-close-without-photocells.md) | Closing by voice is allowed without photocells | Accepted |
 | [ADR-GD-003](ADR-GD-003-opener-data-wire.md) | Read the door state from the opener's data wire (0+2), and offer it as a second way to press | Proposed |
+| [ADR-GD-004](ADR-GD-004-manual-press.md) | A manual press while Roy watches the door, before its state is known | Accepted |
 
 What is deliberately left undone, and what would make each worth doing, is
 [`deferred.md`](deferred.md). A thing left undone with no trigger is a thing
