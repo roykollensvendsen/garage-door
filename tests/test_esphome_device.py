@@ -70,12 +70,12 @@ def run(coroutine):
 
 def test_the_door_state_is_read_from_the_controllers_door_state_sensor():
     client = FakeClient("open")
-    assert run(EsphomeDevice(client).state()) is DoorState.OPEN
+    assert run(EsphomeDevice(lambda: client).state()) is DoorState.OPEN
 
 
 def test_later_state_updates_are_followed():
     client = FakeClient("closed")
-    device = EsphomeDevice(client)
+    device = EsphomeDevice(lambda: client)
     run(device.state())
     client.send(11, "moving")
     client.send(12, "accepted")  # another sensor; must not be read as the door
@@ -84,16 +84,32 @@ def test_later_state_updates_are_followed():
 
 
 def test_a_state_the_laptop_does_not_know_reads_as_unknown():
-    assert run(EsphomeDevice(FakeClient("half-open")).state()) is DoorState.UNKNOWN
+    assert run(EsphomeDevice(lambda: FakeClient("half-open")).state()) is DoorState.UNKNOWN
 
 
 def test_no_state_yet_reads_as_unknown():
-    assert run(EsphomeDevice(FakeClient(None)).state()) is DoorState.UNKNOWN
+    assert run(EsphomeDevice(lambda: FakeClient(None)).state()) is DoorState.UNKNOWN
+
+
+def test_the_client_is_made_on_first_use_not_before():
+    # aioesphomeapi's client needs a running event loop, which only exists
+    # once the MCP server has started.
+    made = []
+
+    def make() -> FakeClient:
+        made.append(FakeClient())
+        return made[-1]
+
+    device = EsphomeDevice(make)
+    assert made == []
+    run(device.state())
+    run(device.state())
+    assert len(made) == 1
 
 
 def test_a_press_calls_the_controllers_press_action():
     client = FakeClient()
-    device = EsphomeDevice(client)
+    device = EsphomeDevice(lambda: client)
     run(device.press())
     assert client.executed == ["press"]
 
@@ -102,12 +118,12 @@ def test_no_connection_is_reported_as_unavailable():
     client = FakeClient()
     client.fail_connect = True
     with pytest.raises(DeviceUnavailableError):
-        run(EsphomeDevice(client).state())
+        run(EsphomeDevice(lambda: client).state())
 
 
 def test_a_connection_lost_during_a_press_is_reported_and_reconnected_next_time():
     client = FakeClient()
-    device = EsphomeDevice(client)
+    device = EsphomeDevice(lambda: client)
     run(device.state())
     client.fail_execute = True
     with pytest.raises(DeviceUnavailableError):
@@ -121,4 +137,4 @@ def test_a_controller_without_the_press_action_is_refused():
     client = FakeClient()
     client.services = []
     with pytest.raises(DeviceUnavailableError, match="press"):
-        run(EsphomeDevice(client).press())
+        run(EsphomeDevice(lambda: client).press())

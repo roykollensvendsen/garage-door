@@ -35,9 +35,14 @@ class Client(Protocol):
 class EsphomeDevice:
     """A Device backed by the garage controller."""
 
-    def __init__(self, client: Client) -> None:
-        """Use `client`, which connects on first use and again after any failure."""
-        self._client = client
+    def __init__(self, make_client: Callable[[], Client]) -> None:
+        """Connect on first use, and again after any failure.
+
+        The client is made on first use rather than passed in, because
+        aioesphomeapi's client can only be created inside a running event loop.
+        """
+        self._make_client = make_client
+        self._client_made: Client | None = None
         self._connected = False
         self._state_key: int | None = None
         self._press: Any = None
@@ -64,6 +69,12 @@ class EsphomeDevice:
             msg = f"the press was not delivered: {error}"
             raise DeviceUnavailableError(msg) from error
         return "sent"
+
+    @property
+    def _client(self) -> Client:
+        if self._client_made is None:
+            self._client_made = self._make_client()
+        return self._client_made
 
     async def _ensure_connected(self) -> None:
         if self._connected:
