@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Run the commands the documentation shows, and compare what they print.
 
 The maintained plugins for testing markdown run a block and check that it

@@ -167,5 +167,7 @@ gate that refuses a message nobody can shorten teaches people to bypass it.
 
 ## Licence
 
-Apache-2.0, in `LICENSE`. A contribution you submit is under that licence;
+GPL-3.0-or-later, in `LICENSE`. Start every new source file with
+`SPDX-License-Identifier: GPL-3.0-or-later` in that language's comment syntax;
+`tests/test_licence_headers.py` fails without it. A contribution you submit is under that licence;
 there is no separate agreement to sign.

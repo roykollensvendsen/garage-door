@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Refuse a commit subject that is not in the imperative.
 
 `committed` has an `imperative_subject` setting, and it fires only on a

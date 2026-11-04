@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Every rule this project enforces has evidence, and the evidence names it.
 
 A rule here is one line of source marked ``# RULE: what it says``. Three things

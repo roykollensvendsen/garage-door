@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What the readability warning says, and what it stays quiet about.
 
 It never refuses. Every case here is about whether it speaks.

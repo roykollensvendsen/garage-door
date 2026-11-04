@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Turn every rule off in turn and see which tests notice.
 
 Green on a first run proves nothing: a test that has never been red tests

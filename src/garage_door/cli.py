@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Command line for garage-door."""
 
 from __future__ import annotations

@@ -38,4 +38,5 @@ including how a change is made here.
 
 ## Licence
 
-Apache-2.0. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE). Each source file says so in an
+`SPDX-License-Identifier` line near its top, and a test fails on a file without one.

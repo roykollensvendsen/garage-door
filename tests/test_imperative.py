@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What the imperative rule accepts and refuses.
 
 The linter this repository uses has the setting and enforces nothing, so this

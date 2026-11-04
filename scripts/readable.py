@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Say when a commit body is harder to read than it needs to be.
 
 Every page in these repositories lives under a sentence-length rule, and

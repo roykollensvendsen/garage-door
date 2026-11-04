@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Wherever a document restates a fact that lives in code, check that it still holds.
 
 Point rather than copy. Where a document has to copy anyway, because a reader
