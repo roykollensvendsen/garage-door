@@ -170,7 +170,11 @@ laptop on battery for the test, and use the optocoupler below in the build.
   BAT54, or a 1N5819) from GPIO36 to 3V3, cathode at 3V3, and optionally
   100 pF from GPIO36 to GND. These are the values in Roy's SparkFun resistor
   kit (2026-11-04). **39 kΩ over 12 kΩ** gives nearly the same ratio and is
-  an equivalent alternative.
+  an equivalent alternative. For the first test Roy uses a **1N4148**, the
+  diode he has. It clamps only at about 3.9 V (3.3 V plus its 0.6 V), above
+  the pin's 3.6 V maximum, so it guards against spikes rather than the
+  steady level. That is acceptable here because the divider alone stays at
+  3.57 V even at 15 V. A permanent build uses a Schottky (1N5819, BAT85).
 - Ratio 10/42 = 0.238. A high at 11.2 V gives 2.67 V, and 12 V gives 2.86 V.
   Both are above the ESP32's input-high level, 0.75 × 3.3 = 2.48 V. A worst
   case of 15 V gives 3.57 V, just under the 3.6 V absolute maximum. The

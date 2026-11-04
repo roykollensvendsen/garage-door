@@ -30,7 +30,7 @@
 <polyline points="410,182 430,182" fill="none" stroke="#222" stroke-width="3"/>
 <polyline points="420,182 420,150" fill="none" stroke="#222" stroke-width="2"/>
 <text x="420" y="144" class="v">3V3</text>
-<text x="436" y="194" class="l">BAT85</text>
+<text x="436" y="194" class="l">1N4148</text>
 <polyline points="420,230 420,270" fill="none" stroke="#222" stroke-width="2"/>
 <polyline points="408,270 432,270" fill="none" stroke="#222" stroke-width="3"/>
 <polyline points="408,276 432,276" fill="none" stroke="#222" stroke-width="3"/>

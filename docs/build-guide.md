@@ -98,7 +98,7 @@ terminal 2, so run the laptop on battery while the USB cable is in.
 | 1 | Resistor 22 kΩ | terminal 0 to the 10 kΩ below |
 | 2 | Resistor 10 kΩ | one in series with the 22 kΩ (top), one from node A to ground (bottom) |
 | 1 | Resistor 1 kΩ | node A to GPIO36 |
-| 1 | Schottky diode BAT85 (or BAT54, 1N5819) | GPIO36 to 3V3, band (cathode) at 3V3 |
+| 1 | Diode 1N4148 for this test; a Schottky (1N5819, BAT85) for a permanent build | GPIO36 to 3V3, band (cathode) at 3V3 |
 | 1 | Capacitor 100 pF (optional) | GPIO36 to ground |
 | | Breadboard and jumper wires | |
 

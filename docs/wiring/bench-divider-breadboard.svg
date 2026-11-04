@@ -49,7 +49,7 @@
 <rect x="474" y="78" width="12" height="5" fill="#ccc"/>
 <polyline points="480,60 480,78" fill="none" stroke="#888" stroke-width="2"/>
 <polyline points="480,112 480,150" fill="none" stroke="#888" stroke-width="2"/>
-<text x="490" y="96" class="s">BAT85, band (cathode) to 3V3</text>
+<text x="490" y="96" class="s">1N4148, band (cathode) to 3V3</text>
 <circle cx="360" cy="150" r="5" fill="none" stroke="#222" stroke-width="2"/>
 <text x="352" y="172" class="s" text-anchor="end">node A</text>
 <polyline points="20,150 200,150" fill="none" stroke="#ed0" stroke-width="4"/>
