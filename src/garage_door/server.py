@@ -11,10 +11,16 @@ Run over stdio by Roy's local MCP server. Settings come from the environment:
 - ``GARAGE_DOOR_API_KEY``: the controller's API encryption key.
 - ``GARAGE_DOOR_ALLOW_CLOSE``: ``no`` switches closing by voice off; it is on otherwise.
 - ``GARAGE_DOOR_LOG``: where to log; default ``$XDG_STATE_HOME/garage-door/presses.jsonl``.
+
+``garage-door-mcp --simulate`` runs the same tools against a simulated door
+(garage_door.simulator) instead, so the voice flow can be tried with no
+hardware. It needs no settings, says it is simulated, and logs to
+``simulated.jsonl`` beside the real log, never to the real log.
 """
 
 from __future__ import annotations
 
+import argparse
 import os
 import pathlib
 from dataclasses import dataclass
@@ -24,6 +30,7 @@ from mcp.server.mcpserver import MCPServer
 
 from garage_door.door import Action
 from garage_door.service import Confirmed, GarageService, Question
+from garage_door.simulator import Start, simulated_controller
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -33,6 +40,8 @@ INSTRUCTIONS = (
     "'say' text to Roy exactly, and call garage_confirm only if Roy clearly answers yes. "
     "If he says anything else, do not confirm. Read every refusal and result aloud."
 )
+
+SIMULATED = "SIMULATED: this is a simulated garage door, not a real one. Say so when you report on it. "
 
 
 @dataclass(frozen=True)
@@ -45,14 +54,22 @@ class Settings:
     log_path: pathlib.Path
 
 
+def _state_folder(env: Mapping[str, str]) -> pathlib.Path:
+    return pathlib.Path(env.get("XDG_STATE_HOME") or pathlib.Path.home() / ".local/state") / "garage-door"
+
+
+def simulated_service(env: Mapping[str, str], start: Start) -> GarageService:
+    """The service wired to a simulated door; it logs apart from the real door."""
+    return GarageService(simulated_controller(start=start), log_path=_state_folder(env) / "simulated.jsonl")
+
+
 def settings_from(env: Mapping[str, str]) -> Settings:
     """Read settings from `env`, refusing to start without an address or key."""
     for name in ("GARAGE_DOOR_HOST", "GARAGE_DOOR_API_KEY"):
         if not env.get(name):
             msg = f"garage-door-mcp: {name} is not set"
             raise SystemExit(msg)
-    state_home = pathlib.Path(env.get("XDG_STATE_HOME") or pathlib.Path.home() / ".local/state")
-    log_path = pathlib.Path(env.get("GARAGE_DOOR_LOG") or state_home / "garage-door/presses.jsonl")
+    log_path = pathlib.Path(env.get("GARAGE_DOOR_LOG") or _state_folder(env) / "presses.jsonl")
     return Settings(
         host=env["GARAGE_DOOR_HOST"],
         api_key=env["GARAGE_DOOR_API_KEY"],
@@ -61,9 +78,12 @@ def settings_from(env: Mapping[str, str]) -> Settings:
     )
 
 
-def build_server(service: GarageService) -> MCPServer[Any]:
+def build_server(service: GarageService, *, simulated: bool = False) -> MCPServer[Any]:
     """The MCP server with its three tools bound to `service`."""
-    server: MCPServer[Any] = MCPServer(name="garage-door", instructions=INSTRUCTIONS)
+    server: MCPServer[Any] = MCPServer(
+        name="garage-door-simulated" if simulated else "garage-door",
+        instructions=(SIMULATED + INSTRUCTIONS) if simulated else INSTRUCTIONS,
+    )
 
     @server.tool(description="Read whether the garage door is open, closed, moving, unknown or faulty.")
     async def garage_status() -> dict[str, str]:
@@ -107,8 +127,18 @@ def build_server(service: GarageService) -> MCPServer[Any]:
     return server
 
 
-def main() -> None:  # pragma: no cover - needs the controller on the network
-    """Start the server over stdio, talking to the real controller."""
+def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the controller on the network
+    """Start the server over stdio, talking to the real controller or, with --simulate, to a simulated one."""
+    parser = argparse.ArgumentParser(prog="garage-door-mcp", description="The garage door as MCP tools.")
+    parser.add_argument("--simulate", action="store_true", help="use a simulated door; touches no hardware")
+    parser.add_argument(
+        "--start", type=Start, choices=list(Start), default=Start.CLOSED, help="simulated door's start"
+    )
+    args = parser.parse_args(argv)
+    if args.simulate:
+        build_server(simulated_service(os.environ, args.start), simulated=True).run()
+        return
+
     from aioesphomeapi.client import APIClient  # noqa: PLC0415 - only needed when running for real
 
     from garage_door.esphome_device import EsphomeDevice  # noqa: PLC0415

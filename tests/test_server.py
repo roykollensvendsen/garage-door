@@ -113,3 +113,18 @@ def test_the_log_goes_under_the_users_state_folder_by_default():
         {"GARAGE_DOOR_HOST": "h", "GARAGE_DOOR_API_KEY": "k", "XDG_STATE_HOME": "/state"}
     )
     assert str(settings.log_path) == "/state/garage-door/presses.jsonl"
+
+
+def test_the_simulated_server_says_it_is_simulated_and_logs_apart(tmp_path):
+    from garage_door.server import simulated_service  # noqa: PLC0415
+    from garage_door.simulator import Start  # noqa: PLC0415
+
+    service = simulated_service({"XDG_STATE_HOME": str(tmp_path)}, Start.CLOSED)
+    server = build_server(service, simulated=True)
+    assert server.name == "garage-door-simulated"
+    assert server.instructions.startswith("SIMULATED:")
+    assert call(server, "garage_status", {}) == {"state": "closed"}
+    asked = call(server, "garage_request", {"action": "open"})
+    assert asked["outcome"] == "question"
+    assert (tmp_path / "garage-door/simulated.jsonl").exists()
+    assert not (tmp_path / "garage-door/presses.jsonl").exists()

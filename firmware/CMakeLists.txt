@@ -21,5 +21,12 @@ target_include_directories(door_logic_test PRIVATE door_logic)
 target_compile_options(door_logic_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
 target_link_libraries(door_logic_test PRIVATE GTest::gtest_main)
 
+# The same logic driving a simulated door (sim/door_sim.h), end to end.
+add_executable(door_sim_test tests/door_sim_test.cpp)
+target_include_directories(door_sim_test PRIVATE door_logic sim)
+target_compile_options(door_sim_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
+target_link_libraries(door_sim_test PRIVATE GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(door_logic_test)
+gtest_discover_tests(door_sim_test)
