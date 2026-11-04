@@ -107,10 +107,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Compiler, CMake, Ninja and GoogleTest
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake ninja-build libgtest-dev
+      - name: Compiler, CMake, Ninja, GoogleTest and gcovr
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake ninja-build libgtest-dev gcovr
       - name: Controller logic tests
         run: sh scripts/firmware-tests.sh
+      - name: Coverage of the controller logic, with a floor
+        run: sh scripts/firmware-coverage.sh
 
   # ESPHome's own validation of the controller configuration, with the example
   # secrets. It does not compile for the board; that needs the ESP-IDF toolchain.

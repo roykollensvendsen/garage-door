@@ -14,6 +14,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(GTest REQUIRED)
+
+# Coverage of the controller's logic by these tests (scripts/firmware-coverage.sh).
+option(GARAGE_COVERAGE "Build the tests with gcov instrumentation" OFF)
+if(GARAGE_COVERAGE)
+  add_compile_options(--coverage -O0)
+  add_link_options(--coverage)
+endif()
 enable_testing()
 
 add_executable(door_logic_test tests/door_logic_test.cpp)

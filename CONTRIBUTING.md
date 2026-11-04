@@ -28,6 +28,7 @@ uv run mypy src
 uv run pytest -q --cov
 uv run python scripts/mutate.py
 sh scripts/firmware-tests.sh
+sh scripts/firmware-coverage.sh
 sh scripts/esphome-config.sh
 uv run python scripts/openers.py --check
 uv run --group docs mkdocs build --strict
@@ -36,8 +37,9 @@ python3 scripts/structure.py
 committed --no-merge-commit origin/main..HEAD
 ```
 
-The two firmware gates need a C++17 compiler, CMake, Ninja and GoogleTest
-(`libgtest-dev` on Debian and Ubuntu, `gtest` on Arch); the ESPHome one
+The firmware gates need a C++17 compiler, CMake, Ninja and GoogleTest
+(`libgtest-dev` on Debian and Ubuntu, `gtest` on Arch), and gcovr for
+coverage; the ESPHome one
 fetches a pinned ESPHome through `uvx`. None of them needs the board.
 
 Run them after the last edit, not before it. A file edited after the format

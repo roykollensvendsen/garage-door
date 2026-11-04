@@ -22,6 +22,7 @@ docs/photos/
 
 # The laptop build of the controller tests, and ESPHome's own output.
 firmware/build/
+firmware/build-coverage/
 firmware/.esphome/
 # Wi-Fi password and keys for the controller; secrets.example.yaml shows the shape.
 firmware/secrets.yaml

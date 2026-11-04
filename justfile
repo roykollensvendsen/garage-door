@@ -18,6 +18,10 @@ test-python:
 test-firmware:
     sh scripts/firmware-tests.sh
 
+# Lines and branches of the controller logic the firmware tests run (needs gcovr).
+coverage-firmware:
+    sh scripts/firmware-coverage.sh
+
 # Formatting, lint and types.
 lint:
     uv run ruff format --check .

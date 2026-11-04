@@ -30,7 +30,8 @@ def source_files() -> list[pathlib.Path]:
             found.update(
                 p
                 for p in (ROOT / folder).rglob(pattern)
-                if p.name not in GENERATED and "build" not in p.relative_to(ROOT).parts
+                if p.name not in GENERATED
+                and not any(part.startswith("build") for part in p.relative_to(ROOT).parts)
             )
     return sorted(found)
 
