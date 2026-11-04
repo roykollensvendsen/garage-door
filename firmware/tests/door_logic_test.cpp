@@ -221,3 +221,18 @@ TEST(Names, EveryStateAndResultHasAName) {
   EXPECT_STREQ(garage::to_string(PressResult::RefusedBusy), "refused: a press is in progress");
   EXPECT_STREQ(garage::to_string(PressResult::RefusedTooSoon), "refused: too soon after the last press");
 }
+
+// --- The single Door the controller uses ---------------------------------------
+
+#include "esphome_glue.h"
+
+TEST(Glue, GivesTheSameDoorEveryTime) {
+  EXPECT_EQ(&garage_door::door(false), &garage_door::door(false));
+}
+
+TEST(Glue, StartsWithClosingAsConfiguredAndTheOutputOff) {
+  garage::Door &d = garage_door::door(false);
+  EXPECT_FALSE(d.output(0));
+  d.update(0, false, true);  // open
+  EXPECT_EQ(d.request_press(0), PressResult::RefusedClose);
+}

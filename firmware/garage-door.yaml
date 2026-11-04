@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# ESPHome configuration for the SparkFun ESP32 Thing that presses the
+# LiftMaster LM80EVF's push-button input (terminals 1 and 2) and reads the two
+# door sensors. The decisions live in door_logic/door_logic.h, which the
+# laptop tests; this file only connects that logic to pins and the network.
+#
+# Check without hardware:  esphome config firmware/garage-door.yaml
+# Secrets come from firmware/secrets.yaml (git-ignored); see secrets.example.yaml.
+
+substitutions:
+  # Closing stays off until photocells are fitted (docs/plan.md, section 4).
+  allow_close: "false"
+
+esphome:
+  name: garage-door
+  friendly_name: Garage door
+  includes:
+    - door_logic/door_logic.h
+    - door_logic/esphome_glue.h
+
+esp32:
+  board: esp32thing
+  framework:
+    type: esp-idf
+
+logger:
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # No fallback access point and no captive portal: nothing to join or
+  # configure from outside if the home network is down.
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+  # The laptop is not always connected; never reboot for want of a client.
+  reboot_timeout: 0s
+  actions:
+    # The only way to ask for a press. The logic may refuse it.
+    - action: press
+      then:
+        - lambda: |-
+            const auto result = garage_door::door(${allow_close}).request_press(millis());
+            id(last_press_result).publish_state(garage::to_string(result));
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# Deliberately absent: web_server, captive_portal, mqtt.
+
+binary_sensor:
+  # Each reed contact closes to ground when its magnet is near. GPIO34 and 35
+  # are input-only with no internal pull-up; the 10 kΩ pull-ups are on the
+  # board (docs/plan.md, section 2).
+  - platform: gpio
+    id: at_closed
+    name: Fully closed
+    pin:
+      number: GPIO34
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on_off: 50ms
+  - platform: gpio
+    id: at_open
+    name: Fully open
+    pin:
+      number: GPIO35
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on_off: 50ms
+
+output:
+  # The PhotoMOS relay across terminals 1 and 2.
+  - platform: gpio
+    id: press_output
+    pin: GPIO25
+
+text_sensor:
+  - platform: template
+    id: door_state
+    name: Door state
+  - platform: template
+    id: last_press_result
+    name: Last press result
+
+interval:
+  # The logic decides; this only carries its answer to the pin and the network.
+  - interval: 20ms
+    then:
+      - lambda: |-
+          auto &door = garage_door::door(${allow_close});
+          const uint32_t now = millis();
+          door.update(now, id(at_closed).state, id(at_open).state);
+          if (door.output(now)) {
+            id(press_output).turn_on();
+          } else {
+            id(press_output).turn_off();
+          }
+          const char *state = garage::to_string(door.state());
+          if (!id(door_state).has_state() || id(door_state).state != state) {
+            id(door_state).publish_state(state);
+          }
