@@ -37,7 +37,7 @@ What the manual does **not** say, so we measure it rather than guess:
 - whether 1–2 wants a plain contact or something special. The evidence says a
   plain contact: the 75EV is a simple push button, the listed key switches
   (100034, 100041) are plain contacts, and the 5-1 fault code only makes sense
-  for a short. A 0.5 s touch with an insulated wire is the bench test.
+  for a short. A 0.5 s touch with an insulated wire is the bench test; Roy did it on 2026-11-04 and it worked (see "Measured on Roy's opener").
 
 Also noted: the manual says "Always use LiftMaster accessories. External
 products can cause malfunctions." A contact that only closes like the 75EV
@@ -75,7 +75,7 @@ how sure it is.
 | Source of state | What it can tell us | How sure |
 |---|---|---|
 | Terminals 6+7, warning-light output (FLA1-LED) | **Moving**, not where. About 24 V while the door moves, with a short lead before and lag after. | The manual lists the FLA1-LED on 6+7 (PDF p. 269). The FLA1-LED manual describes it (<https://manuals.easygates.co.uk/PDF/misc/chamberlain-liftmaster-fla1-led-manual.pdf>). A measurement on the related LM100EVS: <https://www.cavelab.dev/posts/garage-door-flashing-light/>. Not measured on Roy's opener. |
-| 30 VDC output, max 50 mA | Nothing about the door. Likely switched off in standby, so not even usable as power. | Rating on the label and in the manual. Standby behaviour is an **inference** from a related model's manual (LM750EVGB, <https://manualmachine.com/chamberlain/lm750evgb/2593509-operation-manual>), not stated for the LM80EVF. |
+| 30 VDC output, max 50 mA | Nothing about the door. Switched off in standby: Roy measured about 1.1 V idle (2026-11-04). | Rating on the label and in the manual. Standby behaviour is an **inference** from a related model's manual (LM750EVGB, <https://manualmachine.com/chamberlain/lm750evgb/2593509-operation-manual>), not stated for the LM80EVF. |
 | Terminals 0+2, the opener's digital bus (Security+ 2.0) | Possibly open, closed and position, the way ratgdo boards read it. | **Community reports only**, on related EU models: <https://github.com/ratgdo/esphome-ratgdo/issues/179> and <https://github.com/konnected-io/konnected-esphome/issues/128>. State reporting dropped out for some users and was later fixed upstream (April 2026, per those threads). Nobody has reported an LM80EVF. Unofficial protocol: the maker could change it. |
 | 828EV internet gateway | Open/closed, through the maker's cloud. | Needs the myQ cloud, which has been closed to third parties since 2023 (<https://www.home-assistant.io/blog/2023/11/06/removal-of-myq-integration/>). **Excluded**: nothing may leave the LAN. Gateway manual: <https://cdn.shopify.com/s/files/1/0574/2601/8495/files/114-5696-000-828EV.pdf>. |
 | 829EV radio receiver | No state output. | Manual: <https://manuals.easygates.co.uk/PDF/liftmaster/829ev.pdf>. |
@@ -117,6 +117,20 @@ reports about 30 cm in strong sunlight
 (<https://community.st.com/t5/mems-sensors/vl53l1-ranging-instability-in-strong-ambient-light/td-p/316650>),
 and daylight comes in through an open door. Shade it, and reject readings
 whose range status is not valid. Test it before trusting it.
+
+### Measured on Roy's opener (2026-11-04)
+
+Roy measured his LM80EVF with a Fluke 87 V on DC volts, opener plugged in and
+idle. Probe tips alone did not reach the contacts in the push-in terminals:
+**insert a wire through the orange lever** and measure on the wire.
+
+| What | Result | What it means |
+|---|---|---|
+| 1+2, push-button input, idle | **about 10 V DC** | Well under the AQY212EH's 60 V. A small PhotoMOS or relay across 1+2 is fine. |
+| Joining 1+2 by hand for about 0.5 s, three times | 1st: **opened**, 2nd: **stopped**, 3rd: **closed** | Confirms one input that steps open → stop → close (manual PDF p. 24, section 27). The controller can't know what the next press will do unless it knows the state, so a press stays refused unless the door is fully open or fully closed. |
+| 30 VDC output, idle | **about 1.1 V** | Switched off in the opener's under-1-watt standby, as the manual's note on standby suggests (PDF p. 23, section 26 O). Not usable as power or as a signal while idle. |
+| 0+2 (78EV wall control) | not measured yet | A first try read 0 V, but the probe contact was unreliable, and standby may matter. Measure again through a wire in the lever, idle **and** while the door moves. |
+| 6+7 (warning light) | not measured yet | Measure idle and while the door moves. |
 
 ## 2. Circuit
 

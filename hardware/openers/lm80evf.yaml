@@ -11,12 +11,19 @@ manual:
 push_button:
   terminals: [1, 2]
   source: manual PDF p. 269, fig. 19-20; PDF p. 28, accessory 75EV
-  volts_open_circuit: null
+  volts_open_circuit: 10
 leave_alone:
   - "The wire bridge on terminals 4 and 5 (manual PDF p. 22, section 26 A)."
 notes: >-
-  The project's reference opener. The first controller is planned for it but
-  not built yet, so it is listed as untested until it has opened and closed a
-  real door.
+  The project's reference opener. One press steps the door open, stop, close,
+  so the controller only presses when the door is known to be fully open or
+  fully closed. Measure on a wire inserted through the orange lever; probe tips
+  do not reach the contacts. The 30 VDC output reads about 1.1 V while idle
+  (standby). Listed as untested until the controller itself has opened and
+  closed the door.
 reported_by: roykollensvendsen
+checks:
+  - by: Roy
+    date: 2026-11-04
+    what: "1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door"
 build: ""

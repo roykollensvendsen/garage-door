@@ -21,4 +21,5 @@ push_button:
 leave_alone: []              # bridges or terminals that must not be touched, with sources
 notes: ""                    # anything a builder should know
 reported_by: ""              # your GitHub name
+checks: []                   # what was verified on a real opener: - {by, date, what}
 build: ""                    # link to your build in the gallery, if any

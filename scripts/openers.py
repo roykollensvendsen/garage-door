@@ -66,6 +66,10 @@ def model_page(slug: str, m: dict[str, Any]) -> str:
     leave = "\n".join(f"- {item}" for item in m["leave_alone"]) or "- Nothing listed."
     also = ", ".join(m.get("also_sold_as") or []) or "none known"
     by = m.get("reported_by") or "nobody yet"
+    checks = (
+        "\n".join(f"- {c['by']}, {c['date']}: {c['what']}." for c in m.get("checks") or [])
+        or "- Nothing yet."
+    )
     build = f"[{m['build']}]({m['build']})" if m.get("build") else "none yet"
     return f"""{HEADER}
 # {m["brand"]} {m["model"]}
@@ -82,6 +86,10 @@ def model_page(slug: str, m: dict[str, Any]) -> str:
 | Voltage across them, open | {f"{volts} V (measured)" if volts is not None else "not measured yet"} |
 | Reported by | {by} |
 | A build | {build} |
+
+## Checked on a real opener
+
+{checks}
 
 ## Leave alone
 

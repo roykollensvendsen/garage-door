@@ -89,11 +89,15 @@ WireViz.
 ## Step by step
 
 1. **Measure first** (opener plugged in, door clear, a meter on DC volts).
-   Measure the voltage between terminals 1 and 2, and note it. It must be
-   below 60 V for the AQY212EH. Then unplug the opener.
-2. **Check the input by hand.** With the opener plugged in again, touch an
-   insulated wire across terminals 1 and 2 for about half a second. The door
-   should start. Touch again to stop it, as with the wall button.
+   Probe tips do not reach the contacts of the push-in terminals: press the
+   orange lever, insert a short wire, and measure on the wire. Measure between
+   terminals 1 and 2 and note it. It must be below 60 V for the AQY212EH; on
+   the LM80EVF it is about 10 V. Then unplug the opener.
+2. **Check the input by hand.** With the opener plugged in again, join the
+   wires from 1 and 2 for about half a second. One press steps the door:
+   from closed it opens, the next press stops it, the next closes it. That
+   is why the controller only presses when it knows the door is fully open
+   or fully closed.
 3. **Solder the headers** onto the ESP32 Thing.
 4. **Build the board** as the schematic shows: the relay in its socket, the
    five resistors, the two capacitors and the three screw terminals.

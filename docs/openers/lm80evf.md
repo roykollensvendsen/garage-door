@@ -12,9 +12,13 @@
 | Region | EU |
 | Manual | Assembly and operating instructions, LM60EVF/LM80EVF/LM100EVF/LM130EVF, document 114A4C095B ([download](https://ismartgate.com/manuals/Chamberlain_LM80EVF_manual.pdf)) |
 | Push-button terminals | **1 and 2** (manual PDF p. 269, fig. 19-20; PDF p. 28, accessory 75EV) |
-| Voltage across them, open | not measured yet |
+| Voltage across them, open | 10 V (measured) |
 | Reported by | roykollensvendsen |
 | A build | none yet |
+
+## Checked on a real opener
+
+- Roy, 2026-11-04: 1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door.
 
 ## Leave alone
 
@@ -22,7 +26,7 @@
 
 ## Notes
 
-The project's reference opener. The first controller is planned for it but not built yet, so it is listed as untested until it has opened and closed a real door.
+The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Listed as untested until the controller itself has opened and closed the door.
 
 Source: [`hardware/openers/lm80evf.yaml`](https://github.com/roykollensvendsen/garage-door/blob/main/hardware/openers/lm80evf.yaml).
 To correct it, edit that file; see [Add your opener](../compatibility.md#add-your-opener).

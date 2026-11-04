@@ -58,6 +58,8 @@ The manual does not give the voltage across 1–2, whether 6–7 and the 30 V
 output are switched, or any protocol on 0+2. Do not fill these gaps from
 memory. Measure, or cite a source and say how reliable it is. Findings from
 outside the manual go in a section marked as such, with their source.
+Measurements on Roy's own opener are in
+[references/measured.md](references/measured.md).
 
 ## Keeping this skill true
 

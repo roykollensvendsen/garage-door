@@ -11,7 +11,7 @@ manual covers.
   short lead and lag. It gives "moving", not the position. *FLA1-LED manual,
   plus a measurement on the related LM100EVS (cavelab.dev); not measured on
   an LM80EVF.*
-- **30 VDC output (max 50 mA): no state.** Probably switched off in standby.
+- **30 VDC output (max 50 mA): no state.** Switched off in standby: about 1.1 V idle, measured on Roy's opener (see measured.md).
   *Inference from the LM750EVGB manual; not stated for the LM80EVF.*
 - **0+2 is the opener's Security+ 2.0 bus.** ratgdo-style boards read the
   state from it on related EU models (esphome-ratgdo issue 179, Konnected

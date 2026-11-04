@@ -16,6 +16,10 @@
 | Reported by | nobody yet |
 | A build | none yet |
 
+## Checked on a real opener
+
+- Nothing yet.
+
 ## Leave alone
 
 - The wire bridge on terminals 4 and 5 (manual PDF p. 22, section 26 A).
