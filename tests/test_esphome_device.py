@@ -21,13 +21,14 @@ if TYPE_CHECKING:
 
 
 class FakeClient:
-    def __init__(self, door: str | None = "closed") -> None:
+    def __init__(self, door: str | None = "closed", *, late: float = 0.0) -> None:
         self.entities = [
             TextSensorInfo(name="Door state", key=11),
             TextSensorInfo(name="Last press result", key=12),
         ]
         self.services = [UserService(name="press", key=21)]
         self.door = door
+        self.late = late  # seconds before the first states arrive, as on a real network
         self.connects = 0
         self.executed: list[str] = []
         self.switched: list[tuple[int, bool]] = []
@@ -47,8 +48,13 @@ class FakeClient:
 
     def subscribe_states(self, on_state: Callable[[object], None]) -> None:
         self._on_state = on_state
-        if self.door is not None:
-            on_state(TextSensorState(key=11, state=self.door))
+        if self.door is None:
+            return
+        first = TextSensorState(key=11, state=self.door)
+        if self.late:
+            asyncio.get_running_loop().call_later(self.late, on_state, first)
+        else:
+            on_state(first)
 
     async def execute_service(self, service: UserService, data: dict[str, object]) -> None:
         assert data == {}
@@ -95,7 +101,19 @@ def test_a_state_the_laptop_does_not_know_reads_as_unknown():
 
 
 def test_no_state_yet_reads_as_unknown():
-    assert run(EsphomeDevice(lambda: FakeClient(None)).state()) is DoorState.UNKNOWN
+    assert run(EsphomeDevice(lambda: FakeClient(None), first_state_wait=0.05).state()) is DoorState.UNKNOWN
+
+
+def test_the_first_read_waits_for_the_controllers_first_report():
+    # Bench, 2026-11-04: the real controller sends its states a moment after
+    # connecting, so the first request after start read "unknown" and was refused.
+    client = FakeClient("closed", late=0.05)
+    assert run(EsphomeDevice(lambda: client, first_state_wait=1.0).state()) is DoorState.CLOSED
+
+
+def test_the_first_read_gives_up_and_reads_unknown_when_no_report_comes():
+    client = FakeClient("closed", late=1.0)
+    assert run(EsphomeDevice(lambda: client, first_state_wait=0.05).state()) is DoorState.UNKNOWN
 
 
 def test_the_client_is_made_on_first_use_not_before():

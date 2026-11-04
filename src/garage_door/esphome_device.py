@@ -38,13 +38,14 @@ class Client(Protocol):
 class EsphomeDevice:
     """A Device backed by the garage controller."""
 
-    def __init__(self, make_client: Callable[[], Client]) -> None:
+    def __init__(self, make_client: Callable[[], Client], *, first_state_wait: float = 3.0) -> None:
         """Connect on first use, and again after any failure.
 
         The client is made on first use rather than passed in, because
         aioesphomeapi's client can only be created inside a running event loop.
         """
         self._make_client = make_client
+        self._first_state_wait = first_state_wait
         self._client_made: Client | None = None
         self._connected = False
         self._state_key: int | None = None
@@ -116,6 +117,13 @@ class EsphomeDevice:
         self._door = None
         self._client.subscribe_states(self._on_state)
         self._connected = True
+        # The controller sends its states a moment after connecting. Wait a
+        # bounded time for the door's; without it the read stays UNKNOWN and
+        # the service refuses, as before.
+        waited, step = 0.0, 0.02
+        while self._door is None and waited < self._first_state_wait:
+            await asyncio.sleep(step)
+            waited += step
 
     def _on_state(self, state: object) -> None:
         key = getattr(state, "key", None)

@@ -2,7 +2,7 @@
   "complexity": {
     "cli.py": 5,
     "door.py": 2,
-    "esphome_device.py": 10,
+    "esphome_device.py": 12,
     "server.py": 4,
     "service.py": 8,
     "simulator.py": 7
@@ -24,7 +24,7 @@
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 6.6,
-  "tests": 193,
+  "test_seconds": 4.9,
+  "tests": 196,
   "type_errors": 0
 }
