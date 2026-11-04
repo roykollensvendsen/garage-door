@@ -88,6 +88,36 @@ remote. **Not planned:** the 0+2 bus. It is unproven on this model, and
 talking on the opener's bus is a bigger change than closing a contact. If an
 LM80EVF report appears, revisit it in a decision record.
 
+### Without extra sensors? (checked 2026-11-04, before buying anything)
+
+**0+2, the 78EV wall-control input.** Community reports show ratgdo-style
+boards reading door state from this pair on EU "EV" Chamberlain/LiftMaster
+openers. They are wired with ratgdo's control wire on terminal 0 and its
+ground on 2: an ML700EV and an LM100EVS in
+<https://github.com/ratgdo/esphome-ratgdo/issues/179>. ratgdo's wiring guide
+says ROW openers carry the serial line on a separate "eserial" terminal
+(<https://paulwieland.github.io/ratgdo/03_wiring.html>). The catch: state
+reports stopped after hours on those models. A status watchdog merged on
+2026-04-23 addresses it (same issue). Not reported on an LM80EVF. Nothing I
+found documents the line's voltage, and a tap is not isolated, because it
+shares ground with the opener. So: measure 0–2 first, and listen before ever
+transmitting. Whether this opener speaks Security+ 2.0 at all is a guess:
+yellow learn button is the usual sign (ratgdo FAQ). Check the button.
+
+**6+7 warning light plus timing.** This sees every movement, from the
+remote or the wall button too, but not the direction. Force reversal flips
+the direction mid-travel with the light still on. After a power cut the
+position is lost until the door reaches an end that something can detect.
+"Did it close?" is exactly the question it cannot answer reliably, so it is
+not enough on its own.
+
+**Fallback sensor without long wires: VL53L1X time-of-flight at the opener
+head, aimed at the trolley.** ST rates it to 4 m indoors. An ST engineer
+reports about 30 cm in strong sunlight
+(<https://community.st.com/t5/mems-sensors/vl53l1-ranging-instability-in-strong-ambient-light/td-p/316650>),
+and daylight comes in through an open door. Shade it, and reject readings
+whose range status is not valid. Test it before trusting it.
+
 ## 2. Circuit
 
 ```
