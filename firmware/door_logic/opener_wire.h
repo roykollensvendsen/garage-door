@@ -119,11 +119,12 @@ enum class Heard : std::uint8_t {
 };
 
 // Bytes from the UART in, the opener's last status out, with the time it
-// came. Bytes more than kGapMs apart are not one packet (one byte takes
-// 2.5 ms at 4000 baud).
+// came. Bytes more than kGapMs apart are not one packet. One byte takes
+// 2.5 ms at 4000 baud, but the controller reads the UART about every 20 ms,
+// so the limit allows for that.
 class Listener {
  public:
-  static constexpr std::uint32_t kGapMs = 10;
+  static constexpr std::uint32_t kGapMs = 50;
 
   Heard feed(std::uint32_t now, std::uint8_t b) {
     if (seen_byte_ && (now - last_byte_) > kGapMs) {

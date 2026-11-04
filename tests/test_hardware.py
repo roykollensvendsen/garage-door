@@ -52,6 +52,20 @@ def test_the_firmware_uses_the_planned_pins():
     assert sensors["at_open"] == f"GPIO{GPIO['sensor_open']}"
 
 
+def test_the_firmware_listens_on_the_planned_wire_pin_and_never_sends_on_it():
+    # Sending on the opener's wire waits for Roy's approval (decisions/ADR-GD-003).
+    uart = _esphome_config()["uart"]
+    uarts = uart if isinstance(uart, list) else [uart]
+    assert [u["rx_pin"]["number"] for u in uarts] == [f"GPIO{GPIO['wire_rx']}"]
+    assert all("tx_pin" not in u for u in uarts)
+    assert 34 <= GPIO["wire_rx"] <= 39, "an input-only pin cannot drive the opener's bus by mistake"
+
+
+def test_the_controller_starts_unarmed_after_every_boot():
+    switches = {s["id"]: s for s in _esphome_config()["switch"]}
+    assert switches["armed"]["restore_mode"] == "ALWAYS_OFF"
+
+
 def test_the_sensor_pins_are_input_only_and_need_the_planned_pull_ups():
     # GPIO 34-39 have no internal pull-up, so the firmware must not ask for one
     # and the board must carry the external ones the plan lists.

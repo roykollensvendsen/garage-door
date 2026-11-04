@@ -2,7 +2,7 @@
 //
 // The one Door the controller has, built on first use. Kept apart from
 // door_logic.h so the logic itself has no global state for the tests to trip
-// over. It starts in test mode (not armed): an update sent from the loft
+// over. It starts in test mode (not armed): an update sent over Wi-Fi
 // never presses the door until it is armed again.
 
 #pragma once

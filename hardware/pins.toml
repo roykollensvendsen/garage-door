@@ -16,6 +16,10 @@ press = 25
 sensor_closed = 34
 # Reed contact at the fully-open position; closes to ground near its magnet.
 sensor_open = 35
+# The opener's data wire (terminal 0), listen-only through a resistor divider
+# for the first bench test (docs/plan.md). Input-only, not a strapping pin.
+# Not in the schematic yet: it is added with the isolated input.
+wire_rx = 36
 
 [parts]
 relay = "AQY212EH"          # Panasonic PhotoMOS, DIP-4, 60 V 0.5 A, AC/DC output

@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # ESPHome configuration for the SparkFun ESP32 Thing that presses the
-# LiftMaster LM80EVF's push-button input (terminals 1 and 2) and reads the two
-# door sensors. The decisions live in door_logic/door_logic.h, which the
+# LiftMaster LM80EVF's push-button input (terminals 1 and 2), reads the door
+# state from two reed contacts or from the opener's data wire (terminals 0+2,
+# decisions/ADR-GD-003), and logs every packet on that wire over Wi-Fi. The decisions live in door_logic/door_logic.h, which the
 # laptop tests; this file only connects that logic to pins and the network.
 #
 # Check without hardware:  esphome config firmware/garage-door.yaml
@@ -12,13 +13,19 @@ substitutions:
   # Roy, 2026-11-04: closing by voice is allowed. The opener reverses on its
   # own force limit as with the remote; photocells are recommended, not required.
   allow_close: "true"
+  # Where the door state comes from: "reed" (contacts at each end) or "wire"
+  # (the opener's own status on 0+2). The wire is logged either way.
+  state_from: "reed"
 
 esphome:
   name: garage-door
   friendly_name: Garage door
   includes:
     - door_logic/door_logic.h
+    - door_logic/opener_wire.h
     - door_logic/esphome_glue.h
+    - third_party/secplus/secplus.h
+    - third_party/secplus/secplus.c
 
 esp32:
   board: esp32thing
@@ -37,6 +44,12 @@ esp32:
 # Logs go to USB serial when plugged in, and stream over the same encrypted
 # API connection otherwise: `esphome logs firmware/garage-door.yaml`.
 logger:
+  logs:
+    wire: INFO  # every packet on the opener's data wire
+
+# Restart reason and free memory, for debugging over Wi-Fi.
+debug:
+  update_interval: 60s
 
 # After repeated failed boots, start with only Wi-Fi and OTA so a fixed
 # build can still be sent. Also what marks a new build as good for rollback.
@@ -62,10 +75,52 @@ api:
             id(last_press_result).publish_state(garage::to_string(result));
 
 ota:
+  # Updates from the laptop over Wi-Fi, encrypted with their own key.
   - platform: esphome
-    password: !secret ota_password
+    encryption:
+      key: !secret ota_encryption_key
 
 # Deliberately absent: web_server, captive_portal, mqtt.
+
+# The opener's data wire, listen-only: terminal 0 through the resistor divider
+# to GPIO36, ground on terminal 2 (docs/plan.md, "First bench test"). Security+
+# 2.0 wireline at about 4000 baud, 8N1, idle high. No TX pin: nothing is sent.
+uart:
+  id: wire_uart
+  rx_pin:
+    number: GPIO36
+    inverted: false
+  baud_rate: 4000
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+  rx_buffer_size: 256
+
+switch:
+  # Test mode when off: presses are judged and reported, the relay stays open.
+  # Off after every boot and update; Roy turns it on.
+  - platform: template
+    id: armed
+    name: Armed
+    restore_mode: ALWAYS_OFF
+    lambda: return garage_door::door(${allow_close}).armed();
+    turn_on_action:
+      - lambda: garage_door::door(${allow_close}).set_armed(true);
+    turn_off_action:
+      - lambda: garage_door::door(${allow_close}).set_armed(false);
+
+button:
+  # Restarts the controller only; it boots with the relay open and unarmed.
+  - platform: restart
+    name: Restart
+
+sensor:
+  - platform: wifi_signal
+    name: Wi-Fi signal
+    update_interval: 60s
+  - platform: uptime
+    name: Uptime
+    update_interval: 60s
 
 binary_sensor:
   # Each reed contact closes to ground when its magnet is near. GPIO34 and 35
@@ -103,6 +158,14 @@ text_sensor:
   - platform: template
     id: last_press_result
     name: Last press result
+  - platform: template
+    id: wire_status
+    name: Opener status on the wire
+  - platform: version
+    name: Firmware version
+  - platform: debug
+    reset_reason:
+      name: Last restart reason
 
 interval:
   # The logic decides; this only carries its answer to the pin and the network.
@@ -110,8 +173,37 @@ interval:
     then:
       - lambda: |-
           auto &door = garage_door::door(${allow_close});
+          auto &wire = garage_door::wire();
           const uint32_t now = millis();
-          door.update(now, id(at_closed).state, id(at_open).state);
+          uint8_t b;
+          while (id(wire_uart).available() && id(wire_uart).read_byte(&b)) {
+            switch (wire.feed(now, b)) {
+              case garage::Heard::Nothing:
+                break;
+              case garage::Heard::Status: {
+                const auto &s = wire.last();
+                ESP_LOGI("wire", "status door=%u light=%d lock=%d rolling=0x%07x id=0x%010llx | %s",
+                         static_cast<unsigned>(s.door), s.light, s.lock, static_cast<unsigned>(s.rolling),
+                         static_cast<unsigned long long>(s.device_id), garage::to_hex(wire.packet()).c_str());
+                static const char *const names[] = {"unknown", "open", "closed", "stopped", "opening", "closing"};
+                const auto n = static_cast<unsigned>(s.door);
+                id(wire_status).publish_state(n < 6 ? names[n] : "unknown");
+                break;
+              }
+              case garage::Heard::Other:
+                ESP_LOGI("wire", "other | %s", garage::to_hex(wire.packet()).c_str());
+                break;
+              case garage::Heard::Bad:
+                ESP_LOGW("wire", "does not decode | %s", garage::to_hex(wire.packet()).c_str());
+                break;
+            }
+          }
+          if (std::string("${state_from}") == "wire") {
+            door.update_from_wire(now, wire.heard() ? wire.last().door : garage::WireState::Unknown,
+                                  wire.heard() ? wire.heard_at() : now);
+          } else {
+            door.update(now, id(at_closed).state, id(at_open).state);
+          }
           if (door.output(now)) {
             id(press_output).turn_on();
           } else {
