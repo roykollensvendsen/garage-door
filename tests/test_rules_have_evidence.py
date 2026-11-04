@@ -31,15 +31,28 @@ def _mutate():
     return module
 
 
+#: Where rules are marked, the comment that marks them, and the suite that tests them.
+MARKED_IN = (
+    ("src", "*.py", MARKER, "python"),
+    ("firmware/door_logic", "*.h", re.compile(r"^[ \t]*//\s*RULE:\s*(.+?)\s*$"), "firmware"),
+)
+
+
+def marked_suites() -> dict[str, str]:
+    """Every rule the source marks, by its words, and the suite whose test must name it."""
+    found = {}
+    for folder, pattern, marker, suite in MARKED_IN:
+        for source in sorted((ROOT / folder).rglob(pattern)):
+            for line in source.read_text().splitlines():
+                match = marker.search(line)
+                if match:
+                    found[match.group(1)] = suite
+    return found
+
+
 def marked_rules() -> set[str]:
     """Every rule the source marks, by the words the marker gives it."""
-    found = set()
-    for source in sorted((ROOT / "src").rglob("*.py")):
-        for line in source.read_text().splitlines():
-            match = MARKER.search(line)
-            if match:
-                found.add(match.group(1))
-    return found
+    return set(marked_suites())
 
 
 def rowed_rules() -> set[str]:
@@ -58,6 +71,8 @@ def defined_test_names() -> set[str]:
     found = set()
     for module in sorted((ROOT / "tests").rglob("test_*.py")):
         found.update(re.findall(r"^(?:async )?def (test_\w+)", module.read_text(), re.MULTILINE))
+    for module in sorted((ROOT / "firmware/tests").glob("*.cpp")):
+        found.update(a + b for a, b in re.findall(r"^TEST\((\w+), (\w+)\)", module.read_text(), re.MULTILINE))
     return found
 
 
@@ -72,6 +87,7 @@ def test_every_rule_has_a_test_named_after_it():
     """A kill is only evidence about a rule when the test that went red names it."""
     name_for = _mutate().test_name_for
     named = defined_test_names()
-    missing = sorted(rule for rule in marked_rules() if name_for(rule) not in named)
-    wanted = ", ".join(f"{name_for(rule)}()" for rule in missing)
+    suites = marked_suites()
+    missing = sorted(rule for rule, suite in suites.items() if name_for(rule, suite) not in named)
+    wanted = ", ".join(f"{name_for(rule, suites[rule])}()" for rule in missing)
     assert not missing, f"rules with no test named after them — write {wanted}"

@@ -57,3 +57,64 @@ file = "src/garage_door/service.py"
 find = 'log\.write\(json\.dumps\(entry\) \+ "\\n"\)'
 replace = 'pass'
 
+
+# --- The controller's own rules (firmware/door_logic/door_logic.h) ----------
+# `suite = "firmware"` builds and runs the GoogleTest suite instead of pytest.
+# The test that must go red is the rule's words in CamelCase, split between
+# the TEST's suite and name: "press is refused when ..." is Press.IsRefusedWhen...
+
+[[rule]]
+name = "press is refused when the door state is unknown"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(state_ != DoorState::Closed && state_ != DoorState::Open\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "press is refused when open and closing is not allowed"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(state_ == DoorState::Open && !config_\.allow_close\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "pulse cannot be restarted while it is on"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(pressed_ && \(now - press_start_\) < config_\.pulse_ms\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "pulse a second press within two seconds is refused"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(pressed_ && \(now - press_start_\) < config_\.min_gap_ms\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "pulse is off at half a second"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'return pressed_ && \(now - press_start_\) < config_\.pulse_ms;'
+replace = 'return pressed_ && (now - press_start_) < config_.min_gap_ms;'
+
+[[rule]]
+name = "pulse does not come back on when the clock wraps around later"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(pressed_ && \(now - press_start_\) >= config_\.min_gap_ms\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "door state is a fault when both sensors see a magnet at once"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(at_closed && at_open\) \{'
+replace = 'if (false) {'
+
+[[rule]]
+name = "door state becomes unknown when neither end is reached within the travel time"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'const bool within_travel = seen_at_end_ && \(now - last_at_end_\) < config_\.travel_ms;'
+replace = 'const bool within_travel = seen_at_end_;'

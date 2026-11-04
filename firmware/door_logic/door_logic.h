@@ -89,9 +89,11 @@ class Door {
   void update(std::uint32_t now, bool at_closed, bool at_open) {
     // Forget a press once its gap has passed. Remembered for ever, it would
     // look new again when the clock wraps, and press the door on its own.
+    // RULE: pulse does not come back on when the clock wraps around later
     if (pressed_ && (now - press_start_) >= config_.min_gap_ms) {
       pressed_ = false;
     }
+    // RULE: door state is a fault when both sensors see a magnet at once
     if (at_closed && at_open) {
       state_ = DoorState::Fault;
       return;
@@ -102,6 +104,7 @@ class Door {
       seen_at_end_ = true;
       return;
     }
+    // RULE: door state becomes unknown when neither end is reached within the travel time
     const bool within_travel = seen_at_end_ && (now - last_at_end_) < config_.travel_ms;
     state_ = within_travel ? DoorState::Moving : DoorState::Unknown;
   }
@@ -110,15 +113,19 @@ class Door {
 
   // Ask for a press. On Accepted, output() is true for pulse_ms from `now`.
   PressResult request_press(std::uint32_t now) {
+    // RULE: pulse cannot be restarted while it is on
     if (pressed_ && (now - press_start_) < config_.pulse_ms) {
       return PressResult::RefusedBusy;
     }
+    // RULE: pulse a second press within two seconds is refused
     if (pressed_ && (now - press_start_) < config_.min_gap_ms) {
       return PressResult::RefusedTooSoon;
     }
+    // RULE: press is refused when the door state is unknown
     if (state_ != DoorState::Closed && state_ != DoorState::Open) {
       return PressResult::RefusedState;
     }
+    // RULE: press is refused when open and closing is not allowed
     if (state_ == DoorState::Open && !config_.allow_close) {
       return PressResult::RefusedClose;
     }
@@ -130,6 +137,7 @@ class Door {
   // Whether the push-button input should be closed right now. Computed from
   // the clock alone, so the press ends on time even if update() stalls.
   bool output(std::uint32_t now) const {
+    // RULE: pulse is off at half a second
     return pressed_ && (now - press_start_) < config_.pulse_ms;
   }
 

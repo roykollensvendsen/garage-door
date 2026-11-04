@@ -21,8 +21,8 @@ These are not style. A change that breaks one is wrong, even if the tests pass.
    state machine, the refusal rules, the confirmation token and closing.
 2. **Never remove, weaken or skip a safety check**, in the firmware or the
    service, and never loosen a test to make it pass. Every rule marked
-   `# RULE:` in `src/` must keep failing its named test when turned off
-   (`just mutate`).
+   `# RULE:` in `src/` or `// RULE:` in `firmware/door_logic/` must keep
+   failing its named test when turned off (`just mutate`).
 3. **Fail closed.** When the door's state is unknown, the controller does not
    answer, or anything is uncertain: refuse, and say why.
 4. **Never press automatically.** No retries, no re-press after a failed

@@ -7,7 +7,7 @@ nothing. Where a rule is written before its test, the test is run red first.
 Where a rule already exists, this is the substitute. Every rule lives in
 scripts/mutations.toml, one row each. Run it from the repository root:
 
-    uv run python scripts/mutate.py [--write evidence/tests/rule-mutations.md]
+    uv run python scripts/mutate.py [--suite python|firmware] [--write evidence/tests/rule-mutations.md]
 
 A kill is not enough on its own. A mutation breaks whatever it breaks, and it
 can break a test for an incidental reason — a documented example whose output
@@ -37,15 +37,19 @@ TABLE = ROOT / "scripts/mutations.toml"
 RECOVERY = ROOT / "scripts/.mutate-recovery.json"
 
 
-def test_name_for(rule: str) -> str:
+def test_name_for(rule: str, suite: str) -> str:
     """The test name a rule requires: its own words, as an identifier.
 
     Imported by ``tests/test_rules_have_evidence.py`` so the rule is written
     once. A rule named "a spoken reply is capped" wants a test called
-    ``test_a_spoken_reply_is_capped``.
+    ``test_a_spoken_reply_is_capped``. A firmware rule wants a GoogleTest
+    whose suite and name, run together, are its words in CamelCase: "press
+    is refused when unknown" wants ``TEST(Press, IsRefusedWhenUnknown)``.
     """
-    words = re.sub(r"[^a-z0-9]+", "_", rule.lower())
-    return "test_" + re.sub(r"_+", "_", words).strip("_")
+    words = re.findall(r"[a-z0-9]+", rule.lower())
+    if suite == "firmware":
+        return "".join(w.capitalize() for w in words)
+    return "test_" + "_".join(words)
 
 
 def line_of(text: str, pattern: str, occurrence: int) -> int:
@@ -90,8 +94,31 @@ def restore(path: pathlib.Path, original: str, mutated: str) -> bool:
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
-def run_suite() -> tuple[int, list[str]]:
+#: A GoogleTest that failed, as ctest lists it: "  3 - Press.IsRefused (Failed)".
+CTEST_FAILED = re.compile(r"^\s*\d+ - (\S+) \(Failed\)", re.MULTILINE)
+
+
+def run_firmware() -> tuple[int, list[str]]:
+    """Build and run the firmware tests; how many failed, and which, as Suite+Name.
+
+    A mutation that does not compile proves nothing about its rule, so it
+    stops the run instead of counting as a kill.
+    """
+    r = subprocess.run(
+        ["/bin/sh", "scripts/firmware-tests.sh"], capture_output=True, text=True, cwd=ROOT, check=False
+    )
+    failed = [name.replace(".", "") for name in CTEST_FAILED.findall(r.stdout)]
+    if r.returncode and not failed:
+        # RULE: a firmware mutation that does not build is not a kill
+        msg = f"the mutated firmware did not build or run:\n{(r.stdout + r.stderr)[-2000:]}"
+        raise SystemExit(msg)
+    return len(failed), failed
+
+
+def run_suite(suite: str = "python") -> tuple[int, list[str]]:
     """Run the tests and give back how many failed, and which ones."""
+    if suite == "firmware":
+        return run_firmware()
     # Two mutations that replace equal-length text leave files of identical
     # size, and CPython validates a cached .pyc from the source's modification
     # time and size -- both at one-second resolution. Inside the same second
@@ -116,16 +143,28 @@ def run_suite() -> tuple[int, list[str]]:
     return int(m.group(1)) if m else 0, [f.split("::")[-1].split("[")[0] for f in failed]
 
 
-def main() -> int:
-    """Mutate every rule in turn, restore the tree, and report."""
+def selected(suite: str | None) -> list[dict[str, str]]:
+    """The table's rules, or only those one suite tests."""
+    rules = tomllib.loads(TABLE.read_text()).get("rule", [])
+    return [rule for rule in rules if suite in {None, rule.get("suite", "python")}]
+
+
+def arguments() -> argparse.Namespace:
+    """The command line: where to write the evidence, and which suite's rules."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", type=pathlib.Path, help="write the evidence table here")
-    args = parser.parse_args()
+    parser.add_argument("--suite", choices=["python", "firmware"], help="only the rules this suite tests")
+    return parser.parse_args()
+
+
+def main() -> int:
+    """Mutate every rule in turn, restore the tree, and report."""
+    args = arguments()
 
     repair()
     # RULE: an empty rule table is not a crash
     # A scaffolded repository starts with a table of comments and no rows.
-    rules = tomllib.loads(TABLE.read_text()).get("rule", [])
+    rules = selected(args.suite)
     if not rules:
         print(f"no rules in {TABLE.relative_to(ROOT)} yet; add one per rule the code enforces")  # noqa: T201
         return 0
@@ -149,13 +188,13 @@ def main() -> int:
             RECOVERY.write_text(json.dumps({"file": rule["file"], "original": text, "mutated": mutated}))
             path.write_text(mutated)
             standing = (path, text, mutated)
-            count, failed = run_suite()
+            count, failed = run_suite(rule.get("suite", "python"))
             if not restore(path, text, mutated):
                 lost.append(rule["file"])
             standing = None
             RECOVERY.unlink(missing_ok=True)
             # A kill by some other test is not evidence about this rule.
-            own = test_name_for(rule["name"])
+            own = test_name_for(rule["name"], rule.get("suite", "python"))
             by_its_own = own in failed
             results.append((rule["name"], count, own, by_its_own))
             verdict = "KILLED  " if by_its_own else ("BY LUCK " if count else "SURVIVED")

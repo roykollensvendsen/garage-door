@@ -96,7 +96,7 @@ jobs:
         # Fails below the floor in pyproject.toml ([tool.coverage.report]).
         run: uv run pytest -q -p no:cacheprovider --strict-markers --cov
       - name: Each safety rule's own test goes red when the rule is switched off
-        run: uv run python scripts/mutate.py
+        run: uv run python scripts/mutate.py --suite python
       # - name: The project's own check
       #   run: uv run garage-door check .
 
@@ -113,6 +113,8 @@ jobs:
         run: sh scripts/firmware-tests.sh
       - name: Coverage of the controller logic, with a floor
         run: sh scripts/firmware-coverage.sh
+      - name: Each firmware safety rule's own test goes red when the rule is switched off
+        run: python3 scripts/mutate.py --suite firmware
 
   # ESPHome's own validation of the controller configuration, with the example
   # secrets. It does not compile for the board; that needs the ESP-IDF toolchain.
