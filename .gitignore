@@ -19,3 +19,9 @@ scripts/.mutate-recovery.json
 
 # Roy's photos of the opener and board: may show private details
 docs/photos/
+
+# The laptop build of the controller tests, and ESPHome's own output.
+firmware/build/
+firmware/.esphome/
+# Wi-Fi password and keys for the controller; secrets.example.yaml shows the shape.
+firmware/secrets.yaml
