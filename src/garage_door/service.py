@@ -56,11 +56,16 @@ class Refused:
 
 @dataclass(frozen=True)
 class Confirmed:
-    """The button was pressed; where the door was before and is now."""
+    """The button was pressed; where the door was before and is now.
+
+    `armed` is False when the controller was in test mode, so the relay did
+    not switch, and None when the controller did not say.
+    """
 
     before: DoorState
     after: DoorState
     reached: bool
+    armed: bool | None
     message: str
 
 
@@ -108,6 +113,13 @@ class GarageService:
         except DeviceUnavailableError:
             return DoorState.UNKNOWN
 
+    async def armed(self) -> bool | None:
+        """Whether a press would switch the relay; None when the controller does not say."""
+        try:
+            return await self._device.armed()
+        except DeviceUnavailableError:
+            return None
+
     async def request(self, action: Action, *, requester: str) -> Question | Refused:
         """Check that `action` is safe now and return the question to ask, or why not."""
         self._pending = None  # a new request always replaces an older question
@@ -153,6 +165,7 @@ class GarageService:
                     pending.action,
                     pending.requester,
                 )
+            armed = await self.armed()
             verdict = await self._device.press()
         except DeviceUnavailableError:
             return self._refuse(
@@ -161,7 +174,8 @@ class GarageService:
                 pending.action,
                 pending.requester,
             )
-        after = await self._wait_for(pending.action.end_state)
+        # In test mode the relay stays open, so there is no travel to wait for.
+        after = await self.status() if armed is False else await self._wait_for(pending.action.end_state)
         reached = after is pending.action.end_state
         self._log(
             "pressed",
@@ -169,11 +183,17 @@ class GarageService:
             action=pending.action,
             before=before,
             after=after,
+            armed=armed,
             controller=verdict,
         )
         # A press is never repeated here: if the door stopped or reversed, a
         # person has to look before anything moves it again.
-        if reached:
+        if armed is False:
+            message = (
+                "Test mode: the controller is not armed, so the relay did not switch "
+                f"and the door did not move. It is {after}."
+            )
+        elif reached:
             message = f"Pressed. The garage door was {before} and is now {after}."
         elif pending.action is Action.CLOSE:
             message = (
@@ -185,7 +205,9 @@ class GarageService:
                 f"Pressed, but the garage door did not reach {pending.action.end_state}: "
                 f"it is {after}. Please check it."
             )
-        return Confirmed(before, after, reached, message)
+        if armed is None and not reached:
+            message += " I could not tell whether the controller is armed."
+        return Confirmed(before, after, reached, armed, message)
 
     async def _wait_for(self, wanted: DoorState) -> DoorState:
         """Read the door until it is `wanted` or the travel time has passed."""

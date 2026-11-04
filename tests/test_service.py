@@ -31,11 +31,17 @@ class FakeDevice:
         self.after_press = after_press
         self.presses = 0
         self.reachable = True
+        self.is_armed: bool | None = True  # False: test mode, the relay stays open
 
     async def state(self) -> DoorState:
         if not self.reachable:
             raise DeviceUnavailableError(UNREACHABLE)
         return self.current
+
+    async def armed(self) -> bool | None:
+        if not self.reachable:
+            raise DeviceUnavailableError(UNREACHABLE)
+        return self.is_armed
 
     async def press(self) -> str:
         if not self.reachable:
@@ -142,6 +148,54 @@ def test_a_press_that_does_not_reach_the_end_says_so(tmp_path):
     assert outcome.after is DoorState.MOVING
     assert "did not reach open" in outcome.message
     assert clock.now - started >= 30  # it waited the full travel time
+
+
+def test_a_press_in_test_mode_says_the_relay_did_not_switch(tmp_path):
+    # After every boot the controller is not armed: it judges and logs the
+    # press but leaves the relay open. Saying "pressed" then would send Roy
+    # looking for a wiring fault that is not there.
+    device = FakeDevice(DoorState.CLOSED)
+    device.is_armed = False
+    service, clock = make(device, tmp_path)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    assert isinstance(question, Question)
+    started = clock.now
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert outcome.armed is False
+    assert outcome.reached is False
+    assert outcome.message == (
+        "Test mode: the controller is not armed, so the relay did not switch "
+        "and the door did not move. It is closed."
+    )
+    assert "Pressed" not in outcome.message
+    assert device.presses == 1  # still sent: the controller judges and logs it
+    assert clock.now - started < 30  # no waiting for a door that cannot move
+    assert log_lines(tmp_path)[-1]["armed"] == "False"
+
+
+def test_a_press_that_does_not_arrive_says_when_test_mode_is_not_known(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.CLOSED)
+    device.is_armed = None
+    service, _ = make(device, tmp_path)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    assert isinstance(question, Question)
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert outcome.armed is None
+    assert outcome.message.startswith("Pressed, but the garage door did not reach open")
+    assert outcome.message.endswith("I could not tell whether the controller is armed.")
+
+
+def test_a_press_that_arrives_reports_the_controller_armed(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    assert isinstance(question, Question)
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert outcome.armed is True
+    assert outcome.message == "Pressed. The garage door was closed and is now open."
 
 
 # --- Refusals ----------------------------------------------------------------
@@ -301,6 +355,17 @@ def test_status_reports_the_door_and_never_presses(tmp_path):
     assert run(service.status()) is DoorState.CLOSED
     device.reachable = False
     assert run(service.status()) is DoorState.UNKNOWN
+    assert device.presses == 0
+
+
+def test_armed_reports_test_mode_and_is_unknown_without_an_answer(tmp_path):
+    device = FakeDevice(DoorState.CLOSED)
+    service, _ = make(device, tmp_path)
+    assert run(service.armed()) is True
+    device.is_armed = False
+    assert run(service.armed()) is False
+    device.reachable = False
+    assert run(service.armed()) is None
     assert device.presses == 0
 
 

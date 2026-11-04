@@ -191,6 +191,47 @@ def test_test_mode_is_switched_with_the_controllers_armed_switch():
     assert client.executed == []  # arming presses nothing
 
 
+def test_armed_follows_the_controllers_armed_switch():
+    from aioesphomeapi import SwitchInfo, SwitchState  # noqa: PLC0415
+
+    client = FakeClient("closed")
+    client.entities.append(SwitchInfo(name="Armed", key=14))
+    device = EsphomeDevice(lambda: client)
+    assert run(device.armed()) is None  # not reported yet: not known
+    client.deliver(SwitchState(key=14, state=True))
+    assert run(device.armed()) is True
+    client.deliver(SwitchState(key=14, state=False))
+    assert run(device.armed()) is False
+    assert client.executed == []
+    assert client.switched == []
+
+
+def test_armed_is_not_known_on_a_controller_without_the_switch():
+    from aioesphomeapi import SwitchState  # noqa: PLC0415
+
+    client = FakeClient("closed")
+    device = EsphomeDevice(lambda: client)
+    run(device.state())
+    client.deliver(SwitchState(key=14, state=True))  # not one of its entities
+    assert run(device.armed()) is None
+
+
+def test_armed_is_forgotten_when_the_connection_is_made_again():
+    # After a restart the controller comes back unarmed; until it says so,
+    # the last answer from before is not trusted.
+    from aioesphomeapi import SwitchInfo, SwitchState  # noqa: PLC0415
+
+    client = FakeClient("closed")
+    client.entities.append(SwitchInfo(name="Armed", key=14))
+    device = EsphomeDevice(lambda: client)
+    run(device.state())
+    client.deliver(SwitchState(key=14, state=True))
+    client.fail_execute = True
+    with pytest.raises(DeviceUnavailableError):
+        run(device.press())  # drops the connection
+    assert run(device.armed()) is None
+
+
 def test_arming_fails_closed_on_a_controller_without_the_switch():
     client = FakeClient("closed")
     with pytest.raises(DeviceUnavailableError, match="Armed"):

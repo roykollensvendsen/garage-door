@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The garage door as MCP tools, for a local voice session.
 
-Three tools: ``garage_status`` reads the door; ``garage_request`` checks that
-opening or closing is safe and returns a question to read aloud with a token;
-``garage_confirm`` presses, and is to be called only after Roy says yes.
+Three tools: ``garage_status`` reads the door and whether the controller is
+armed; ``garage_request`` checks that opening or closing is safe and returns a
+question to read aloud with a token; ``garage_confirm`` presses, and is to be
+called only after Roy says yes.
 
 Run over stdio by Roy's local MCP server. Settings come from the environment:
 
@@ -85,9 +86,14 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
         instructions=(SIMULATED + INSTRUCTIONS) if simulated else INSTRUCTIONS,
     )
 
-    @server.tool(description="Read whether the garage door is open, closed, moving, unknown or faulty.")
-    async def garage_status() -> dict[str, str]:
-        return {"state": str(await service.status())}
+    @server.tool(
+        description=(
+            "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
+            "the controller is armed (false: test mode, a press switches nothing; null: not known)."
+        )
+    )
+    async def garage_status() -> dict[str, str | bool | None]:
+        return {"state": str(await service.status()), "armed": await service.armed()}
 
     @server.tool(
         description=(
@@ -112,7 +118,7 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
             "after Roy has given a spoken yes to its question. Read the result ('say') aloud."
         )
     )
-    async def garage_confirm(token: str) -> dict[str, str | bool]:
+    async def garage_confirm(token: str) -> dict[str, str | bool | None]:
         outcome = await service.confirm(token)
         if isinstance(outcome, Confirmed):
             return {
@@ -120,6 +126,7 @@ def build_server(service: GarageService, *, simulated: bool = False) -> MCPServe
                 "before": str(outcome.before),
                 "after": str(outcome.after),
                 "reached": outcome.reached,
+                "armed": outcome.armed,
                 "say": outcome.message,
             }
         return {"outcome": "refused", "state": str(outcome.state), "say": outcome.reason}

@@ -11,7 +11,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any, Protocol
 
 from aioesphomeapi.core import APIConnectionError
-from aioesphomeapi.model import TextSensorState
+from aioesphomeapi.model import SwitchState, TextSensorState
 
 from garage_door.door import DeviceUnavailableError, DoorState
 
@@ -51,6 +51,7 @@ class EsphomeDevice:
         self._state_key: int | None = None
         self._press: Any = None
         self._armed_key: int | None = None
+        self._armed: bool | None = None
         self._door: str | None = None
         self._names: dict[int, str] = {}
         self._seen: dict[str, str] = {}
@@ -62,6 +63,11 @@ class EsphomeDevice:
             return DoorState(self._door) if self._door is not None else DoorState.UNKNOWN
         except ValueError:
             return DoorState.UNKNOWN
+
+    async def armed(self) -> bool | None:
+        """The controller's Armed switch as last reported; None until it is."""
+        await self._ensure_connected()
+        return self._armed
 
     async def press(self) -> str:
         """Ask the controller to press once. Its own logic may still refuse."""
@@ -115,6 +121,7 @@ class EsphomeDevice:
         self._armed_key = next((e.key for e in entities if e.name == ARMED_SWITCH), None)
         self._press = next((s for s in services if s.name == PRESS_ACTION), None)
         self._door = None
+        self._armed = None  # a controller that restarted comes back unarmed; wait to be told
         self._client.subscribe_states(self._on_state)
         self._connected = True
         # The controller sends its states a moment after connecting. Wait a
@@ -131,6 +138,8 @@ class EsphomeDevice:
             self._seen[self._names[key]] = _shown(state)
         if isinstance(state, TextSensorState) and state.key == self._state_key:
             self._door = state.state
+        if isinstance(state, SwitchState) and state.key == self._armed_key:
+            self._armed = state.state
 
 
 def _shown(state: object) -> str:

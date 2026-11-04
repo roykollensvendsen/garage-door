@@ -40,6 +40,13 @@ class Device(Protocol):
         """The door's state now. Raises DeviceUnavailableError if there is no answer."""
         ...
 
+    async def armed(self) -> bool | None:
+        """Whether a press switches the relay; False in test mode, None when not reported.
+
+        Raises DeviceUnavailableError if there is no answer.
+        """
+        ...
+
     async def press(self) -> str:
         """Ask the controller to press once; returns its own verdict on the request."""
         ...

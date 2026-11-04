@@ -7,7 +7,7 @@ session.
 
 | Tool | What it does |
 |---|---|
-| `garage_status` | Says whether the door is open, closed, moving, unknown or faulty. |
+| `garage_status` | Says whether the door is open, closed, moving, unknown or faulty, and whether the controller is armed. Not armed is test mode: a press is judged and logged, but the relay stays open. |
 | `garage_request` | Asks to open or close. Presses nothing. Returns a question to read aloud and a one-time token, or a refusal to read aloud. |
 | `garage_confirm` | Presses, given the token, and only after a spoken yes. Returns what the door did. |
 
@@ -22,6 +22,13 @@ If the door meets something on the way down:
 
 > **Claude:** The garage door did NOT close, possibly reversed. Something may
 > be in the way: it is open. Please check it before trying again.
+
+If the controller is in test mode, as it always is after a restart, the
+press is sent but the relay does not switch, and Claude says so instead of
+"pressed":
+
+> **Claude:** Test mode: the controller is not armed, so the relay did not
+> switch and the door did not move. It is closed.
 
 ## Try it without a garage
 

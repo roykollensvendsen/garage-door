@@ -112,6 +112,10 @@ class SimulatedController:
         recent = self._last_at_end is not None and self._clock() - self._last_at_end < FIRMWARE_TRAVEL_SECONDS
         return DoorState.MOVING if recent else DoorState.UNKNOWN
 
+    async def armed(self) -> bool:
+        """Always armed: the simulated door has no test mode, so a press moves it."""
+        return True
+
     async def press(self) -> str:
         """Press once if the firmware would; return its verdict, as the controller does."""
         state = await self.state()

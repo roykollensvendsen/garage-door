@@ -18,13 +18,17 @@ if TYPE_CHECKING:
 
 
 class FakeDevice:
-    def __init__(self, state: DoorState, after_press: DoorState) -> None:
+    def __init__(self, state: DoorState, after_press: DoorState, *, armed: bool | None = True) -> None:
         self.current = state
         self.after_press = after_press
+        self.is_armed = armed
         self.presses = 0
 
     async def state(self) -> DoorState:
         return self.current
+
+    async def armed(self) -> bool | None:
+        return self.is_armed
 
     async def press(self) -> str:
         self.presses += 1
@@ -57,7 +61,23 @@ def test_the_server_offers_exactly_status_request_and_confirm(tmp_path):
 
 def test_status_reports_the_door(tmp_path):
     server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
-    assert call(server, "garage_status", {}) == {"state": "closed"}
+    assert call(server, "garage_status", {}) == {"state": "closed", "armed": True}
+
+
+@pytest.mark.parametrize("armed", [False, None])
+def test_status_says_when_the_controller_is_in_test_mode_or_not_known(tmp_path, armed):
+    server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN, armed=armed), tmp_path)
+    assert call(server, "garage_status", {}) == {"state": "closed", "armed": armed}
+
+
+def test_a_press_in_test_mode_comes_back_as_test_mode(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, DoorState.CLOSED, armed=False)
+    server = server_for(device, tmp_path)
+    asked = call(server, "garage_request", {"action": "open"})
+    done = call(server, "garage_confirm", {"token": asked["token"]})
+    assert done["outcome"] == "pressed"
+    assert done["armed"] is False
+    assert done["say"].startswith("Test mode:")
 
 
 def test_request_then_confirm_presses_once_through_the_tools(tmp_path):
@@ -70,6 +90,7 @@ def test_request_then_confirm_presses_once_through_the_tools(tmp_path):
     done = call(server, "garage_confirm", {"token": asked["token"]})
     assert done["outcome"] == "pressed"
     assert (done["before"], done["after"]) == ("closed", "open")
+    assert done["armed"] is True
     assert device.presses == 1
 
 
@@ -123,7 +144,7 @@ def test_the_simulated_server_says_it_is_simulated_and_logs_apart(tmp_path):
     server = build_server(service, simulated=True)
     assert server.name == "garage-door-simulated"
     assert server.instructions.startswith("SIMULATED:")
-    assert call(server, "garage_status", {}) == {"state": "closed"}
+    assert call(server, "garage_status", {}) == {"state": "closed", "armed": True}
     asked = call(server, "garage_request", {"action": "open"})
     assert asked["outcome"] == "question"
     assert (tmp_path / "garage-door/simulated.jsonl").exists()
