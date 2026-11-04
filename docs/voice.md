@@ -1,0 +1,61 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+# Voice and Claude (MCP)
+
+The laptop side is an [MCP](https://modelcontextprotocol.io) server with three
+tools. Any MCP client can use it; it was built for a local Claude voice
+session.
+
+| Tool | What it does |
+|---|---|
+| `garage_status` | Says whether the door is open, closed, moving, unknown or faulty. |
+| `garage_request` | Asks to open or close. Presses nothing. Returns a question to read aloud and a one-time token, or a refusal to read aloud. |
+| `garage_confirm` | Presses, given the token, and only after a spoken yes. Returns what the door did. |
+
+A conversation looks like this:
+
+> **You:** Close the garage.
+> **Claude** *(calls `garage_request`)*: The garage door is open. Close it?
+> **You:** Yes.
+> **Claude** *(calls `garage_confirm`)*: The garage door is closed.
+
+If the door meets something on the way down:
+
+> **Claude:** The garage door did NOT close, possibly reversed. Something may
+> be in the way: it is open. Please check it before trying again.
+
+## Try it without a garage
+
+The same server can run against a simulated door that takes 12 seconds to
+travel and reverses on an obstacle. It needs no hardware and no settings,
+says it is simulated, and keeps its own log.
+
+<!-- not run: starts a long-running server -->
+```sh
+uv run garage-door-mcp --simulate               # starts closed
+uv run garage-door-mcp --simulate --start open  # starts open
+```
+
+To use it from Claude Code, add it as an MCP server:
+
+<!-- not run: changes the reader's Claude Code configuration -->
+```sh
+claude mcp add garage-door-sim -- uv --directory /path/to/garage-door run garage-door-mcp --simulate
+```
+
+## Connecting the real door
+
+<!-- not run: needs the controller on the network -->
+```sh
+export GARAGE_DOOR_HOST=garage-door.local
+export GARAGE_DOOR_API_KEY=...        # from your secret store, never a file in the repo
+uv run garage-door-mcp
+```
+
+Settings:
+
+| Variable | Meaning |
+|---|---|
+| `GARAGE_DOOR_HOST` | The controller's address on your network. Required. |
+| `GARAGE_DOOR_API_KEY` | The controller's API encryption key. Required. |
+| `GARAGE_DOOR_ALLOW_CLOSE` | `no` switches closing by voice off. On otherwise. |
+| `GARAGE_DOOR_LOG` | Where to log. Default `$XDG_STATE_HOME/garage-door/presses.jsonl`. |

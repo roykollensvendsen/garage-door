@@ -159,3 +159,23 @@ jobs:
       - name: The cable diagram renders
         run: uvx wireviz==0.4.1 -f s -o "$RUNNER_TEMP" hardware/harness.yaml
 
+  # The project site builds with no warnings, and the pages generated from
+  # hardware/openers/ are current. Publishing is in pages.yml.
+  site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.13"
+      - name: The compatibility pages are current
+        run: uv run python scripts/openers.py --check
+      - name: The site builds with no warnings
+        env:
+          NO_MKDOCS_2_WARNING: "1"
+        run: uv run --group docs mkdocs build --strict
+      - name: The site has llms.txt and Markdown pages
+        run: test -s site/llms.txt && test -s site/llms-full.txt && test -s site/build-guide.md
+

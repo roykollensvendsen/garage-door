@@ -1,13 +1,30 @@
 # garage-door
 
-Voice-controlled garage door: ESP32 + ESPHome on the opener's push-button input, driven by a local MCP module with confirmation and logging.
+[![Checks](https://github.com/roykollensvendsen/garage-door/actions/workflows/checks.yml/badge.svg)](https://github.com/roykollensvendsen/garage-door/actions/workflows/checks.yml)
+[![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue)](LICENSE)
+[![Site](https://img.shields.io/badge/site-garage--door-teal)](https://roykollensvendsen.github.io/garage-door/)
+[![Try it without hardware](https://img.shields.io/badge/try%20it-simulated%20door-orange)](docs/voice.md#try-it-without-a-garage)
 
-<!-- not run: there is nothing to run until the walking skeleton exists -->
-```bash
-# Replace this block with what garage-door actually does, as a ```console block
-# whose output is what the command really prints. The suite runs those blocks
-# and compares them, so an example here cannot quietly stop being true.
-```
+**Talk to your garage door.** *"Open the garage." "The garage door is closed.
+Open it?" "Yes."* An ESP32 joins a LiftMaster (Chamberlain) opener's
+push-button terminals through an isolated relay, and a local MCP server lets
+Claude ask before every press, report what the door did, and log it all.
+Home network only. Build it in an evening for roughly €60–80, with no
+soldering inside the opener.
+
+![Demo video placeholder: a voice command opening the garage door](docs/assets/demo-placeholder.svg)
+
+- **Build one:** [build guide](docs/build-guide.md), with the schematic, the
+  cable diagram and the parts by part number.
+- **Does it work with your opener?** [Check, or add it](docs/compatibility.md),
+  the easiest contribution there is.
+- **Try it without a garage:** `uv run garage-door-mcp --simulate`
+  ([how](docs/voice.md#try-it-without-a-garage)).
+- **Read [Safety](docs/safety.md)** before you build.
+- **Contribute:** [start here](docs/contribute.md). Coding agents: [AGENTS.md](AGENTS.md).
+
+The project site, <https://roykollensvendsen.github.io/garage-door/>, goes
+live when this repository is made public.
 
 ## Where this stands
 

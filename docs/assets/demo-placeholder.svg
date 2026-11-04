@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Demo video placeholder">
+  <rect width="800" height="450" rx="16" fill="#263238"/>
+  <circle cx="400" cy="190" r="56" fill="#009688"/>
+  <path d="M385 162v56l46-28z" fill="#fff"/>
+  <text x="400" y="300" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#fff">"Open the garage." — "Open it?" — "Yes."</text>
+  <text x="400" y="345" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#b2dfdb">Demo video coming after the first build</text>
+</svg>

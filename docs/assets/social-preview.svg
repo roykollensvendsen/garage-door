@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <rect width="1280" height="640" fill="#00796b"/>
+  <g transform="translate(90 170) scale(4.4)" fill="none" stroke="#fff" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M8 28 32 10l24 18v26H8z" stroke-width="3.5"/>
+    <path d="M16 34h32M16 41h32M16 48h32" stroke-width="2.5"/>
+    <path d="M27 27c2-2 8-2 10 0M24 23c4-4 12-4 16 0" stroke-width="2.2"/>
+  </g>
+  <text x="440" y="250" font-family="DejaVu Sans, sans-serif" font-size="78" font-weight="bold" fill="#fff">garage-door</text>
+  <text x="440" y="330" font-family="DejaVu Sans, sans-serif" font-size="38" fill="#e0f2f1">Talk to your garage door.</text>
+  <text x="440" y="400" font-family="DejaVu Sans, sans-serif" font-size="28" fill="#b2dfdb">ESP32 + isolated relay + Claude over MCP</text>
+  <text x="440" y="445" font-family="DejaVu Sans, sans-serif" font-size="28" fill="#b2dfdb">LiftMaster / Chamberlain LM80EVF and similar</text>
+  <text x="440" y="490" font-family="DejaVu Sans, sans-serif" font-size="28" fill="#b2dfdb">Asks before every press. Home network only.</text>
+</svg>

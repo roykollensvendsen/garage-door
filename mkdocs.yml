@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+site_name: garage-door
+site_description: >-
+  Voice control for a LiftMaster / Chamberlain garage door (LM80EVF and
+  similar) with an ESP32, an isolated relay and Claude over MCP. Asks before
+  every press; home network only.
+site_url: https://roykollensvendsen.github.io/garage-door/
+repo_url: https://github.com/roykollensvendsen/garage-door
+repo_name: roykollensvendsen/garage-door
+edit_uri: edit/main/docs/
+copyright: GPL-3.0-or-later. LiftMaster and Chamberlain are trademarks of The Chamberlain Group; this project is not affiliated with them.
+
+docs_dir: docs
+not_in_nav: |
+  openers/*.md
+
+exclude_docs: |
+  photos/
+  vendor/
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      toggle: {icon: material/weather-night, name: Dark}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      toggle: {icon: material/weather-sunny, name: Light}
+  features:
+    - content.action.edit
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc: {permalink: true}
+
+hooks:
+  - scripts/site_hooks.py
+
+nav:
+  - Home: index.md
+  - Build it:
+      - Build guide: build-guide.md
+      - Safety: safety.md
+      - Does it work with my opener?: compatibility.md
+  - Use it:
+      - Voice and Claude (MCP): voice.md
+      - Questions: faq.md
+  - Community:
+      - Contribute: contribute.md
+      - Builds: gallery.md
+  - Design:
+      - The plan: plan.md
+      - Vendor documents: vendor-sources.md

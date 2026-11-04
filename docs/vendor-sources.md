@@ -6,7 +6,7 @@ The manufacturer's documents are copyrighted. They are kept locally in
 where each one came from, so anyone can fetch the same file and check that
 it is the same. Our own notes, written in our own words and citing these
 files by page, are in
-[`.claude/skills/liftmaster-lm80evf/`](../.claude/skills/liftmaster-lm80evf/SKILL.md).
+[`.claude/skills/liftmaster-lm80evf/`](https://github.com/roykollensvendsen/garage-door/blob/main/.claude/skills/liftmaster-lm80evf/SKILL.md).
 
 | Local file (in `docs/vendor/`) | What it is | Downloaded from | Retrieved | SHA-256 |
 |---|---|---|---|---|

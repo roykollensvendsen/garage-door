@@ -60,7 +60,7 @@ The photos are in `docs/photos/`, which git ignores.
   on 2+3**. Closing therefore relies on the opener's own force-based
   reversal, exactly as it does with the remote. Roy decided on 2026-11-04
   to allow closing by voice anyway; see section 4 and
-  [`decisions/ADR-GD-002`](../decisions/ADR-GD-002-close-without-photocells.md).
+  [`decisions/ADR-GD-002`](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-002-close-without-photocells.md).
 - **ESP32 Thing:** pins 25, 34, 35, 3V3, GND and VUSB are all labelled and
   broken out; headers are not soldered yet; micro-USB and the JST battery
   socket as expected.
@@ -166,7 +166,7 @@ LM80EVF report appears, revisit it in a decision record.
 
 **Recommendation: ESPHome** over hand-written Arduino or ESP-IDF firmware.
 Reasons and the options weighed are in
-[`decisions/ADR-GD-001-esphome-native-api.md`](../decisions/ADR-GD-001-esphome-native-api.md).
+[`decisions/ADR-GD-001-esphome-native-api.md`](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-001-esphome-native-api.md).
 In short: the pulse limit, the boot-with-output-off rule and the sensor
 debouncing are a few lines of configuration that ESPHome has already got
 right many times over, and its native API comes with encryption and a
@@ -184,7 +184,7 @@ same LAN as the ESP32 to press anything. When Roy is away from home the tool
 reports "not reachable" rather than trying another route. Making it work away
 from home (a tailnet subnet router or an always-on box at home running the
 module) is a later decision for Roy, listed in
-[`decisions/deferred.md`](../decisions/deferred.md).
+[`decisions/deferred.md`](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/deferred.md).
 
 **Updates and logs.**
 

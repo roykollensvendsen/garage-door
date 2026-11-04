@@ -77,3 +77,9 @@ omit = ["*/_version.py"]   # generated from the Git tag at build time
 [tool.coverage.report]
 show_missing = true
 exclude_also = ["if __name__ == .__main__.:"]
+
+[dependency-groups]
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.8.0",
+]

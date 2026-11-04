@@ -29,6 +29,8 @@ uv run pytest -q --cov
 uv run python scripts/mutate.py
 sh scripts/firmware-tests.sh
 sh scripts/esphome-config.sh
+uv run python scripts/openers.py --check
+uv run --group docs mkdocs build --strict
 committed --no-merge-commit origin/main..HEAD
 ```
 

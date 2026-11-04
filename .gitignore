@@ -35,3 +35,6 @@ hardware/*.kicad_prl
 hardware/fp-info-cache
 hardware/.history/
 hardware/~*.lck
+
+# Built site
+site/

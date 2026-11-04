@@ -29,7 +29,7 @@ ROOT = pathlib.Path(__file__).parent.parent
 # Every page, found rather than listed: a hand-kept list is a page's way out.
 # evidence/ and references/ hold material quoted from elsewhere, not this
 # project's own claims, so their examples are nobody here's to run.
-SKIP = ("evidence", "references", ".venv", "node_modules")
+SKIP = ("evidence", "references", ".venv", "node_modules", "site")
 LOOKS_LIKE_A_COMMAND = re.compile(
     r"^\s*\$?\s*(garage-door|uv |git |pytest|python|committed|ruff|mypy)\b", re.MULTILINE
 )
