@@ -22,6 +22,7 @@
 - Roy, 2026-11-04: 0+2 measured at about 10 V idle, 11.17 V after running; 0 Hz while moving; brief readings only at state changes: about 285 Hz around the start, 27.27 Hz at a stop part-way, 17.51 Hz stopped closed (status bursts, not yet decoded).
 - Roy, 2026-11-04: 0+2 on an oscilloscope (MSO2024, 1 ms/div), triggered by the remote: idle about 10-12 V, a sharp drop to about 0 V held 2-3 ms, then a burst of short open-drain-style pulses. A data line, consistent with a Security+ 2.0-style serial bus; bit rate not measured yet.
 - Roy, 2026-11-04: 0+2 pulse widths with scope cursors: break low 2.624 ms (about 21 bit times, a UART break), then high 128.4 us, low 254 us, high 252.4 us, later highs of 504.4 and 754.4 us; 1, 2, 2, 4 and 6 bits give about 126 us per bit, about 7900 baud (7812.5 or 8000 nominal), not ratgdo's 9600; message longer than 10 ms; not decoded yet.
+- Roy, 2026-11-04: 0+2 capture saved from the scope and decoded with scripts/decode_capture.py: the bit is about 250 us (about 4000 baud, 8N1, idle high); the 126 us pulse was the half-bit after the break; the message reads [break] 55 01 00 86 0E BD (capture ends), and 55 01 00 is the Security+ 2.0 sync ratgdo looks for.
 
 ## Leave alone
 

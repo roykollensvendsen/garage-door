@@ -28,4 +28,10 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   nominal), not the 9600 baud ratgdo uses for Security+ 2.0. The
   message lasts more than 10 ms. Not decoded yet. The plan's "Next step for 0+2" has the scope settings and the
   listen-only input.
+- **0+2 decoded** from a saved scope CSV (`scripts/decode_capture.py`): the
+  real bit is about 250 us, about 4000 baud, 8N1, idle high. The 126 us
+  pulse above is the half-bit high right after the break, not a bit. The
+  bytes are `[break] 55 01 00 86 0E BD`, cut off by the end of the 20 ms
+  capture. `55 01 00` is the Security+ 2.0 sync ratgdo looks for, so this is
+  Security+ 2.0 framing at about 4000 baud, not ratgdo's 9600.
 - **6+7:** not measured yet. Measure idle and while moving.

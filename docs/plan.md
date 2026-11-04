@@ -111,9 +111,13 @@ position is lost until the door reaches an end that something can detect.
 "Did it close?" is exactly the question it cannot answer reliably, so it is
 not enough on its own.
 
-**Next step for 0+2: decode it, listen-only.** The bit time measured on
-the scope is about 126 µs, which is about 7900 baud (7812.5 or 8000 nominal). Each
-message starts with a break of 2.624 ms, about 21 bit times.
+**Next step for 0+2: decode a whole packet, listen-only.** Decoding the saved
+capture showed the true bit is about **250 µs, about 4000 baud, 8N1**. The
+126 µs pulse measured by hand was the half-bit high after the break. The
+message starts `55 01 00`, the Security+ 2.0 sync (see the table above). Each
+message starts with a break of 2.624 ms, about 10 bit times. Where the
+settings below say 7900, use **4000**. A whole 19-byte packet takes about
+48 ms, so capture at 10 ms/div.
 
 *What is known about the rate.* ratgdo's ESPHome firmware opens Security+
 2.0 at **9600 baud, 8N1** and Security+ 1.0 at **1200 baud, 8E1**
@@ -198,6 +202,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 0+2 while the door ran | DC dipped slightly, then returned to 11.17 V. Frequency mode reads **0 Hz while the door moves**. A reading appears only briefly **around each change of state**: about **285 Hz** around the start, **27.27 Hz** at a stop part-way, **17.51 Hz** when it stopped closed (hand-held probes) | **Bursts of traffic at each change of state, quiet in between**, as a bus that sends status on change (Security+ 2.0-style) would show. A multimeter cannot resolve serial data, so the figures are artefacts of the bursts, not baud rates. **Not proven** until captured. |
 | 0+2 on an oscilloscope, triggered by the remote | Tektronix MSO2024, 10x probe, ground clip on 2, tip on 0, 5 V/div, 1 ms/div, falling edge at 6 V, Normal, Single. Idle **steady at about 10–12 V**. At the trigger the line drops **sharply to about 0 V and stays low for about 2–3 ms**. Then **a burst of short pulses**, pulled low and released, open-drain style | **A data line, not a plain button input.** A long low "break" and then bytes is what a Security+ 2.0-style one-wire serial bus looks like. Bits not resolved at 1 ms/div. **Bit rate and protocol not yet measured**; next capture below. |
 | 0+2, pulse widths (scope cursors in the zoom window) | Idle high about 12 V. Break low for **2.624 ms**. Then high **128.4 µs**, low **254 µs**, high **252.4 µs**. After that, a run of fairly regular pulses, then longer lows and some wider highs: **504.4 µs** and **754.4 µs**. The message lasts **more than about 10 ms** | The widths are 1, 2, 2, 4 and 6 bits: 1893.6 µs over 15 bits is **about 126.2 µs per bit, about 7920 baud**. The break is about 21 bit times, a little longer than two 8N1 frames (20 bits): a classic UART break marking the start of a message. Nominal is probably **7812.5 baud** (8 MHz / 1024, 128 µs) or **8000 baud** (125 µs). Both are within about 1.3 % of the measured rate, which a UART tolerates. Either way it is **not the 9600 baud** that ratgdo uses for Security+ 2.0. It could be a variant, or another encoding (Manchester at 128 µs per half-bit is also possible). **Not decoded yet.** |
+| 0+2, a saved capture decoded in software | MSO2024, CH1 saved as CSV, 20 ms at 0.16 µs per sample, triggered by the remote. Decoded with `scripts/decode_capture.py` (threshold 6 V). Runs after the break: a high of 128.6 µs, then every run a multiple of about **250 µs** (254, 1751, 2250, 1003 µs and so on) | The 126 µs "bit" was the **half-bit high right after the break**. The real bit is about **250 µs: about 4000 baud** (fitted 3973–3989). As **UART 8N1, idle high**, it decodes to `[break] 55 01 00 86 0E BD` and then the capture ends. **`55 01 00` is exactly the Security+ 2.0 sync that ratgdo's receiver looks for**, so this is Security+ 2.0 framing, at about 4000 baud instead of ratgdo's 9600. A Security+ 2.0 packet is 19 bytes (about 48 ms at 4000 baud), so this 20 ms capture holds only the first 6. **Next:** capture again at 10 ms/div (100 ms) to get a whole packet, and decode it with secplus. |
 | 6+7 (warning light) | not measured yet | Measure idle and while the door moves. |
 
 ## 2. Circuit
