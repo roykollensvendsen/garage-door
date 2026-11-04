@@ -19,7 +19,7 @@
 ## Checked on a real opener
 
 - Roy, 2026-11-04: 1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door.
-- Roy, 2026-11-04: 0+2 measured at about 10 V idle, 11.17 V after running; frequency reading about 285 Hz while moving, about 27.27 Hz right after a stop (status traffic, not yet decoded).
+- Roy, 2026-11-04: 0+2 measured at about 10 V idle, 11.17 V after running; frequency reading about 285 Hz while moving, about 27.27 Hz stopped part-way, about 17.51 Hz closed (status traffic, not yet decoded).
 
 ## Leave alone
 
