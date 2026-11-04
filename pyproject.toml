@@ -76,6 +76,9 @@ omit = ["*/_version.py"]   # generated from the Git tag at build time
 
 [tool.coverage.report]
 show_missing = true
+# The floor: below this the test run fails. The ratchet (quality.json) holds the
+# level actually reached, so this only catches a drop the ratchet was told to allow.
+fail_under = 95
 exclude_also = ["if __name__ == .__main__.:"]
 
 [dependency-groups]

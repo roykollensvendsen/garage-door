@@ -12,7 +12,7 @@ test: test-python test-firmware
 
 # The laptop side's tests.
 test-python:
-    uv run pytest -q
+    uv run pytest -q --cov
 
 # The controller's logic and the simulated door, built and run on this machine.
 test-firmware:

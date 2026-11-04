@@ -93,8 +93,7 @@ jobs:
       - name: Types
         run: uv run mypy src
       - name: The rules that guard the rules
-        # Coverage is measured and printed, with no threshold yet: a number
-        # picked before there is data is a guess with a gate on it.
+        # Fails below the floor in pyproject.toml ([tool.coverage.report]).
         run: uv run pytest -q -p no:cacheprovider --strict-markers --cov
       - name: Each safety rule's own test goes red when the rule is switched off
         run: uv run python scripts/mutate.py
