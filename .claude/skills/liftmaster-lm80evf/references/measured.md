@@ -53,6 +53,22 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   | T0003 | 0x2ce55 | 0x081 status | closing (5) | light 1, lock 0 |
   | T0004 | 0x2ce58 | 0x081 status | stopped (3) | light 1, lock 0 |
 
+  T0005 (19:29, Roy, 2026-11-04): sent by the opener **on its own while the
+  door stood still**, no remote pressed, about 2-5 min after the previous
+  unprompted one. Measured at GPIO36, after 22k/10k, 1k, 1N4148 to 3V3 and
+  10 nF to GND: 0 V to about 3.4 V, min -240 mV.
+  `55 01 00 11 15 ED 75 B0 4D E6 96 A1 1E 51 4C 43 39 E4 B1`
+
+  | File | Rolling | Command | Door state | Rest |
+  |---|---|---|---|---|
+  | T0005 | 0x2ce97 | 0x081 status | **closed (2)** | light 0, lock 0 |
+
+  Same device id. The rolling code moved 63 since T0004 (14:24), about one
+  message every 5 min: the opener repeats its status while idle. Here the
+  break runs straight into the start bit of `55` with no idle gap; the 10 nF
+  shortens each high by about 40 us (highs ~215 us, lows ~290 us), still
+  under a fifth of a bit at the sampling point.
+
   Same device id `0x405d056056` in all four: the opener's own status
   messages, not the remote's command. Only the door-state field (top of the
   payload) changes; the rest (`0x6802`) stays the same. The rolling code

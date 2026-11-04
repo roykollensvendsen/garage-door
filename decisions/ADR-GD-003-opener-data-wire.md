@@ -31,9 +31,13 @@ sending, it waits for the line to be idle for 1.3 ms. Its board runs at
 
 Not known yet:
 - whether this opener obeys commands from a controller it has never seen;
-- whether it sends anything while the door is still, or only at changes;
-- what it sends when the door is fully open or fully closed (1 and 2 in
-  ratgdo's table; not captured yet).
+- what it sends when the door is fully open (1 in ratgdo's table; not
+  captured yet).
+
+Learned since (Roy, 2026-11-04, capture T0005): while the door stands still
+the opener repeats its status by itself, about every 5 minutes. Fully closed
+reads 2. That is too rare for the 2 s freshness rule, so listening alone
+still cannot allow a press; asking (0x080) is needed for that.
 
 ## Options considered
 
