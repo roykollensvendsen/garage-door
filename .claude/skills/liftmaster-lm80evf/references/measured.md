@@ -12,9 +12,10 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   step per press.
 - **30 VDC output:** about 1.1 V idle, so switched off in standby.
 - **0+2:** about 10 V DC idle, about 11.17 V after the door had run (likely
-  out of standby). While moving: a small dip in DC, and about 285 Hz briefly
-  in frequency mode; about 27.27 Hz right after a stop part-way;
-  about 17.51 Hz stopped fully closed. Readings that
-  change with door activity point to status traffic. That suggests bursts of serial data (Security+ 2.0?),
-  not proven. The next step is a listen-only capture, decoded with secplus or ratgdo.
+  out of standby). Frequency mode reads 0 Hz while the door moves, and shows
+  a value only briefly around each change of state: about 285 Hz around the
+  start, 27.27 Hz at a stop part-way, 17.51 Hz when stopped closed. So:
+  bursts at state changes, quiet in between, like status packets
+  (Security+ 2.0?). Not proven; next is a listen-only capture, decoded with
+  secplus or ratgdo.
 - **6+7:** not measured yet. Measure idle and while moving.

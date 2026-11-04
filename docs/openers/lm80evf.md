@@ -19,7 +19,7 @@
 ## Checked on a real opener
 
 - Roy, 2026-11-04: 1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door.
-- Roy, 2026-11-04: 0+2 measured at about 10 V idle, 11.17 V after running; frequency reading about 285 Hz while moving, about 27.27 Hz stopped part-way, about 17.51 Hz closed (status traffic, not yet decoded).
+- Roy, 2026-11-04: 0+2 measured at about 10 V idle, 11.17 V after running; 0 Hz while moving; brief readings only at state changes: about 285 Hz around the start, 27.27 Hz at a stop part-way, 17.51 Hz stopped closed (status bursts, not yet decoded).
 
 ## Leave alone
 
@@ -27,7 +27,7 @@
 
 ## Notes
 
-The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Listed as untested until the controller itself has opened and closed the door. Terminals 0+2 carry about 10-11 V and show bursts of activity while the door moves, which suggests a Security+ 2.0 bus; not yet decoded.
+The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Listed as untested until the controller itself has opened and closed the door. Terminals 0+2 carry about 10-11 V and show short bursts of traffic at each change of state, quiet in between, which suggests a Security+ 2.0-style status bus; not yet decoded.
 
 Source: [`hardware/openers/lm80evf.yaml`](https://github.com/roykollensvendsen/garage-door/blob/main/hardware/openers/lm80evf.yaml).
 To correct it, edit that file; see [Add your opener](../compatibility.md#add-your-opener).
