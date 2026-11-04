@@ -34,6 +34,7 @@ uv run python scripts/openers.py --check
 uv run --group docs mkdocs build --strict
 python3 scripts/skill_lint.py check
 python3 scripts/structure.py
+uv run python scripts/ratchet.py check --base origin/main
 committed --no-merge-commit origin/main..HEAD
 ```
 

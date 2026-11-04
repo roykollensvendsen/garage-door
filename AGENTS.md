@@ -46,6 +46,7 @@ is not installed):
 | `just test` | Python tests and firmware tests, against fakes and a simulated door |
 | `just lint` | ruff format, ruff check, mypy strict |
 | `just mutate` | each safety rule must fail its test when turned off |
+| `just ratchet` | measure everything and record it in `quality.json`; a worse level fails CI unless the pull request has `Ratchet-Exception: <measure> - why` |
 | `just structure` | module size, layers (`[tool.quality]` in `pyproject.toml`), import cycles |
 | `just docs` | regenerate compatibility pages, build the site with `--strict` |
 | `just diagrams` | regenerate schematic and cable diagram (needs KiCad 10, Graphviz) |

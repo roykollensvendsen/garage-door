@@ -63,6 +63,14 @@ skills:
 structure:
     python3 scripts/structure.py
 
+# Measure everything and record the levels in quality.json (the ratchet).
+ratchet:
+    uv run python scripts/ratchet.py update
+
+# Fail if a measure in quality.json got worse than on main.
+ratchet-check base="main":
+    uv run python scripts/ratchet.py check --base {{base}}
+
 # Everything CI runs that needs no hardware.
 check: lint test mutate skills structure
     uv run python scripts/openers.py --check

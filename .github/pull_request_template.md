@@ -34,3 +34,6 @@
       skill or a rule where it is not. Not only in the commit message.
 - [ ] New lesson captured in a skill? Either a skill in `.claude/skills/` changed
       in this pull request, or there was nothing non-obvious to learn.
+- [ ] Nothing in `quality.json` got worse, or this description has a line
+      `Ratchet-Exception: <measure> - why` for each measure that did. A level
+      that got better is recorded (`just ratchet`).
