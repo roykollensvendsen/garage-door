@@ -10,3 +10,5 @@ if git diff --cached --name-only | grep -q '^\.claude/skills/'; then
     root="$(git rev-parse --show-toplevel)"
     cd "$root" && python3 scripts/skill_lint.py check
 fi
+# Never commit the controller's Wi-Fi password or keys (scripts/secret_scan.py).
+python3 "$(git rev-parse --show-toplevel)/scripts/secret_scan.py"
