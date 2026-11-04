@@ -54,3 +54,23 @@ def test_colour_bands_are_read_the_standard_way():
 def test_the_pictures_are_drawn_from_the_current_values():
     stale = [str(p.relative_to(ROOT)) for p, text in bench.outputs().items() if p.read_text() != text]
     assert not stale, f"run python3 scripts/bench_divider.py: {stale}"
+
+
+def _opto():
+    spec = importlib.util.spec_from_file_location("opto_input", ROOT / "scripts/opto_input.py")
+    assert spec
+    assert spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_isolated_input_loads_the_bus_by_about_a_milliampere():
+    opto = _opto()
+    assert 0.0009 < opto.led_current(11.2, "10k") < 0.0011
+    assert opto.led_current(15.0, "10k") < 0.0015
+
+
+def test_the_isolated_input_picture_is_drawn_from_the_current_values():
+    opto = _opto()
+    assert opto.OUTPUT.read_text() == opto.schematic(), "run python3 scripts/opto_input.py"

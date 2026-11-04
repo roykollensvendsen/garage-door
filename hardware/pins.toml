@@ -43,6 +43,17 @@ filter = "100p"             # optional, GPIO36 to GND
 line_idle_min = 11.2        # volts, measured high on 0+2
 line_max = 15.0             # volts, assumed worst case
 
+[opto_input]
+# The permanent, isolated input on the opener's data wire (docs/plan.md):
+# terminal 0 -> led_resistor -> 6N136 pin 2, pin 3 -> terminal 2, reverse diode
+# across the LED; pin 8 to 3V3 with a decoupling cap, pin 6 -> wire_rx with a
+# pull-up. Inverts. Drawn by scripts/opto_input.py. Proposed, not built.
+part = "6N136"
+led_resistor = "10k"        # about 1 mA at 11.2 V; two in parallel if the output is not low enough
+reverse_diode = "1N4148"
+pull_up = "22k"             # one element of the 22k SIL network
+decoupling = "100n"
+
 [opener]
 # LiftMaster LM80EVF terminals the relay output connects to (manual 114A4C095B, PDF p. 269).
 terminals = [1, 2]

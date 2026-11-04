@@ -195,23 +195,44 @@ laptop on battery for the test, and use the optocoupler below in the build.
   GPIO39 can show a glitch of about 80 ns when the ADC or Wi-Fi power saving
   is on. Keep the ADC off that pin and set `power_save_mode: none`.
 
-*Listen-only input on the ESP32 (proposed, not in the pin plan yet).* Use a
-**low-input-current optocoupler**, chosen from its datasheet. It should be
-fully on at 0.5 mA or less of input current, fast enough for 20 kbit/s or
-more, with an output that runs on 3.3 V. That keeps the galvanic isolation
-the plan already uses for the press output.
-- **Bus side.** Terminal 0 → 22 kΩ → optocoupler LED anode. LED cathode →
-  terminal 2. A reverse diode (1N4148) across the LED, and a 15 V TVS diode
-  from 0 to 2 at the terminals. At 12 V that is about 0.5 mA, and only while
-  the line is high. That is a light load beside the bus's own pull-up. If
-  the datasheet says less current is enough, use a bigger resistor. Check on
-  the scope that the idle level and the edges do not change with the input
-  connected.
-- **ESP32 side.** Optocoupler output → **GPIO36**, with 10 kΩ to 3.3 V and
-  100 pF to ground. GPIO36 is input-only, so this circuit **cannot drive the
-  bus even by mistake**. Take care: some module pinouts mark GPIO36 as
-  "VP". The optocoupler inverts the signal (line high → output low), so set
-  the ESPHome UART `rx_pin` to `inverted: true`, and set no `tx_pin`.
+*Listen-only input for the permanent build: a 6N136 optocoupler (proposed,
+from parts Roy has, 2026-11-04).* The divider above is for the first test.
+For the permanent build the input should be **galvanically isolated**, like
+the press output. Roy has 6N136s (a 1 Mbit/s photodiode-and-transistor
+optocoupler, DIP-8), which is far faster than this 4000 baud line needs.
+- **Bus side.** Terminal 0 → **10 kΩ** → pin 2 (LED anode). Pin 3 (LED
+  cathode) → terminal 2. A **1N4148** across the LED, reversed (cathode on
+  pin 2), protects it from reverse voltage. The LED drops about 1.5 V, so the
+  current is about 1.0 mA at 11.2 V, 1.05 mA at 12 V and 1.35 mA at 15 V.
+  That is the load on the bus, and only while the line is high (most of the
+  time, since it idles high). It is four times the divider's load, so check
+  on the scope that the idle level and the edges do not change.
+- **ESP32 side.** Pin 8 (VCC) to 3V3, with **100 nF** from pin 8 to pin 5
+  close to the chip. Pin 5 to GND. Pin 6 (output) → **GPIO36**, with **22 kΩ**
+  to 3V3 (one element of the 22 kΩ SIL network, its common pin on 3V3). Leave
+  pin 7 (base) open. GPIO36 is input-only, so this **cannot drive the bus**.
+- **Margins.** The 6N136's current transfer ratio is at least about 19 %
+  (datasheet, at 16 mA; it falls somewhat at low current). At 1 mA that is
+  roughly 0.15–0.2 mA, and the 22 kΩ pull-up needs 0.15 mA to pull the
+  output fully low. That is enough, but not by much. If the output does not
+  go below about 0.8 V (the ESP32's input-low level, 0.25 × 3.3 V), put a
+  second 10 kΩ in parallel with the first: 2 mA, twice the margin, twice the
+  load. The datasheet rates it at 4.5–5 V, so check its operation at 3.3 V on
+  the bench.
+- **It inverts.** Line high → LED on → output low. Set `inverted: true` on the
+  UART's `rx_pin` (the divider uses `false`). The idle line then still reads
+  as a UART idle.
+- **Edges.** At this pull-up the output rises in a few microseconds and falls
+  in under one. Beside a 250 µs bit that is under 2 % distortion, which a
+  UART tolerates. Check the output and the line together on the scope.
+- **Not needed here:** the 4.7 V zeners, the 7805, the bridge rectifier and
+  the 470 µF capacitors. The ESP32 stays on USB power, and the LED current is
+  limited by its resistor even at 15 V.
+- **Pinout (6N136, DIP-8):** 1 not connected, 2 anode, 3 cathode, 4 not
+  connected, 5 GND, 6 output, 7 base, 8 VCC.
+- Drawn from `[opto_input]` in `hardware/pins.toml` by `scripts/opto_input.py`:
+  [schematic](wiring/opto-input-schematic.svg).
+
 - **Then decode.** Read the bytes with the bit rate and format the scope
   found, and decode them with secplus (<https://github.com/argilo/secplus>,
   GPL-3.0) or ratgdo's code. If door-state messages decode reliably over a
