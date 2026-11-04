@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+brand: LiftMaster
+model: LM60EVF
+also_sold_as: []
+region: EU
+status: untested
+manual:
+  title: Assembly and operating instructions, LM60EVF/LM80EVF/LM100EVF/LM130EVF
+  document: 114A4C095B
+  url: https://ismartgate.com/manuals/Chamberlain_LM80EVF_manual.pdf
+push_button:
+  terminals: [1, 2]
+  source: manual PDF p. 269, fig. 19-20 (one manual and terminal block for all four models)
+  volts_open_circuit: null
+leave_alone:
+  - "The wire bridge on terminals 4 and 5 (manual PDF p. 22, section 26 A)."
+notes: >-
+  Shares the LM80EVF's manual and terminal block, so the same wiring is
+  expected to work. Nobody has tried it yet: if you do, change the status and
+  add your name.
+reported_by: ""
+build: ""

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Copy this file to <model>.yaml (lower case, e.g. lm100evf.yaml), fill it in,
+# and run `just docs` to see your opener on the compatibility page. Every
+# claim needs a source: a page of the manual, or "measured" with what you saw.
+# The project skill .claude/skills/add-opener-model walks an agent through it.
+
+brand: LiftMaster            # as printed on the opener
+model: LM00EVF               # as printed on the type plate
+also_sold_as: []             # other names for the same unit, with a source each
+region: EU                   # where this model is sold
+status: untested             # tested | untested | does-not-work
+manual:
+  title: ""                  # the manual's own title
+  document: ""               # its document number, e.g. 114A4C095B
+  url: ""                    # where it can be downloaded (do not commit the PDF)
+push_button:
+  terminals: []              # the wall push-button input, e.g. [1, 2]
+  source: ""                 # e.g. "manual PDF p. 269, fig. 19-20"
+  volts_open_circuit: null   # measured across those terminals, in volts
+leave_alone: []              # bridges or terminals that must not be touched, with sources
+notes: ""                    # anything a builder should know
+reported_by: ""              # your GitHub name
+build: ""                    # link to your build in the gallery, if any
