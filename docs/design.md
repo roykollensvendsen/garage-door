@@ -94,16 +94,25 @@ on a real door, and when.
 
 ## Quality, as in claude-voice
 
-| Measure | Today | Proposed |
+Built 2026-11-04 (step 5 below, done first at Roy's request). The levels
+are in [`quality.json`](https://github.com/roykollensvendsen/garage-door/blob/main/quality.json).
+
+| Measure | Level now | Enforced by |
 |---|---|---|
-| Tests without hardware, including a door simulator | yes (Python and firmware) | the simulator runs every profile |
-| Coverage | measured: 94 % of the laptop code | a floor of 90 %, raised by the ratchet |
-| Mutation testing | every `# RULE:` in the laptop code (7 of 7) | extend to the firmware's rules |
-| Complexity and module size | ruff's limits (complexity 10) | plus a module-size limit |
-| Quality ratchet | skills only (`.claude/skills/baseline.json`) | `quality.json`: coverage, mutation score, test count, lint, complexity, module size; can only get better unless a pull request says why |
-| Required checks and branch protection | not possible while private on the free plan | on when public: every CI job required, no direct pushes |
-| Dependabot | monthly, actions and uv | grouped into one pull request per ecosystem |
-| Status page | none | a page on the site: tests, coverage, mutation score, complexity, with trends from each `quality.json` in history |
+| Tests without hardware, including a door simulator | 154 Python, 38 firmware | `checks`, `firmware`; the ratchet holds both counts |
+| Coverage of the laptop code | 100 % of statements and branches | floor of 95 % (`pyproject.toml`), the ratchet holds the level |
+| Coverage of the controller logic | 100 % of lines, 98 % of branches (gcov) | floor of 95 % lines and 90 % branches (`scripts/firmware-coverage.sh`), the ratchet |
+| Mutation testing | 15 of 15 rules: 7 in the laptop code, 8 in the firmware | `scripts/mutate.py --suite python` and `--suite firmware`, the ratchet |
+| Complexity | most tangled function 8 (`service.py`) | ruff's limit of 10; the ratchet holds each module's level, and a new module starts at 10 |
+| Module size | largest 375 lines (a tool); product code at most 209 | 300 lines for the product, 400 for tools (`scripts/structure.py`) |
+| Layers and import cycles | none broken, no cycle | `scripts/structure.py`, layers in `[tool.quality.layers]` |
+| Copied code | 0 % of the product's lines in a repeated 6-line block | the ratchet |
+| Lint and types | 0 ruff errors (every rule), 0 mypy strict errors | `checks`, the ratchet |
+| Quality ratchet | `quality.json`; a worse level fails unless the pull request says `Ratchet-Exception: <measure> - why` | `ratchet` job |
+| Test time | 2.5 s for the Python suite | budget of 30 s + 50 %, set by hand |
+| Required checks and branch protection | every job in `checks.yml` | not possible while private on the free plan; turn on when public, with no direct pushes |
+| Dependabot | monthly, actions and uv | still to do: one grouped pull request per ecosystem |
+| Status page | none | still to do: a site page with the levels and their trend through `quality.json`'s history |
 
 ## Order, once approved
 
@@ -113,4 +122,5 @@ on a real door, and when.
 2. Profile schema with capabilities and quirks; the feature matrix page.
 3. Firmware hardware interfaces; the core reads the profile's quirks.
 4. Capability-driven MCP tools.
-5. The quality ratchet, coverage floor, status page, grouped Dependabot.
+5. The quality ratchet and coverage floors: **done**. Still to do: the
+   status page and grouped Dependabot.
