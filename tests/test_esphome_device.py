@@ -30,6 +30,7 @@ class FakeClient:
         self.door = door
         self.connects = 0
         self.executed: list[str] = []
+        self.switched: list[tuple[int, bool]] = []
         self.fail_connect = False
         self.fail_execute = False
         self._on_state: Callable[[object], None] | None = None
@@ -56,12 +57,18 @@ class FakeClient:
             raise APIConnectionError(msg)
         self.executed.append(service.name)
 
+    def switch_command(self, key: int, state: bool) -> None:  # noqa: FBT001 - the library's own signature
+        self.switched.append((key, state))
+
     async def disconnect(self) -> None:
         pass
 
     def send(self, key: int, state: str) -> None:
+        self.deliver(TextSensorState(key=key, state=state))
+
+    def deliver(self, state: object) -> None:
         assert self._on_state is not None
-        self._on_state(TextSensorState(key=key, state=state))
+        self._on_state(state)
 
 
 def run(coroutine):
@@ -138,3 +145,35 @@ def test_a_controller_without_the_press_action_is_refused():
     client.services = []
     with pytest.raises(DeviceUnavailableError, match="press"):
         run(EsphomeDevice(lambda: client).press())
+
+
+def test_readings_list_everything_the_controller_reports_and_press_nothing():
+    from aioesphomeapi import SensorInfo, SensorState, SwitchInfo, SwitchState  # noqa: PLC0415
+
+    client = FakeClient("closed")
+    client.entities += [SensorInfo(name="Wi-Fi signal", key=13), SwitchInfo(name="Armed", key=14)]
+    device = EsphomeDevice(lambda: client)
+    run(device.state())
+    client.deliver(SensorState(key=13, state=-61.4))
+    client.deliver(SwitchState(key=14, state=False))
+    client.deliver(SensorState(key=99, state=1.0))  # not one of its entities: ignored
+    assert run(device.readings(wait=0)) == {"Armed": "off", "Door state": "closed", "Wi-Fi signal": "-61"}
+    assert client.executed == []
+
+
+def test_test_mode_is_switched_with_the_controllers_armed_switch():
+    from aioesphomeapi import SwitchInfo  # noqa: PLC0415
+
+    client = FakeClient("closed")
+    client.entities.append(SwitchInfo(name="Armed", key=14))
+    device = EsphomeDevice(lambda: client)
+    run(device.set_armed(on=True))
+    run(device.set_armed(on=False))
+    assert client.switched == [(14, True), (14, False)]
+    assert client.executed == []  # arming presses nothing
+
+
+def test_arming_fails_closed_on_a_controller_without_the_switch():
+    client = FakeClient("closed")
+    with pytest.raises(DeviceUnavailableError, match="Armed"):
+        run(EsphomeDevice(lambda: client).set_armed(on=True))

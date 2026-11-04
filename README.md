@@ -52,7 +52,7 @@ rather than after. They are not required for this project.
 ## Updating the controller
 
 The first build goes in over micro-USB. Every update after that goes over the
-home Wi-Fi, needs a password and works only from the LAN. The board keeps two
+home Wi-Fi, is encrypted with its own key and works only from the LAN. The board keeps two
 copies of its app and falls back to the last one that worked if an update
 does not boot. The controller's log streams over the same encrypted
 connection the laptop uses. USB stays the way back in if everything else
@@ -65,6 +65,45 @@ esphome run firmware/garage-door.yaml --device /dev/ttyUSB0   # first time, over
 esphome run firmware/garage-door.yaml                         # afterwards, over Wi-Fi
 esphome logs firmware/garage-door.yaml                        # the controller's log
 ```
+
+**Working from elsewhere on the home network.** Everything below works
+over Wi-Fi, without going to the controller:
+
+- **Test mode.** After every boot and update it starts **not armed**. Presses
+  are judged and logged, but the relay stays open. `garage-door arm` leaves
+  test mode, only when the door may move; `garage-door disarm` goes back.
+- **The log** shows every packet on the opener's data wire (terminals 0+2),
+  as hex and decoded, under the tag `wire`.
+- **Diagnostics:** Wi-Fi signal, uptime, firmware version, the reason for the
+  last restart, and a restart button that does not touch the door.
+- **A check from the laptop** that only reads (`arm` and `disarm` don't press either):
+
+<!-- not run: needs the controller on the network -->
+```text
+$ GARAGE_DOOR_HOST=garage-door.local GARAGE_DOOR_API_KEY=... uv run garage-door check
+Armed: off
+Door state: closed
+Firmware version: 2026.10.2 ...
+Opener status on the wire: closed
+Wi-Fi signal: -61
+Not armed (test mode): presses are judged and logged, the relay stays open.
+```
+
+Without the controller's address and key, each of them refuses before it
+connects to anything:
+
+```console
+$ env -u GARAGE_DOOR_HOST garage-door check
+garage-door: GARAGE_DOOR_HOST is not set
+$ env -u GARAGE_DOOR_HOST garage-door arm
+garage-door: GARAGE_DOOR_HOST is not set
+$ env -u GARAGE_DOOR_HOST garage-door disarm
+garage-door: GARAGE_DOOR_HOST is not set
+```
+
+`sh scripts/esphome-config.sh compile` builds the firmware exactly as an
+update would, with the example secrets, so a build is never first tried on
+the controller.
 
 ## The gates
 
