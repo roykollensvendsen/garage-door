@@ -44,7 +44,10 @@ BASELINE = SKILLS / "baseline.json"
 HARD_LINES = 500  # the skill-creator's own guidance: keep SKILL.md under 500 lines
 SOFT_LINES = 200
 DESCRIPTION = (100, 1024)  # characters; 1024 is the most a description may have
-WHEN = re.compile(r"\buse (it |this )?(when|whenever|before|after|for)\b", re.IGNORECASE)
+WHEN = re.compile(
+    r"\buse (it |this )?(when|whenever|before|after|for)\b|\bbruk (den |denne )?(når|før|etter)\b",
+    re.IGNORECASE,
+)
 REFERENCE_LINES = 300
 STALE_DAYS = 365
 DUPLICATE_WORDS = 15
@@ -63,14 +66,23 @@ class Skill:
 
 
 def front_matter(text: str) -> dict[str, str]:
-    """The simple `key: value` lines between the opening `---` lines."""
+    """The top-level `key: value` pairs between the opening `---` lines.
+
+    Handles what skills use: plain values, quoted values, values continued on
+    indented lines, and `>` or `|` block scalars.
+    """
     match = re.match(r"\A---\n(.*?)\n---\n", text, re.DOTALL)
     if not match:
         return {}
-    pairs = (
-        line.split(":", 1) for line in match.group(1).splitlines() if ":" in line and not line[0].isspace()
-    )
-    return {key.strip(): value.strip().strip("\"'") for key, value in pairs}
+    meta: dict[str, list[str]] = {}
+    key = None
+    for line in match.group(1).splitlines():
+        if line[:1].isspace() and key:
+            meta[key].append(line.strip())
+        elif ":" in line:
+            key, value = (part.strip() for part in line.split(":", 1))
+            meta[key] = [] if value in {">", ">-", "|", "|-"} else [value]
+    return {k: " ".join(v).strip().strip("\"'") for k, v in meta.items()}
 
 
 def sentences(text: str) -> set[str]:
@@ -118,7 +130,8 @@ def _front_matter_errors(name: str, text: str) -> list[str]:
 def _page_problems(folder: Path, page: Path) -> tuple[list[str], list[str]]:
     """Broken links (errors) and a long reference without contents (warning) in one page."""
     text = page.read_text()
-    local = (t for t in LINK.findall(text) if not re.match(r"[a-z]+:", t) and not t.startswith("#"))
+    prose = re.sub(r"```.*?```|`[^`]*`", " ", text, flags=re.DOTALL)  # examples are not links
+    local = (t for t in LINK.findall(prose) if not re.match(r"[a-z]+:", t) and not t.startswith("#"))
     errors = [
         f"{page.relative_to(folder)} links to missing {t}"
         for t in local
@@ -140,7 +153,7 @@ def measure(folder: Path, *, stale: bool = False) -> Skill:
         )
     elif skill.lines > SOFT_LINES:
         skill.warnings.append(f"SKILL.md is {skill.lines} lines; past {SOFT_LINES}, consider references/")
-    for page in sorted(folder.rglob("*.md")):
+    for page in sorted(p for p in folder.rglob("*.md") if "assets" not in p.relative_to(folder).parts):
         errors, warnings = _page_problems(folder, page)
         skill.errors += errors
         skill.warnings += warnings

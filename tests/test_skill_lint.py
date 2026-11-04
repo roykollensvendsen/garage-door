@@ -108,3 +108,21 @@ def test_this_repositorys_skills_pass():
         check=False,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_a_description_written_as_a_folded_block_is_read_whole(lint, tmp_path):
+    long = (
+        "Does one clear thing for this project, with the steps and the checks."
+        " Use when someone asks for it."
+    )
+    skill(tmp_path, "folded", f"---\nname: folded\ndescription: >\n  {long[:50]}\n  {long[50:]}\n---\n")
+    assert errors(lint) == []
+
+
+def test_links_in_examples_and_templates_are_not_checked(lint, tmp_path):
+    folder = skill(
+        tmp_path, "examples", GOOD.format(name="examples") + "```\n[x](nowhere.md)\n```\n`[y](nowhere.md)`\n"
+    )
+    (folder / "assets").mkdir()
+    (folder / "assets/TEMPLATE.md").write_text("[for the new repo](docs/later.md)\n")
+    assert errors(lint) == []
