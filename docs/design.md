@@ -87,7 +87,7 @@ row per model:
 
 | Opener | Impulse | Stop | Separate open/close | Moving signal | Native state | Photocells | Warning light | Wicket contact | Verified by, date |
 |---|---|---|---|---|---|---|---|---|---|
-| LiftMaster LM80EVF | 1+2 | by impulse | no | 6+7 (unverified) | no | 2+3 | 6+7 | 4+5 (bridged) | not built yet |
+| LiftMaster LM80EVF | 1+2 | by impulse | no | 0+2 status (opening, closing) | yes, 0+2 status at 9600 baud | 2+3 | 6+7 | 4+5 (bridged) | Roy, 2026-11-05 |
 
 Each cell links to its manual citation. "Verified by" names who confirmed it
 on a real door, and when.

@@ -12,7 +12,7 @@ Most garage door openers have one. These are the models we know about.
 | [LiftMaster LM100EVF](openers/lm100evf.md) | EU | 1 and 2 | Expected to work, not tried yet |
 | [LiftMaster LM130EVF](openers/lm130evf.md) | EU | 1 and 2 | Expected to work, not tried yet |
 | [LiftMaster LM60EVF](openers/lm60evf.md) | EU | 1 and 2 | Expected to work, not tried yet |
-| [LiftMaster LM80EVF](openers/lm80evf.md) | EU | 1 and 2 | Expected to work, not tried yet |
+| [LiftMaster LM80EVF](openers/lm80evf.md) | EU | 1 and 2 | Works: built and used on a real door |
 
 "Expected to work" means the manual shows the same push-button input, but
 nobody has built the controller for that model yet. Be the first, and tell us.

@@ -3,7 +3,7 @@ brand: LiftMaster
 model: LM80EVF
 also_sold_as: []
 region: EU
-status: untested
+status: tested
 manual:
   title: Assembly and operating instructions, LM60EVF/LM80EVF/LM100EVF/LM130EVF
   document: 114A4C095B
@@ -19,12 +19,13 @@ notes: >-
   so the controller only presses when the door is known to be fully open or
   fully closed. Measure on a wire inserted through the orange lever; probe tips
   do not reach the contacts. The 30 VDC output reads about 1.1 V while idle
-  (standby). Listed as untested until the controller itself has opened and
-  closed the door. Terminals 0+2 carry about 10-11 V and show short bursts
-  of traffic at each change of state, quiet in between: a Security+ 2.0
-  serial bus at about 4000 baud. Decoded with secplus, the opener sends its
-  own status messages there, with the door state (opening, closing,
-  stopped) in them.
+  (standby). Tested on 2026-11-05: the controller opened and closed the
+  door through the relay on 1+2, by voice, with the door state read from
+  0+2. Terminals 0+2 carry about 10-11 V and a Security+ 2.0 serial bus.
+  The opener sends a status at every change and repeats it about every 5
+  minutes, with the door state and the light in it. The speed was about
+  4000 baud on 2026-11-04 and 9600 baud after a power cycle on 2026-11-05;
+  why it changed is not known.
 reported_by: roykollensvendsen
 checks:
   - by: Roy
@@ -45,4 +46,13 @@ checks:
   - by: Roy
     date: 2026-11-04
     what: "0+2, four whole 19-byte packets at 10 ms/div, triggered by the remote, decoded with argilo's secplus (decode_wireline_command): all four are command 0x081 (status) from the same device id 0x405d056056, the rolling code counts up (0x2ce51, 53, 55, 58), and only the door state changes: closing, opening, closing, stopped; light on, not locked. Event order open, close, stop for the last three is Roy's recollection, and the decode agrees"
+  - by: Roy
+    date: 2026-11-05
+    what: "0+2 read by the controller at 9600 baud (after the opener was power cycled about 08:30; 4000 baud no longer decodes): every status decodes, with no rolling-code gap, open (1), closed (2), opening (4), closing (5), and the light; the idle repeat comes about every 296 s"
+  - by: Roy
+    date: 2026-11-05
+    what: "The controller's relay on 1+2 (0.5 s, after a spoken yes) opened and closed the door, with the state from 0+2: first at 10:38 from the terminal, then by voice from the Claude app at 14:33 (closed to open) and 14:35 (open to closed), confirmed at the door"
+  - by: Roy
+    date: 2026-11-05
+    what: "The light goes out about 2 min 50 s after the door reaches its end (by eye: closed 20:18:10, out about 20:21); the opener sends no status when it goes out"
 build: ""

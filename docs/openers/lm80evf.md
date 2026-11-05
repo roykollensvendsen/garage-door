@@ -3,7 +3,7 @@
 
 # LiftMaster LM80EVF
 
-**Status:** Expected to work, not tried yet.
+**Status:** Works: built and used on a real door.
 
 | | |
 |---|---|
@@ -24,6 +24,9 @@
 - Roy, 2026-11-04: 0+2 pulse widths with scope cursors: break low 2.624 ms (about 21 bit times, a UART break), then high 128.4 us, low 254 us, high 252.4 us, later highs of 504.4 and 754.4 us; 1, 2, 2, 4 and 6 bits give about 126 us per bit, about 7900 baud (7812.5 or 8000 nominal), not ratgdo's 9600; message longer than 10 ms; not decoded yet.
 - Roy, 2026-11-04: 0+2 capture saved from the scope and decoded with scripts/decode_capture.py: the bit is about 250 us (about 4000 baud, 8N1, idle high); the 126 us pulse was the half-bit after the break; the message reads [break] 55 01 00 86 0E BD (capture ends), and 55 01 00 is the Security+ 2.0 sync ratgdo looks for.
 - Roy, 2026-11-04: 0+2, four whole 19-byte packets at 10 ms/div, triggered by the remote, decoded with argilo's secplus (decode_wireline_command): all four are command 0x081 (status) from the same device id 0x405d056056, the rolling code counts up (0x2ce51, 53, 55, 58), and only the door state changes: closing, opening, closing, stopped; light on, not locked. Event order open, close, stop for the last three is Roy's recollection, and the decode agrees.
+- Roy, 2026-11-05: 0+2 read by the controller at 9600 baud (after the opener was power cycled about 08:30; 4000 baud no longer decodes): every status decodes, with no rolling-code gap, open (1), closed (2), opening (4), closing (5), and the light; the idle repeat comes about every 296 s.
+- Roy, 2026-11-05: The controller's relay on 1+2 (0.5 s, after a spoken yes) opened and closed the door, with the state from 0+2: first at 10:38 from the terminal, then by voice from the Claude app at 14:33 (closed to open) and 14:35 (open to closed), confirmed at the door.
+- Roy, 2026-11-05: The light goes out about 2 min 50 s after the door reaches its end (by eye: closed 20:18:10, out about 20:21); the opener sends no status when it goes out.
 
 ## Leave alone
 
@@ -31,7 +34,7 @@
 
 ## Notes
 
-The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Listed as untested until the controller itself has opened and closed the door. Terminals 0+2 carry about 10-11 V and show short bursts of traffic at each change of state, quiet in between: a Security+ 2.0 serial bus at about 4000 baud. Decoded with secplus, the opener sends its own status messages there, with the door state (opening, closing, stopped) in them.
+The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Tested on 2026-11-05: the controller opened and closed the door through the relay on 1+2, by voice, with the door state read from 0+2. Terminals 0+2 carry about 10-11 V and a Security+ 2.0 serial bus. The opener sends a status at every change and repeats it about every 5 minutes, with the door state and the light in it. The speed was about 4000 baud on 2026-11-04 and 9600 baud after a power cycle on 2026-11-05; why it changed is not known.
 
 Source: [`hardware/openers/lm80evf.yaml`](https://github.com/roykollensvendsen/garage-door/blob/main/hardware/openers/lm80evf.yaml).
 To correct it, edit that file; see [Add your opener](../compatibility.md#add-your-opener).
