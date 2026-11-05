@@ -45,7 +45,9 @@ if TYPE_CHECKING:
 INSTRUCTIONS = (
     "Controls Roy's garage door. Never press without asking: call garage_request, read its "
     "'say' text to Roy exactly, and call garage_confirm only if Roy clearly answers yes. "
-    "If he says anything else, do not confirm. Read every refusal and result aloud. Every answer "
+    "If he says anything else, do not confirm. Never call garage_request again while a question is "
+    "open; wait for Roy's answer. Confirm with the token from the most recent question only. "
+    "Read every refusal and result aloud. Every answer "
     "has 'controller': say first when it is not armed, or in manual mode. garage_press_button is "
     "only for when Roy says he is at the door watching it; it never opens or closes by name. "
     "garage_switch arms or disarms the controller and switches manual mode: switching on returns a "
@@ -181,8 +183,10 @@ def build_server(
 
     @server.tool(
         description=(
-            "Press the garage door button. Call only with the token from garage_request, and only "
-            "after Roy has given a spoken yes to its question. Read the result ('say') aloud."
+            "Press the garage door button. Call only with the token from the most recent "
+            "garage_request (or garage_press_button, garage_switch), and only after Roy has given a "
+            "spoken yes to its question. A wrong or old token is refused and cancels the question. "
+            "Read the result ('say') aloud."
         )
     )
     async def garage_confirm(token: str) -> dict[str, Any]:

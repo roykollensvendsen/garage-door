@@ -326,3 +326,14 @@ def test_the_simulated_door_cannot_be_switched(tmp_path):
     answer = call(server, "garage_switch", {"change": "arm"})
     assert answer["outcome"] == "refused"
     assert "simulated" in answer["say"]
+
+
+def test_the_voice_is_told_to_keep_one_question_open_and_confirm_the_newest_token(tmp_path):
+    # 2026-11-05 14:38: two requests 3 s apart, then a confirm with the first token, refused.
+    from garage_door.server import INSTRUCTIONS  # noqa: PLC0415
+
+    assert "Never call garage_request again while a question is open" in INSTRUCTIONS
+    server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
+    tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
+    assert "most recent" in tools["garage_confirm"].description
+    assert "cancels the question" in tools["garage_confirm"].description
