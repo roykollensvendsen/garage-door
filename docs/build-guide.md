@@ -264,6 +264,13 @@ not connected to the opener and the controller unarmed:
   closed. Open it?", Roy said yes, and the opener reported opening at once
   and open about 18 s later. The service answered "Pressed. The garage door
   was closed and is now open."
+- **First open and close by voice (14:33 and 14:35),** from the Claude app,
+  through the claude-voice bridge to this MCP server, against the real door.
+  For "open", the question came at 14:33:08 and Roy's spoken yes at 14:33:32.
+  The opener reported opening at once and open at 14:33:50, and the answer
+  was "closed → open, reached". Roy confirmed it at the door. "Close"
+  followed: the question came at 14:35:21, the yes at 14:35:32, and the door
+  was closed at 14:35:52. Each was one press, logged with requester "mcp".
 
 ## First press on the real door: manual mode
 
