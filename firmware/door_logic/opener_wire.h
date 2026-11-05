@@ -19,6 +19,7 @@
 
 #include "door_logic.h"
 #include "secplus.h"
+#include "wire_health.h"
 
 namespace garage {
 
@@ -117,6 +118,8 @@ class Framer {
   std::size_t skipped() const { return skipped_; }
   std::string skipped_hex() const;
   void clear_skipped() { skipped_ = 0; }
+  // Every byte skipped since boot; clear_skipped() leaves it alone.
+  std::uint32_t skipped_total() const { return skipped_total_; }
 
  private:
   void skip(std::uint8_t b) {
@@ -124,6 +127,7 @@ class Framer {
       kept_[skipped_] = b;
     }
     ++skipped_;
+    ++skipped_total_;
   }
   void drop_buffer() {
     for (std::size_t i = 0; i < have_; ++i) {
@@ -138,6 +142,7 @@ class Framer {
   std::size_t have_ = 0;
   std::array<std::uint8_t, kSkippedKept> kept_{};
   std::size_t skipped_ = 0;
+  std::uint32_t skipped_total_ = 0;
 };
 
 enum class Heard : std::uint8_t {
@@ -161,11 +166,14 @@ class Listener {
     }
     seen_byte_ = true;
     last_byte_ = now;
+    ++health_.bytes;
     if (!framer_.feed(b)) {
       return Heard::Nothing;
     }
     Status s{};
     if (read_status(framer_.packet(), s)) {
+      ++health_.decoded;
+      count_gap(s.device_id, s.rolling);
       last_ = s;
       heard_ = true;
       heard_at_ = now;
@@ -176,7 +184,19 @@ class Listener {
     std::uint16_t command = 0;
     std::uint32_t payload = 0;
     const bool decodes = decode_wireline_command(framer_.packet().data(), &rolling, &id, &command, &payload) == 0;
-    return decodes ? Heard::Other : Heard::Bad;
+    if (!decodes) {
+      ++health_.failed;
+      return Heard::Bad;
+    }
+    ++health_.decoded;
+    count_gap(id, rolling);
+    return Heard::Other;
+  }
+
+  Health health() const {
+    Health h = health_;
+    h.skipped = framer_.skipped_total();
+    return h;
   }
 
   const Packet& packet() const { return framer_.packet(); }
@@ -188,7 +208,26 @@ class Listener {
   std::uint32_t heard_at() const { return heard_at_; }
 
  private:
+  // Codes of one sender that were skipped. A step back or a jump of more
+  // than kMaxGap is a restart of its counter, not lost packets.
+  static constexpr std::uint32_t kMaxGap = 1000;
+  void count_gap(std::uint64_t id, std::uint32_t rolling) {
+    if (have_rolling_ && id == rolling_id_) {
+      const std::uint32_t step = (rolling - last_rolling_) & kRollingMask;
+      if (step > 1 && step <= kMaxGap) {
+        health_.gaps += step - 1;
+      }
+    }
+    have_rolling_ = true;
+    rolling_id_ = id;
+    last_rolling_ = rolling;
+  }
+
   Framer framer_;
+  Health health_{};
+  bool have_rolling_ = false;
+  std::uint64_t rolling_id_ = 0;
+  std::uint32_t last_rolling_ = 0;
   Status last_{};
   bool heard_ = false;
   std::uint32_t heard_at_ = 0;

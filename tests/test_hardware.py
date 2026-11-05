@@ -54,11 +54,35 @@ def test_the_firmware_uses_the_planned_pins():
 
 def test_the_firmware_listens_on_the_planned_wire_pin_and_never_sends_on_it():
     # Sending on the opener's wire waits for Roy's approval (decisions/ADR-GD-003).
-    uart = _esphome_config()["uart"]
-    uarts = uart if isinstance(uart, list) else [uart]
-    assert [u["rx_pin"]["number"] for u in uarts] == [f"GPIO{GPIO['wire_rx']}"]
-    assert all("tx_pin" not in u for u in uarts)
+    # The wire's UART is set up with ESP-IDF itself (door_logic/wire_uart.h), to
+    # count framing errors and overflows; ESPHome's uart component is not used.
+    config = _esphome_config()
+    assert "uart" not in config
+    assert config["substitutions"]["wire_rx_gpio"] == str(GPIO["wire_rx"])
+    glue = (ROOT / "firmware/door_logic/wire_uart.h").read_text()
+    assert "uart_set_pin(kPort, UART_PIN_NO_CHANGE, rx_gpio, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)" in glue
+    assert "uart_write" not in glue
+    assert "uart_tx" not in glue
+    assert "door_logic/wire_uart.h" in config["esphome"]["includes"]
     assert 34 <= GPIO["wire_rx"] <= 39, "an input-only pin cannot drive the opener's bus by mistake"
+
+
+WIRE_HEALTH = {
+    "Wire bytes received",
+    "Wire bytes skipped",
+    "Wire packets decoded",
+    "Wire packets failed",
+    "Wire rolling-code gaps",
+    "Wire framing errors",
+    "Wire parity errors",
+    "Wire overflows",
+    "Wire breaks",
+}
+
+
+def test_the_wire_health_counters_are_reported_over_the_api():
+    names = {s.get("name") for s in _esphome_config()["sensor"]}
+    assert names >= WIRE_HEALTH
 
 
 def test_the_controller_starts_unarmed_after_every_boot():

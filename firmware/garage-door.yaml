@@ -21,14 +21,28 @@ substitutions:
   # on a low input: set "true" only after the bench check in the build guide
   # shows it. Either way "off" is relay open, at boot and between presses.
   relay_active_low: "false"
+  # The opener's data wire, listen-only: terminal 0 through the resistor
+  # divider to this GPIO, ground on terminal 2 (docs/plan.md, "First bench
+  # test"). Security+ 2.0 wireline at about 4000 baud, 8N1, idle high. Read by
+  # door_logic/wire_uart.h, which never assigns a TX pin: nothing is sent.
+  wire_rx_gpio: "36"
 
 esphome:
   name: garage-door
   friendly_name: Garage door
+  on_boot:
+    priority: 600
+    then:
+      - lambda: |-
+          if (!garage_door::wire_uart().begin(${wire_rx_gpio}, 4000)) {
+            ESP_LOGE("wire", "the wire's UART did not start: nothing will be heard on 0+2");
+          }
   includes:
     - door_logic/door_logic.h
+    - door_logic/wire_health.h
     - door_logic/opener_wire.h
     - door_logic/esphome_glue.h
+    - door_logic/wire_uart.h
     - third_party/secplus/secplus.h
     - third_party/secplus/secplus.c
 
@@ -93,20 +107,6 @@ ota:
 
 # Deliberately absent: web_server, captive_portal, mqtt.
 
-# The opener's data wire, listen-only: terminal 0 through the resistor divider
-# to GPIO36, ground on terminal 2 (docs/plan.md, "First bench test"). Security+
-# 2.0 wireline at about 4000 baud, 8N1, idle high. No TX pin: nothing is sent.
-uart:
-  id: wire_uart
-  rx_pin:
-    number: GPIO36
-    inverted: false
-  baud_rate: 4000
-  data_bits: 8
-  parity: NONE
-  stop_bits: 1
-  rx_buffer_size: 256
-
 switch:
   # Test mode when off: presses are judged and reported, the relay stays open.
   # Off after every boot and update; Roy turns it on.
@@ -143,6 +143,61 @@ sensor:
   - platform: uptime
     name: Uptime
     update_interval: 60s
+  # How well the opener's wire is heard: counted since boot, only ever up.
+  - platform: template
+    name: Wire bytes received
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire().health().bytes);
+  - platform: template
+    name: Wire bytes skipped
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire().health().skipped);
+  - platform: template
+    name: Wire packets decoded
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire().health().decoded);
+  - platform: template
+    name: Wire packets failed
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire().health().failed);
+  - platform: template
+    name: Wire rolling-code gaps
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire().health().gaps);
+  - platform: template
+    name: Wire framing errors
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire_uart().trouble().framing);
+  - platform: template
+    name: Wire parity errors
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire_uart().trouble().parity);
+  - platform: template
+    name: Wire overflows
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire_uart().trouble().overflow);
+  - platform: template
+    name: Wire breaks
+    accuracy_decimals: 0
+    state_class: total_increasing
+    update_interval: 10s
+    lambda: return static_cast<float>(garage_door::wire_uart().trouble().breaks);
 
 binary_sensor:
   # Each reed contact closes to ground when its magnet is near. GPIO34 and 35
@@ -201,8 +256,7 @@ interval:
           auto &door = garage_door::door(${allow_close});
           auto &wire = garage_door::wire();
           const uint32_t now = millis();
-          uint8_t b;
-          while (id(wire_uart).available() && id(wire_uart).read_byte(&b)) {
+          garage_door::wire_uart().poll([&](uint8_t b) {
             switch (wire.feed(now, b)) {
               case garage::Heard::Nothing:
                 break;
@@ -223,7 +277,7 @@ interval:
                 ESP_LOGW("wire", "does not decode | %s", garage::to_hex(wire.packet()).c_str());
                 break;
             }
-          }
+          });
           // Nothing on the wire vanishes unseen: bytes outside any packet are logged too.
           if (wire.skipped() > 0) {
             ESP_LOGI("wire", "skipped %u bytes outside any packet | %s", static_cast<unsigned>(wire.skipped()),

@@ -361,3 +361,65 @@ TEST(Listener, DropsAPacketCutShortByAPause) {
   l.clear_skipped();
   EXPECT_EQ(l.skipped_hex(), "");
 }
+
+// --- Link health: counted since boot, only ever up ------------------------------
+
+namespace {
+Packet status_with(std::uint32_t rolling, std::uint32_t id) {
+  Packet p{};
+  EXPECT_TRUE(garage::detail::build(rolling, id, garage::kStatus, 0x20000, p));
+  return p;
+}
+}  // namespace
+
+TEST(Health, CountsEveryByteAndEveryPacketItHears) {
+  garage::Listener l;
+  for (std::uint8_t b : std::array<std::uint8_t, 3>{0x38, 0x00, 0x6B}) {
+    l.feed(0, b);
+  }
+  feed_all(l, kOpening, 100);
+  feed_all(l, kStopped, 1000);
+  Packet broken = kOpening;
+  broken[4] = static_cast<std::uint8_t>(broken[4] | 0xC0);
+  feed_all(l, broken, 2000);
+  const garage::Health h = l.health();
+  EXPECT_EQ(h.bytes, 3u + 3u * 19u);
+  EXPECT_EQ(h.decoded, 2u);
+  EXPECT_EQ(h.failed, 1u);
+  EXPECT_EQ(h.skipped, 3u);
+  l.clear_skipped();  // the log's copy, not the count
+  EXPECT_EQ(l.health().skipped, 3u);
+}
+
+TEST(Health, CountsTheRollingCodesThatNeverArrived) {
+  garage::Listener l;
+  feed_all(l, status_with(5, 0x1234), 0);
+  feed_all(l, status_with(6, 0x1234), 1000);
+  EXPECT_EQ(l.health().gaps, 0u);
+  feed_all(l, status_with(10, 0x1234), 2000);  // 7, 8 and 9 never came
+  EXPECT_EQ(l.health().gaps, 3u);
+}
+
+TEST(Health, CountsNoGapAcrossAnotherSenderOrARestartOfTheCounter) {
+  garage::Listener l;
+  feed_all(l, status_with(100, 0x1234), 0);
+  feed_all(l, status_with(500, 0x9999), 1000);  // another device's own counter
+  feed_all(l, status_with(101, 0x1234), 2000);
+  feed_all(l, status_with(3, 0x1234), 3000);  // backwards: the opener started again
+  EXPECT_EQ(l.health().gaps, 0u);
+}
+
+TEST(Health, CountsEachKindOfUartTroubleApart) {
+  garage::UartTrouble t;
+  t.count(garage::UartEvent::Framing);
+  t.count(garage::UartEvent::Framing);
+  t.count(garage::UartEvent::Parity);
+  t.count(garage::UartEvent::Overflow);
+  t.count(garage::UartEvent::Break);
+  t.count(garage::UartEvent::Break);
+  t.count(garage::UartEvent::Break);
+  EXPECT_EQ(t.framing, 2u);
+  EXPECT_EQ(t.parity, 1u);
+  EXPECT_EQ(t.overflow, 1u);
+  EXPECT_EQ(t.breaks, 3u);
+}
