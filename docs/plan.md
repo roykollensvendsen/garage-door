@@ -6,7 +6,7 @@ flashed. Written 2026-11-04.*
 ## What we are building
 
 Roy says "open the garage". The voice session asks back "The door is closed.
-Open it?", Roy says yes, and only then does a small box next to the opener
+Do you want me to open it?", Roy says yes, and only then does a small box next to the opener
 press the opener's push-button input for half a second. Two magnetic sensors
 tell the system whether the door is fully open, fully closed, or somewhere in
 between, so the door's state is reported before and after every press, and

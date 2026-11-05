@@ -103,7 +103,7 @@ def test_a_request_asks_the_question_and_does_not_press(tmp_path):
     answer = run(service.request(Action.OPEN, requester="voice"))
     assert isinstance(answer, Question)
     assert answer.state is DoorState.CLOSED
-    assert answer.question == "The garage door is closed. Open it?"
+    assert answer.question == "The garage door is closed. Do you want me to open it?"
     assert device.presses == 0
 
 
@@ -244,7 +244,7 @@ def test_closing_is_asked_about_by_default(tmp_path):
     service, _ = make(device, tmp_path)
     answer = run(service.request(Action.CLOSE, requester="voice"))
     assert isinstance(answer, Question)
-    assert answer.question == "The garage door is open. Close it?"
+    assert answer.question == "The garage door is open. Do you want me to close it?"
 
 
 def test_a_token_works_once(tmp_path):

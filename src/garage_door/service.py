@@ -141,8 +141,10 @@ class GarageService:
         token = self._new_token()
         self._pending = _Pending(token, action, state, self._clock(), requester)
         self._log("asked", requester=requester, action=action, before=state)
-        verb = "Open" if action is Action.OPEN else "Close"
-        return Question(token, state, action, f"The garage door is {state}. {verb} it?")
+        verb = "open" if action is Action.OPEN else "close"
+        # Read aloud by a voice: worded so that it is plainly a question.
+        question = f"The garage door is {state}. Do you want me to {verb} it?"
+        return Question(token, state, action, question)
 
     async def confirm(self, token: str) -> Confirmed | Refused:
         """Press once, if `token` is the current question and nothing has changed since."""

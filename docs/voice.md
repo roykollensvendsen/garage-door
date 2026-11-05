@@ -19,7 +19,7 @@ that first when the controller is not armed or is in manual mode.
 A conversation looks like this:
 
 > **You:** Close the garage.
-> **Claude** *(calls `garage_request`)*: The garage door is open. Close it?
+> **Claude** *(calls `garage_request`)*: The garage door is open. Do you want me to close it?
 > **You:** Yes.
 > **Claude** *(calls `garage_confirm`)*: The garage door is closed.
 

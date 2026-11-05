@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from garage_door.door import DeviceUnavailableError, DoorState
-from garage_door.manual import ManualPress, ManualQuestion, controller_report
+from garage_door.manual import QUESTION, ManualPress, ManualQuestion, controller_report
 from garage_door.service import Refused
 
 if TYPE_CHECKING:
@@ -292,3 +292,8 @@ def test_the_controller_report_says_whether_the_opener_light_is_on_and_how_old_t
 ):
     report = run(controller_report(LitDevice(light, age)))
     assert (report["light"], report["light_age_s"]) == (said, said_age)
+
+
+def test_the_manual_question_is_plainly_a_question_when_spoken():
+    # A voice reads it aloud; flat intonation must not hide that it asks.
+    assert "Do you want me to press the button?" in QUESTION

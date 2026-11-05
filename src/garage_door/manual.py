@@ -30,7 +30,7 @@ Report = dict[str, str | bool | int | None]
 
 QUESTION = (
     "Manual mode is on. I don't know if the door is open or closed, and I can't tell which way "
-    "it will go. Press the button? Only say yes if you can see the door."
+    "it will go. Do you want me to press the button? Only say yes if you can see the door."
 )
 PRESSED = "Pressed. I can't tell which way the door went: look at it."
 

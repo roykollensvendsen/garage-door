@@ -39,10 +39,12 @@ class Switch(enum.StrEnum):
 
 
 QUESTIONS = {
-    Switch.ARM: "The controller is not armed. Arm it, so a confirmed press moves the door?",
+    Switch.ARM: (
+        "The controller is not armed. Do you want me to arm it, so a confirmed press moves the door?"
+    ),
     Switch.MANUAL_ON: (
-        "Switch manual mode on for 10 minutes? A press then needs no known door state; "
-        "say yes to a press only while you can see the door."
+        "Do you want me to switch manual mode on for 10 minutes? A press then needs no known door "
+        "state; say yes to a press only while you can see the door."
     ),
 }
 ALREADY = {

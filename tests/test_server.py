@@ -124,7 +124,7 @@ def test_request_then_confirm_presses_once_through_the_tools(tmp_path):
     server = server_for(device, tmp_path)
     asked = call(server, "garage_request", {"action": "open"})
     assert asked["outcome"] == "question"
-    assert asked["say"] == "The garage door is closed. Open it?"
+    assert asked["say"] == "The garage door is closed. Do you want me to open it?"
     assert device.presses == 0
     done = call(server, "garage_confirm", {"token": asked["token"]})
     assert done["outcome"] == "pressed"
@@ -287,7 +287,7 @@ def test_arming_by_voice_asks_and_arms_only_on_confirm(tmp_path):
     server = server_for(device, tmp_path)
     asked = call(server, "garage_switch", {"change": "arm"})
     assert asked["outcome"] == "question"
-    assert asked["say"].startswith("The controller is not armed. Arm it")
+    assert asked["say"].startswith("The controller is not armed. Do you want me to arm it")
     assert device.is_armed is False
     done = call(server, "garage_confirm", {"token": asked["token"]})
     assert done["outcome"] == "switched"

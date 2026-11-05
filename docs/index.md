@@ -6,7 +6,7 @@ description: Open and close a LiftMaster or Chamberlain garage door (LM80EVF and
 
 # Talk to your garage door
 
-*"Open the garage." "The garage door is closed. Open it?" "Yes."* And it opens.
+*"Open the garage." "The garage door is closed. Do you want me to open it?" "Yes."* And it opens.
 
 **garage-door** is a small controller box and a few hundred lines of code that
 let a voice assistant open and close a LiftMaster (Chamberlain) garage door.
@@ -49,7 +49,7 @@ not quotes:
 1. You speak to a voice session (Claude, through the MCP tools in this repo).
 2. It asks the controller on your network what the door is doing. It reads
    two magnetic contacts: one at fully closed, one at fully open.
-3. It reads you a question: "The garage door is closed. Open it?"
+3. It reads you a question: "The garage door is closed. Do you want me to open it?"
 4. Only after a clear yes does the controller close an isolated relay across
    the opener's push-button terminals for half a second, as the wall button does.
 5. After the door's travel time it tells you where the door ended up, or warns

@@ -93,7 +93,10 @@ def test_arming_waits_for_a_spoken_yes(tmp_path):
     switches, _ = make(device, tmp_path)
     answer = run(switches.request(Switch.ARM, requester="voice"))
     assert isinstance(answer, SwitchQuestion)
-    assert answer.question == "The controller is not armed. Arm it, so a confirmed press moves the door?"
+    assert (
+        answer.question
+        == "The controller is not armed. Do you want me to arm it, so a confirmed press moves the door?"
+    )
     assert device.sets == []
     done = run(switches.confirm(answer.token))
     assert isinstance(done, Switched)
@@ -108,6 +111,7 @@ def test_manual_mode_waits_for_a_spoken_yes(tmp_path):
     assert isinstance(answer, SwitchQuestion)
     assert "10 minutes" in answer.question
     assert "only while you can see the door" in answer.question
+    assert answer.question.startswith("Do you want me to switch manual mode on")
     assert device.sets == []
     run(switches.confirm(answer.token))
     assert device.sets == [("manual", True)]
