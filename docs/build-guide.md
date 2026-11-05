@@ -179,8 +179,8 @@ The board has its own driver transistor, flyback diode and LEDs.
   row 17 (the 3V3 net, red), relay GND to the blue rail (black), relay CTH
   straight to ESP32 GPIO25 (green). Not connected yet: the ESP32 still needs
   headers and firmware.
-- **Output terminal (NO, COM, NC):** COM to opener terminal 1, NO to
-  terminal 2. NC stays empty, so a dead or unpowered module never presses.
+- **Output terminal:** COM is the middle screw and NO the right one
+  (measured, see below). COM to opener terminal 1, NO to terminal 2. NC stays empty, so a dead or unpowered module never presses.
 - **Power:** the coil's 120 mA comes from the Thing's 3.3 V regulator (rated
   600 mA), next to the ESP32's Wi-Fi peaks of about 250 mA. That fits. Some
   power banks switch off when little is drawn; use one that stays on at about
@@ -233,6 +233,14 @@ output:
 - Found on the way: the first request after the laptop connected always
   read "unknown", because the door was read before the controller's first
   report arrived. Fixed on the laptop, with a test; the controller was fine.
+
+**Relay output, checked in the garage (2026-11-05),** with the output still
+not connected to the opener and the controller unarmed:
+- Continuity puts **COM on the middle screw and NO on the right one**. NO
+  is open at rest (the meter shows OL).
+- CTH bridged to VCC by hand: the relay clicks and the meter beeps across
+  COM and NO.
+- Next: COM to opener terminal 1, NO to terminal 2 (the free "2" screw).
 
 ## First press on the real door: manual mode
 
