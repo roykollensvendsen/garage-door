@@ -258,6 +258,12 @@ not connected to the opener and the controller unarmed:
   about a second later and another about 20 s later, at the end of travel.
   (A press at 10:15 after the rewiring most likely moved it too; Roy did
   not say.)
+- **First "open" by name (11:11:51),** with the state from the opener's
+  wire (ADR-GD-005) and no manual mode. The controller read "closed" from
+  the opener's 5-minute status. The service asked "The garage door is
+  closed. Open it?", Roy said yes, and the opener reported opening at once
+  and open about 18 s later. The service answered "Pressed. The garage door
+  was closed and is now open."
 
 ## First press on the real door: manual mode
 
