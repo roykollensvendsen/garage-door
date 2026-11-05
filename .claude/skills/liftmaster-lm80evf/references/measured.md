@@ -76,3 +76,14 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   Roy's order for T0002-T0004. So listening on 0+2 gives the door state
   without extra sensors. The 6-byte T0000 capture is too short to decode.
 - **6+7:** not measured yet. Measure idle and while moving.
+
+
+**2026-11-05, measured: the opener now sends at 9600 baud.** Until about
+08:30 the controller decoded the opener at 4000 baud (14 of 22 packets at
+08:16). The opener was then power cycled, and from then on every packet
+reached a 4000-baud UART as 8 garbled bytes starting 18/38/88/98 00, with no
+framing errors. That is what a 4000-baud UART makes of a 19-byte packet sent
+at 9600, and a 10 nF to 1 nF filter swap did not change it. With the UART at
+9600 (10:43), whole packets decode again: closed, then opening and open
+after a press, with no rolling-code gap. Why the speed was 4000 before is
+not known; check it with the scope if it ever changes back.
