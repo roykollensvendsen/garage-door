@@ -224,6 +224,12 @@ interval:
                 break;
             }
           }
+          // Nothing on the wire vanishes unseen: bytes outside any packet are logged too.
+          if (wire.skipped() > 0) {
+            ESP_LOGI("wire", "skipped %u bytes outside any packet | %s", static_cast<unsigned>(wire.skipped()),
+                     wire.skipped_hex().c_str());
+            wire.clear_skipped();
+          }
           if (std::string("${state_from}") == "wire") {
             door.update_from_wire(now, wire.heard() ? wire.last().door : garage::WireState::Unknown,
                                   wire.heard() ? wire.heard_at() : now);

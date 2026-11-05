@@ -260,6 +260,52 @@ TEST(Framer, StartsAgainAfterAGapInTheMiddleOfAPacket) {
   EXPECT_EQ(f.packet(), kStopped);
 }
 
+TEST(Framer, KeepsTheBytesItSkipsWhileLookingForAPacket) {
+  // Nothing on the wire may vanish without a trace: what is not a packet is kept for the log.
+  garage::Framer f;
+  for (std::uint8_t b : std::array<std::uint8_t, 5>{0x00, 0xFF, 0x55, 0x55, 0x01}) {
+    f.feed(b);
+  }
+  for (std::uint8_t b : kOpening) {
+    f.feed(b);
+  }
+  EXPECT_EQ(f.skipped(), 5u);
+  EXPECT_EQ(f.skipped_hex(), "00 FF 55 55 01");
+  f.clear_skipped();
+  EXPECT_EQ(f.skipped(), 0u);
+  EXPECT_EQ(f.skipped_hex(), "");
+}
+
+TEST(Framer, KeepsThePartOfAPacketAGapCutOff) {
+  garage::Framer f;
+  for (std::size_t i = 0; i < 10; ++i) {
+    f.feed(kOpening[i]);
+  }
+  f.gap();
+  EXPECT_EQ(f.skipped(), 10u);
+  EXPECT_EQ(f.skipped_hex(), "55 01 00 24 38 B3 DF FA F6 7B");
+}
+
+TEST(Framer, SkipsNothingBetweenWholePackets) {
+  garage::Framer f;
+  for (const Packet& p : {kClosing, kStopped}) {
+    for (std::uint8_t b : p) {
+      f.feed(b);
+    }
+  }
+  f.gap();
+  EXPECT_EQ(f.skipped(), 0u);
+}
+
+TEST(Framer, CountsEverySkippedByteButKeepsOnlyTheFirstForTheLog) {
+  garage::Framer f;
+  for (int i = 0; i < 100; ++i) {
+    f.feed(0xAA);
+  }
+  EXPECT_EQ(f.skipped(), 100u);
+  EXPECT_EQ(f.skipped_hex().size(), garage::Framer::kSkippedKept * 3 - 1);
+}
+
 TEST(Framer, WritesAPacketAsHex) {
   EXPECT_EQ(garage::to_hex(kOpening), "55 01 00 24 38 B3 DF FA F6 7B 9F 55 27 8E AE 4C 32 EB A8");
 }
@@ -311,4 +357,7 @@ TEST(Listener, DropsAPacketCutShortByAPause) {
   }
   EXPECT_EQ(last, garage::Heard::Nothing);
   EXPECT_EQ(feed_all(l, kOpening, 200), garage::Heard::Status);
+  EXPECT_EQ(l.skipped(), 19u);  // the cut-off packet, kept for the log
+  l.clear_skipped();
+  EXPECT_EQ(l.skipped_hex(), "");
 }

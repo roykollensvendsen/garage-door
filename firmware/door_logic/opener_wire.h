@@ -84,12 +84,21 @@ inline bool build_door_action(std::uint32_t rolling, std::uint32_t client_id, Wi
 // Finds 19-byte packets in the bytes the UART receives. A packet starts with
 // the sync 55 01 00; anything before it (the break reads as 0x00, noise) is
 // skipped. Call gap() when the line has been quiet for longer than a byte.
+// Every skipped byte is counted, and the first kSkippedKept are kept, so the
+// log can show what on the wire was not a packet.
 class Framer {
  public:
+  static constexpr std::size_t kSkippedKept = 32;
+
   // True when `b` completes a packet; packet() then holds it.
   bool feed(std::uint8_t b) {
     if (have_ < 3 && b != kSync[have_]) {
-      have_ = (b == kSync[0]) ? 1 : 0;  // a 55 may itself start the sync
+      drop_buffer();
+      if (b == kSync[0]) {
+        buffer_[have_++] = b;  // a 55 may itself start the sync
+      } else {
+        skip(b);
+      }
       return false;
     }
     buffer_[have_++] = b;
@@ -101,14 +110,34 @@ class Framer {
     return true;
   }
 
-  void gap() { have_ = 0; }
+  void gap() { drop_buffer(); }
   const Packet& packet() const { return packet_; }
 
+  // Bytes skipped since clear_skipped(), and the first of them as hex.
+  std::size_t skipped() const { return skipped_; }
+  std::string skipped_hex() const;
+  void clear_skipped() { skipped_ = 0; }
+
  private:
+  void skip(std::uint8_t b) {
+    if (skipped_ < kSkippedKept) {
+      kept_[skipped_] = b;
+    }
+    ++skipped_;
+  }
+  void drop_buffer() {
+    for (std::size_t i = 0; i < have_; ++i) {
+      skip(buffer_[i]);
+    }
+    have_ = 0;
+  }
+
   static constexpr std::uint8_t kSync[3] = {0x55, 0x01, 0x00};
   Packet buffer_{};
   Packet packet_{};
   std::size_t have_ = 0;
+  std::array<std::uint8_t, kSkippedKept> kept_{};
+  std::size_t skipped_ = 0;
 };
 
 enum class Heard : std::uint8_t {
@@ -151,6 +180,9 @@ class Listener {
   }
 
   const Packet& packet() const { return framer_.packet(); }
+  std::size_t skipped() const { return framer_.skipped(); }
+  std::string skipped_hex() const { return framer_.skipped_hex(); }
+  void clear_skipped() { framer_.clear_skipped(); }
   bool heard() const { return heard_; }
   const Status& last() const { return last_; }
   std::uint32_t heard_at() const { return heard_at_; }
@@ -165,17 +197,23 @@ class Listener {
 };
 
 // "55 01 00 ..." for the log.
-inline std::string to_hex(const Packet& packet) {
+inline std::string to_hex(const std::uint8_t* bytes, std::size_t n) {
   static constexpr char kDigits[] = "0123456789ABCDEF";
   std::string out;
-  for (std::uint8_t b : packet) {
+  for (std::size_t i = 0; i < n; ++i) {
     if (!out.empty()) {
       out += ' ';
     }
-    out += kDigits[b >> 4];
-    out += kDigits[b & 0x0F];
+    out += kDigits[bytes[i] >> 4];
+    out += kDigits[bytes[i] & 0x0F];
   }
   return out;
+}
+
+inline std::string to_hex(const Packet& packet) { return to_hex(packet.data(), packet.size()); }
+
+inline std::string Framer::skipped_hex() const {
+  return to_hex(kept_.data(), skipped_ < kSkippedKept ? skipped_ : kSkippedKept);
 }
 
 // The controller's own 28-bit rolling code. The opener ignores a code it has
