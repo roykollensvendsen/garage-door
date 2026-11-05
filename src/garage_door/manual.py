@@ -16,7 +16,7 @@ import json
 import secrets
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from garage_door.door import DeviceUnavailableError, DoorState
 from garage_door.service import KNOWN, TOKEN_SECONDS, Refused
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 #: What the controller says, attached to every answer so the voice session can say it first.
-Report = dict[str, str | bool | None]
+Report = dict[str, str | bool | int | None]
 
 QUESTION = (
     "Manual mode is on. I don't know if the door is open or closed, and I can't tell which way "
@@ -62,13 +62,37 @@ class ManualPressed:
     message: str
 
 
+@runtime_checkable
+class LightDevice(Protocol):
+    """A controller that reports the opener's light (the real one; fakes and the simulator need not)."""
+
+    async def light(self) -> tuple[bool | None, float | None]: ...  # noqa: D102
+
+
+# The opener's light is reported only from a status as fresh as one the
+# controller trusts for the door (decisions/ADR-GD-005).
+LIGHT_FRESH_SECONDS = 360.0
+
+
 async def controller_report(device: ManualDevice) -> Report:
-    """Door state, whether it can be trusted, armed and manual mode; unknown and None without an answer."""
+    """State, whether it can be trusted, armed, manual mode and light; unknown and None without an answer."""
+    light: bool | None = None
+    age: float | None = None
     try:
         state, armed, manual = await device.state(), await device.armed(), await device.manual()
+        if isinstance(device, LightDevice):
+            light, age = await device.light()
     except DeviceUnavailableError:
         state, armed, manual = DoorState.UNKNOWN, None, None
-    return {"state": str(state), "state_trusted": state in KNOWN, "armed": armed, "manual": manual}
+    fresh = age is not None and age < LIGHT_FRESH_SECONDS
+    return {
+        "state": str(state),
+        "state_trusted": state in KNOWN,
+        "armed": armed,
+        "manual": manual,
+        "light": light if fresh else None,
+        "light_age_s": round(age) if age is not None else None,
+    }
 
 
 class ManualPress:

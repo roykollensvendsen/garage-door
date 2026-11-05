@@ -8,10 +8,11 @@ ones firmware/garage-door.yaml defines.
 from __future__ import annotations
 
 import asyncio
+import math
 from typing import TYPE_CHECKING, Any, Protocol
 
 from aioesphomeapi.core import APIConnectionError
-from aioesphomeapi.model import SwitchState, TextSensorState
+from aioesphomeapi.model import SensorState, SwitchState, TextSensorState
 
 from garage_door.door import DeviceUnavailableError, DoorState
 
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 STATE_SENSOR = "Door state"
+LIGHT_SENSOR = "Opener light"  # from the opener's last status on the wire; read only
+STATUS_AGE_SENSOR = "Opener status age"  # seconds since that status
 ARMED_SWITCH = "Armed"
 MANUAL_SWITCH = "Manual mode"
 PRESS_ACTION = "press"
@@ -58,6 +61,8 @@ class EsphomeDevice:
         self._manual: bool | None = None
         self._manual_press: Any = None
         self._door: str | None = None
+        self._light: bool | None = None
+        self._status_age: float | None = None
         self._names: dict[int, str] = {}
         self._seen: dict[str, str] = {}
 
@@ -78,6 +83,11 @@ class EsphomeDevice:
         """The controller's Manual mode switch as last reported; None until it is."""
         await self._ensure_connected()
         return self._manual
+
+    async def light(self) -> tuple[bool | None, float | None]:
+        """The opener's light from its last status, and that status's age in seconds; None if not known."""
+        await self._ensure_connected()
+        return self._light, self._status_age
 
     async def press(self) -> str:
         """Ask the controller to press once. Its own logic may still refuse."""
@@ -171,6 +181,12 @@ class EsphomeDevice:
             self._armed = state.state
         if isinstance(state, SwitchState) and state.key == self._manual_key:
             self._manual = state.state
+        name = self._names.get(key) if isinstance(key, int) else None
+        if name == LIGHT_SENSOR and isinstance(state, TextSensorState):
+            self._light = {"on": True, "off": False}.get(state.state)
+        if name == STATUS_AGE_SENSOR and isinstance(state, SensorState):
+            age = state.state
+            self._status_age = None if state.missing_state or math.isnan(age) else age
 
 
 def _shown(state: object) -> str:

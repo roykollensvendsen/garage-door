@@ -194,3 +194,14 @@ def test_the_door_state_comes_from_the_wire_trusting_the_last_status_by_default(
     assert config["substitutions"]["wire_trust"] == "last_status"
     glue = (ROOT / "firmware/door_logic/esphome_glue.h").read_text()
     assert 'c.trust_last_status = std::string(wire_trust) == "last_status";' in glue
+
+
+def test_the_opener_light_and_the_age_of_its_last_status_are_reported_read_only():
+    config = _esphome_config()
+    texts = {t.get("name"): t for t in config["text_sensor"]}
+    sensors = {t.get("name"): t for t in config["sensor"]}
+    assert "Opener light" in texts
+    assert "Opener status age" in sensors
+    yaml_text = (ROOT / "firmware/garage-door.yaml").read_text()
+    assert 'id(opener_light).publish_state(s.light ? "on" : "off");' in yaml_text
+    assert "light" not in {s.get("name", "").lower() for s in config["switch"]}  # nothing switches the light

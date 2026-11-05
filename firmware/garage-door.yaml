@@ -149,6 +149,19 @@ button:
     name: Restart
 
 sensor:
+  # Seconds since the opener's last whole status; unknown until the first.
+  # The laptop reports the light only while this is under 6 minutes.
+  - platform: template
+    name: Opener status age
+    unit_of_measurement: s
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      auto &wire = garage_door::wire();
+      if (!wire.heard()) {
+        return NAN;
+      }
+      return static_cast<float>(millis() - wire.heard_at()) / 1000.0f;
   - platform: wifi_signal
     name: Wi-Fi signal
     update_interval: 60s
@@ -254,6 +267,11 @@ text_sensor:
   - platform: template
     id: wire_status
     name: Opener status on the wire
+  # The opener's light, as its last status said; read only, nothing here
+  # switches it. How old that status is: "Opener status age".
+  - platform: template
+    id: opener_light
+    name: Opener light
   - platform: version
     name: Firmware version
   - platform: debug
@@ -280,6 +298,7 @@ interval:
                 static const char *const names[] = {"unknown", "open", "closed", "stopped", "opening", "closing"};
                 const auto n = static_cast<unsigned>(s.door);
                 id(wire_status).publish_state(n < 6 ? names[n] : "unknown");
+                id(opener_light).publish_state(s.light ? "on" : "off");
                 break;
               }
               case garage::Heard::Other:

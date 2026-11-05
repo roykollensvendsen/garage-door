@@ -279,3 +279,22 @@ def test_a_controller_without_manual_mode_refuses_it():
         run(device.manual_press())
     with pytest.raises(DeviceUnavailableError, match="Manual mode"):
         run(device.set_manual(on=True))
+
+
+def test_the_opener_light_and_the_age_of_its_last_status_are_read():
+    from aioesphomeapi import SensorInfo, SensorState  # noqa: PLC0415
+
+    client = FakeClient("closed")
+    client.entities += [
+        TextSensorInfo(name="Opener light", key=15),
+        SensorInfo(name="Opener status age", key=16),
+    ]
+    device = EsphomeDevice(lambda: client)
+    assert run(device.light()) == (None, None)  # nothing reported yet
+    client.deliver(TextSensorState(key=15, state="on"))
+    client.deliver(SensorState(key=16, state=42.0))
+    assert run(device.light()) == (True, 42.0)
+    client.deliver(TextSensorState(key=15, state="off"))
+    client.deliver(SensorState(key=16, state=float("nan"), missing_state=True))
+    assert run(device.light()) == (False, None)  # the age is not known: never trusted as fresh
+    assert client.executed == []

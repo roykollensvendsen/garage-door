@@ -226,7 +226,14 @@ def test_a_confirm_with_a_wrong_token_is_refused_through_the_tools(tmp_path):
 def test_every_answer_says_what_the_controller_reports(tmp_path):
     device = FakeDevice(DoorState.CLOSED, DoorState.OPEN)
     server = server_for(device, tmp_path)
-    report = {"state": "closed", "state_trusted": True, "armed": True, "manual": False}
+    report = {
+        "state": "closed",
+        "state_trusted": True,
+        "armed": True,
+        "manual": False,
+        "light": None,
+        "light_age_s": None,
+    }
     assert call(server, "garage_status", {})["controller"] == report
     question = call(server, "garage_request", {"action": "open"})
     assert question["controller"] == report

@@ -11,6 +11,8 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
+import pytest
+
 from garage_door.door import DeviceUnavailableError, DoorState
 from garage_door.manual import ManualPress, ManualQuestion, controller_report
 from garage_door.service import Refused
@@ -108,7 +110,14 @@ def test_the_question_carries_what_the_controller_reports(tmp_path):
     manual, _ = make(FakeDevice(DoorState.FAULT), tmp_path)
     answer = run(manual.request(requester="voice"))
     assert isinstance(answer, ManualQuestion)
-    assert answer.controller == {"state": "fault", "state_trusted": False, "armed": True, "manual": True}
+    assert answer.controller == {
+        "state": "fault",
+        "state_trusted": False,
+        "armed": True,
+        "manual": True,
+        "light": None,
+        "light_age_s": None,
+    }
 
 
 def test_a_confirmed_manual_press_presses_once_and_says_only_pressed(tmp_path):
@@ -218,6 +227,8 @@ def test_the_controller_report_says_whether_the_state_can_be_trusted():
         "state_trusted": True,
         "armed": True,
         "manual": False,
+        "light": None,
+        "light_age_s": None,
     }
 
 
@@ -229,6 +240,8 @@ def test_the_controller_report_says_unknown_when_the_controller_does_not_answer(
         "state_trusted": False,
         "armed": None,
         "manual": None,
+        "light": None,
+        "light_age_s": None,
     }
 
 
@@ -252,3 +265,30 @@ def test_the_simulated_controller_has_no_manual_mode():
     controller = simulated_controller()
     assert run(controller.manual()) is False
     assert run(controller.manual_press()) == "refused: manual mode is off"
+
+
+class LitDevice(FakeDevice):
+    def __init__(self, light: bool | None, age: float | None) -> None:  # noqa: FBT001
+        super().__init__(DoorState.CLOSED)
+        self.is_manual = False
+        self.lit = (light, age)
+
+    async def light(self) -> tuple[bool | None, float | None]:
+        return self.lit
+
+
+@pytest.mark.parametrize(
+    ("light", "age", "said", "said_age"),
+    [
+        (True, 12.4, True, 12),
+        (False, 359.0, False, 359),
+        (True, 360.0, None, 360),  # older than the last status is trusted (ADR-GD-005): not known
+        (True, None, None, None),  # never heard since boot
+        (None, 5.0, None, 5),
+    ],
+)
+def test_the_controller_report_says_whether_the_opener_light_is_on_and_how_old_that_is(
+    light, age, said, said_age
+):
+    report = run(controller_report(LitDevice(light, age)))
+    assert (report["light"], report["light_age_s"]) == (said, said_age)
