@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -74,8 +75,19 @@ def simulated_service(env: Mapping[str, str], start: Start) -> tuple[GarageServi
     return GarageService(controller, log_path=log), ManualPress(controller, log_path=log)
 
 
-def settings_from(env: Mapping[str, str]) -> Settings:
-    """Read settings from `env`, refusing to start without an address or key."""
+def settings_from(
+    env: Mapping[str, str], *, secrets_file: pathlib.Path | None = None, host: str | None = None
+) -> Settings:
+    """Read settings from `env`, refusing to start without an address or key.
+
+    `secrets_file` (the firmware's secrets.yaml) and `host` fill in what the
+    environment leaves out, so a launcher never has to hold the key.
+    """
+    env = dict(env)
+    if host and not env.get("GARAGE_DOOR_HOST"):
+        env["GARAGE_DOOR_HOST"] = host
+    if secrets_file is not None and not env.get("GARAGE_DOOR_API_KEY"):
+        env["GARAGE_DOOR_API_KEY"] = _key_from(secrets_file)
     for name in ("GARAGE_DOOR_HOST", "GARAGE_DOOR_API_KEY"):
         if not env.get(name):
             msg = f"garage-door-mcp: {name} is not set"
@@ -87,6 +99,20 @@ def settings_from(env: Mapping[str, str]) -> Settings:
         allow_close=env.get("GARAGE_DOOR_ALLOW_CLOSE", "yes") != "no",
         log_path=log_path,
     )
+
+
+def _key_from(secrets_file: pathlib.Path) -> str:
+    """The controller's API key from the firmware's secrets.yaml, never printed."""
+    try:
+        text = secrets_file.read_text(encoding="utf-8")
+    except OSError:
+        msg = f"garage-door-mcp: cannot read {secrets_file}"
+        raise SystemExit(msg) from None
+    found = re.search(r'^api_encryption_key:\s*"?([^"\s]+)"?\s*$', text, re.MULTILINE)
+    if found is None:
+        msg = f"garage-door-mcp: no api_encryption_key in {secrets_file}"
+        raise SystemExit(msg)
+    return found.group(1)
 
 
 def build_server(
@@ -239,6 +265,10 @@ def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the
     parser.add_argument(
         "--start", type=Start, choices=list(Start), default=Start.CLOSED, help="simulated door's start"
     )
+    parser.add_argument(
+        "--secrets-file", type=pathlib.Path, help="read the API key from this secrets.yaml (env wins)"
+    )
+    parser.add_argument("--host", help="the controller's address, if GARAGE_DOOR_HOST is not set")
     args = parser.parse_args(argv)
     if args.simulate:
         build_server(*simulated_service(os.environ, args.start), simulated=True).run()
@@ -248,7 +278,7 @@ def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the
 
     from garage_door.esphome_device import EsphomeDevice  # noqa: PLC0415
 
-    settings = settings_from(os.environ)
+    settings = settings_from(os.environ, secrets_file=args.secrets_file, host=args.host)
     device = EsphomeDevice(
         lambda: APIClient(
             settings.host, 6053, None, noise_psk=settings.api_key, client_info="garage-door-mcp"

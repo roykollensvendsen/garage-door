@@ -162,6 +162,26 @@ def test_settings_need_the_controllers_address_and_key():
         settings_from({"GARAGE_DOOR_HOST": "garage-door.local"})
 
 
+def test_the_key_and_address_can_come_from_the_secrets_file_and_a_flag(tmp_path):
+    # So a launcher (the claude-voice bridge) never holds the key.
+    secrets = tmp_path / "secrets.yaml"
+    secrets.write_text('wifi_ssid: "home"\napi_encryption_key: "from-the-file="\n')
+    settings = settings_from({}, secrets_file=secrets, host="192.0.2.7")
+    assert (settings.host, settings.api_key) == ("192.0.2.7", "from-the-file=")
+    env = {"GARAGE_DOOR_HOST": "garage-door.local", "GARAGE_DOOR_API_KEY": "from-env"}
+    settings = settings_from(env, secrets_file=secrets, host="192.0.2.7")
+    assert (settings.host, settings.api_key) == ("garage-door.local", "from-env")  # the environment wins
+
+
+def test_a_secrets_file_without_the_key_refuses_to_start(tmp_path):
+    secrets = tmp_path / "secrets.yaml"
+    secrets.write_text('wifi_ssid: "home"\n')
+    with pytest.raises(SystemExit, match="api_encryption_key"):
+        settings_from({}, secrets_file=secrets, host="192.0.2.7")
+    with pytest.raises(SystemExit, match="cannot read"):
+        settings_from({}, secrets_file=tmp_path / "missing.yaml", host="192.0.2.7")
+
+
 def test_closing_is_on_unless_the_setting_says_no():
     base = {"GARAGE_DOOR_HOST": "garage-door.local", "GARAGE_DOOR_API_KEY": "k"}
     assert settings_from(base).allow_close is True
