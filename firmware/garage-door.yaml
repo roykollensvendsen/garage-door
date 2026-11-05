@@ -26,6 +26,12 @@ substitutions:
   # test"). Security+ 2.0 wireline at about 4000 baud, 8N1, idle high. Read by
   # door_logic/wire_uart.h, which never assigns a TX pin: nothing is sent.
   wire_rx_gpio: "36"
+  # The wire's speed. Roy's scope captures (2026-11-04) and the first garage
+  # run (2026-11-05 08:16) decoded at 4000 baud. After the opener was power
+  # cycled at about 08:30, every packet arrived as 8 bytes starting 18/38/88/
+  # 98 00: what a 4000-baud UART makes of a 19-byte packet sent at 9600, the
+  # speed ratgdo uses for Security+ 2.0. Trying 9600.
+  wire_baud: "9600"
 
 esphome:
   name: garage-door
@@ -34,7 +40,7 @@ esphome:
     priority: 600
     then:
       - lambda: |-
-          if (!garage_door::wire_uart().begin(${wire_rx_gpio}, 4000)) {
+          if (!garage_door::wire_uart().begin(${wire_rx_gpio}, ${wire_baud})) {
             ESP_LOGE("wire", "the wire's UART did not start: nothing will be heard on 0+2");
           }
   includes:

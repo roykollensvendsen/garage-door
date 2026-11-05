@@ -59,6 +59,7 @@ def test_the_firmware_listens_on_the_planned_wire_pin_and_never_sends_on_it():
     config = _esphome_config()
     assert "uart" not in config
     assert config["substitutions"]["wire_rx_gpio"] == str(GPIO["wire_rx"])
+    assert "begin(${wire_rx_gpio}, ${wire_baud})" in str(config["esphome"]["on_boot"])
     glue = (ROOT / "firmware/door_logic/wire_uart.h").read_text()
     assert "uart_set_pin(kPort, UART_PIN_NO_CHANGE, rx_gpio, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)" in glue
     assert "uart_write" not in glue
