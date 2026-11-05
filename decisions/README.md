@@ -35,6 +35,7 @@ decision nobody writes down.
 | [ADR-GD-004](ADR-GD-004-manual-press.md) | A manual press while Roy watches the door, before its state is known | Accepted |
 | [ADR-GD-005](ADR-GD-005-trust-the-last-status.md) | How long the opener's last status is trusted | Accepted |
 | [ADR-GD-006](ADR-GD-006-switch-by-voice.md) | Arm, disarm and switch manual mode by voice | Accepted |
+| [ADR-GD-007](ADR-GD-007-light-by-voice.md) | Switch the opener's light by voice, over the data wire | Proposed |
 
 What is deliberately left undone, and what would make each worth doing, is
 [`deferred.md`](deferred.md). A thing left undone with no trigger is a thing

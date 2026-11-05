@@ -87,3 +87,9 @@ at 9600, and a 10 nF to 1 nF filter swap did not change it. With the UART at
 9600 (10:43), whole packets decode again: closed, then opening and open
 after a press, with no rolling-code gap. Why the speed was 4000 before is
 not known; check it with the scope if it ever changes back.
+
+**2026-11-05, measured by eye (Roy): the light goes out about 2 min 50 s
+after the door reaches its end.** Closed at 20:18:10 (from the wire), light
+out at about 20:21. The opener sends no status when the light goes out; it
+shows only in the next 5-minute repeat (about 296 s after the end, every
+time that day), so the wire alone cannot time it.
