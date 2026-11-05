@@ -18,6 +18,7 @@
 #include <string>
 
 #include "door_logic.h"
+#include "rolling_code.h"
 #include "secplus.h"
 #include "wire_health.h"
 
@@ -36,7 +37,6 @@ struct Status {
 constexpr std::uint16_t kGetStatus = 0x080;
 constexpr std::uint16_t kStatus = 0x081;
 constexpr std::uint16_t kDoorAction = 0x280;
-constexpr std::uint32_t kRollingMask = 0x0FFFFFFF;  // 28 bits
 
 // The opener's status in `packet`, if it is one. False for anything that does
 // not decode, and for any other command.
@@ -120,6 +120,8 @@ class Framer {
   void clear_skipped() { skipped_ = 0; }
   // Every byte skipped since boot; clear_skipped() leaves it alone.
   std::uint32_t skipped_total() const { return skipped_total_; }
+  // Skipped bytes other than 00, since boot.
+  std::uint32_t stray() const { return stray_; }
 
  private:
   void skip(std::uint8_t b) {
@@ -128,6 +130,9 @@ class Framer {
     }
     ++skipped_;
     ++skipped_total_;
+    if (b != 0x00) {
+      ++stray_;  // not the 00 a break reads as
+    }
   }
   void drop_buffer() {
     for (std::size_t i = 0; i < have_; ++i) {
@@ -143,6 +148,7 @@ class Framer {
   std::array<std::uint8_t, kSkippedKept> kept_{};
   std::size_t skipped_ = 0;
   std::uint32_t skipped_total_ = 0;
+  std::uint32_t stray_ = 0;
 };
 
 enum class Heard : std::uint8_t {
@@ -161,13 +167,19 @@ class Listener {
   static constexpr std::uint32_t kGapMs = 50;
 
   Heard feed(std::uint32_t now, std::uint8_t b) {
+    const std::uint32_t stray_before = framer_.stray();
     if (seen_byte_ && (now - last_byte_) > kGapMs) {
       framer_.gap();
     }
     seen_byte_ = true;
     last_byte_ = now;
     ++health_.bytes;
-    if (!framer_.feed(b)) {
+    const bool done = framer_.feed(b);
+    // RULE: listener marks damage after the last status until the next one
+    if (framer_.stray() != stray_before) {
+      damaged_ = true;
+    }
+    if (!done) {
       return Heard::Nothing;
     }
     Status s{};
@@ -177,6 +189,7 @@ class Listener {
       last_ = s;
       heard_ = true;
       heard_at_ = now;
+      damaged_ = false;
       return Heard::Status;
     }
     std::uint32_t rolling = 0;
@@ -186,6 +199,7 @@ class Listener {
     const bool decodes = decode_wireline_command(framer_.packet().data(), &rolling, &id, &command, &payload) == 0;
     if (!decodes) {
       ++health_.failed;
+      damaged_ = true;
       return Heard::Bad;
     }
     ++health_.decoded;
@@ -204,6 +218,9 @@ class Listener {
   std::string skipped_hex() const { return framer_.skipped_hex(); }
   void clear_skipped() { framer_.clear_skipped(); }
   bool heard() const { return heard_; }
+  // Whether a broken packet or stray bytes (other than the break's 00) came
+  // after the last status: the newest packet may be the one that was lost.
+  bool damaged_since_status() const { return damaged_; }
   const Status& last() const { return last_; }
   std::uint32_t heard_at() const { return heard_at_; }
 
@@ -230,6 +247,7 @@ class Listener {
   std::uint32_t last_rolling_ = 0;
   Status last_{};
   bool heard_ = false;
+  bool damaged_ = false;
   std::uint32_t heard_at_ = 0;
   bool seen_byte_ = false;
   std::uint32_t last_byte_ = 0;
@@ -254,34 +272,5 @@ inline std::string to_hex(const Packet& packet) { return to_hex(packet.data(), p
 inline std::string Framer::skipped_hex() const {
   return to_hex(kept_.data(), skipped_ < kSkippedKept ? skipped_ : kSkippedKept);
 }
-
-// The controller's own 28-bit rolling code. The opener ignores a code it has
-// already seen, so the code only goes forward, also across a restart. It is
-// saved in blocks: before a code at or past the saved value is sent, the
-// controller saves a value `block` further on, so after a restart it resumes
-// past everything it could have sent.
-class RollingCode {
- public:
-  RollingCode(std::uint32_t saved, std::uint32_t block)
-      : current_(saved & kRollingMask), limit_(saved & kRollingMask), block_(block) {}
-
-  // The code for the next packet. Call save_due() before sending it.
-  std::uint32_t next() {
-    current_ = (current_ + 1) & kRollingMask;
-    return current_;
-  }
-
-  // RULE: rolling code is saved before a code past the saved one is sent
-  bool save_due() const { return ((current_ - limit_) & kRollingMask) < (kRollingMask >> 1); }
-
-  // What to save in flash when save_due(); call saved() once it is written.
-  std::uint32_t to_save() const { return (current_ + block_) & kRollingMask; }
-  void saved() { limit_ = to_save(); }
-
- private:
-  std::uint32_t current_;
-  std::uint32_t limit_;
-  std::uint32_t block_;
-};
 
 }  // namespace garage

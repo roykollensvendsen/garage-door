@@ -15,7 +15,12 @@ substitutions:
   allow_close: "true"
   # Where the door state comes from: "reed" (contacts at each end) or "wire"
   # (the opener's own status on 0+2). The wire is logged either way.
-  state_from: "reed"
+  state_from: "wire"
+  # With the state from the wire, how long the opener's last status is
+  # trusted (decisions/ADR-GD-005): "last_status" for up to 6 minutes, with
+  # safeguards; "ask_first" for 2 s only, which refuses every press until a
+  # sender is fitted to ask the opener (ADR-GD-003).
+  wire_trust: "last_status"
   # The press output's level. "false": a high pin closes the relay, as with the
   # AQY212EH. Roy's first-test module (Songle SRD-03VDC-SL-C board) may trigger
   # on a low input: set "true" only after the bench check in the build guide
@@ -46,6 +51,7 @@ esphome:
   includes:
     - door_logic/door_logic.h
     - door_logic/wire_health.h
+    - door_logic/rolling_code.h
     - door_logic/opener_wire.h
     - door_logic/esphome_glue.h
     - door_logic/wire_uart.h
@@ -96,14 +102,14 @@ api:
     - action: press
       then:
         - lambda: |-
-            const auto result = garage_door::door(${allow_close}).request_press(millis());
+            const auto result = garage_door::door(${allow_close}, "${wire_trust}").request_press(millis());
             id(last_press_result).publish_state(garage::to_string(result));
     # A press with no direction, while Roy watches the door (ADR-GD-004).
     # Refused unless armed and in manual mode.
     - action: manual_press
       then:
         - lambda: |-
-            const auto result = garage_door::door(${allow_close}).request_manual_press(millis());
+            const auto result = garage_door::door(${allow_close}, "${wire_trust}").request_manual_press(millis());
             id(last_press_result).publish_state(std::string("manual: ") + garage::to_string(result));
 
 ota:
@@ -120,22 +126,22 @@ switch:
     id: armed
     name: Armed
     restore_mode: ALWAYS_OFF
-    lambda: return garage_door::door(${allow_close}).armed();
+    lambda: return garage_door::door(${allow_close}, "${wire_trust}").armed();
     turn_on_action:
-      - lambda: garage_door::door(${allow_close}).set_armed(true);
+      - lambda: garage_door::door(${allow_close}, "${wire_trust}").set_armed(true);
     turn_off_action:
-      - lambda: garage_door::door(${allow_close}).set_armed(false);
+      - lambda: garage_door::door(${allow_close}, "${wire_trust}").set_armed(false);
   # Manual mode (decisions/ADR-GD-004): allows a manual press with the door's
   # state unknown. Off after every boot and update, and by itself after 10 min.
   - platform: template
     id: manual
     name: Manual mode
     restore_mode: ALWAYS_OFF
-    lambda: return garage_door::door(${allow_close}).manual(millis());
+    lambda: return garage_door::door(${allow_close}, "${wire_trust}").manual(millis());
     turn_on_action:
-      - lambda: garage_door::door(${allow_close}).set_manual(true, millis());
+      - lambda: garage_door::door(${allow_close}, "${wire_trust}").set_manual(true, millis());
     turn_off_action:
-      - lambda: garage_door::door(${allow_close}).set_manual(false, millis());
+      - lambda: garage_door::door(${allow_close}, "${wire_trust}").set_manual(false, millis());
 
 button:
   # Restarts the controller only; it boots with the relay open and unarmed.
@@ -259,7 +265,7 @@ interval:
   - interval: 20ms
     then:
       - lambda: |-
-          auto &door = garage_door::door(${allow_close});
+          auto &door = garage_door::door(${allow_close}, "${wire_trust}");
           auto &wire = garage_door::wire();
           const uint32_t now = millis();
           garage_door::wire_uart().poll([&](uint8_t b) {
@@ -292,7 +298,8 @@ interval:
           }
           if (std::string("${state_from}") == "wire") {
             door.update_from_wire(now, wire.heard() ? wire.last().door : garage::WireState::Unknown,
-                                  wire.heard() ? wire.heard_at() : now);
+                                  wire.heard() ? wire.heard_at() : now - 0x80000000U,
+                                  wire.damaged_since_status());
           } else {
             door.update(now, id(at_closed).state, id(at_open).state);
           }

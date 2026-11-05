@@ -233,11 +233,11 @@ TEST(Names, AValueOutsideTheListIsNamedAsTheSafeOne) {
 #include "esphome_glue.h"
 
 TEST(Glue, GivesTheSameDoorEveryTime) {
-  EXPECT_EQ(&garage_door::door(false), &garage_door::door(false));
+  EXPECT_EQ(&garage_door::door(false, "last_status"), &garage_door::door(false, "last_status"));
 }
 
 TEST(Glue, StartsWithClosingAsConfiguredAndTheOutputOff) {
-  garage::Door &d = garage_door::door(false);
+  garage::Door &d = garage_door::door(false, "last_status");
   EXPECT_FALSE(d.output(0));
   d.update(0, false, true);  // open
   EXPECT_EQ(d.request_press(0), PressResult::RefusedClose);
@@ -263,7 +263,7 @@ TEST(Pulse, IsCutTheMomentTheControllerIsDisarmed) {
 }
 
 TEST(Glue, StartsDisarmedSoAnUpdateNeverPressesBeforeRoySaysSo) {
-  EXPECT_FALSE(garage_door::door(false).armed());
+  EXPECT_FALSE(garage_door::door(false, "last_status").armed());
 }
 
 TEST(Glue, GivesTheSameWireListenerEveryTimeAndItStartsDeaf) {
@@ -367,5 +367,5 @@ TEST(Manual, ModeDoesNotLetAnOrdinaryPressThroughWithTheStateUnknown) {
 }
 
 TEST(Glue, StartsWithManualModeOffSoAnUpdateNeverAllowsOne) {
-  EXPECT_FALSE(garage_door::door(false).manual(0));
+  EXPECT_FALSE(garage_door::door(false, "last_status").manual(0));
 }

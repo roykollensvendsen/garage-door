@@ -122,11 +122,32 @@ replace = 'const bool within_travel = seen_at_end_;'
 # --- The opener's data wire (firmware/door_logic/opener_wire.h, ADR-GD-003) ---
 
 [[rule]]
-name = "wire state is unknown when the last status is older than two seconds"
+name = "wire state is unknown when the last status is older than its limit"
 suite = "firmware"
 file = "firmware/door_logic/door_logic.h"
-find = 'if \(\(now - heard_at\) >= config_\.status_max_age_ms\) \{'
-replace = 'if (false && heard_at) {'
+find = 'if \(age >= limit\) \{'
+replace = 'if (false && limit) {'
+
+[[rule]]
+name = "wire state is unknown when a damaged packet came after the last status"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(damaged\) \{'
+replace = 'if (false && damaged) {'
+
+[[rule]]
+name = "wire state is unknown when a moving door was last heard longer ago than the travel time"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(moving && age >= config_\.travel_ms\) \{'
+replace = 'if (false && moving) {'
+
+[[rule]]
+name = "listener marks damage after the last status until the next one"
+suite = "firmware"
+file = "firmware/door_logic/opener_wire.h"
+find = 'if \(framer_\.stray\(\) != stray_before\) \{'
+replace = 'if (false && stray_before) {'
 
 [[rule]]
 name = "wire press opens a closed door and closes an open one"
@@ -145,7 +166,7 @@ replace = 'if (false) {'
 [[rule]]
 name = "rolling code is saved before a code past the saved one is sent"
 suite = "firmware"
-file = "firmware/door_logic/opener_wire.h"
+file = "firmware/door_logic/rolling_code.h"
 find = 'bool save_due\(\) const \{ return .*'
 replace = 'bool save_due() const { return false; }'
 

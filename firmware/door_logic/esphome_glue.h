@@ -7,15 +7,20 @@
 
 #pragma once
 
+#include <string>
+
 #include "door_logic.h"
 #include "opener_wire.h"
 
 namespace garage_door {
 
-inline garage::Door &door(bool allow_close) {
-  static garage::Door instance([allow_close] {
+// `wire_trust`: "last_status" or "ask_first" (decisions/ADR-GD-005). Any
+// other value asks first, the stricter of the two.
+inline garage::Door &door(bool allow_close, const char *wire_trust) {
+  static garage::Door instance([allow_close, wire_trust] {
     garage::Config c;
     c.allow_close = allow_close;
+    c.trust_last_status = std::string(wire_trust) == "last_status";
     c.armed = false;  // after every boot and update, until Roy arms it
     return c;
   }());

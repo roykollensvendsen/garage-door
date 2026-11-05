@@ -120,13 +120,44 @@ TEST(WireState, MapsOntoTheDoorsOwnStates) {
   EXPECT_EQ(told(static_cast<WireState>(9)).state(), DoorState::Unknown);
 }
 
-TEST(WireState, IsUnknownWhenTheLastStatusIsOlderThanTwoSeconds) {
-  Door d(open_and_close());
-  d.update_from_wire(2999, WireState::Closed, 1000);
-  EXPECT_EQ(d.state(), DoorState::Closed);
-  d.update_from_wire(3000, WireState::Closed, 1000);
+Config trusting_the_last_status() {
+  Config c = open_and_close();
+  c.trust_last_status = true;  // decisions/ADR-GD-005, the default
+  return c;
+}
+
+TEST(WireState, IsUnknownWhenTheLastStatusIsOlderThanItsLimit) {
+  // Asking first (ADR-GD-003): a status counts for 2 s.
+  Door ask(open_and_close());
+  ask.update_from_wire(2999, WireState::Closed, 1000);
+  EXPECT_EQ(ask.state(), DoorState::Closed);
+  ask.update_from_wire(3000, WireState::Closed, 1000);
+  EXPECT_EQ(ask.state(), DoorState::Unknown);
+  EXPECT_EQ(ask.request_press(3000), PressResult::RefusedState);
+  // Trusting the last status (ADR-GD-005): for 6 minutes, past the opener's 5-minute repeat.
+  Door last(trusting_the_last_status());
+  last.update_from_wire(1000 + 360000 - 1, WireState::Closed, 1000);
+  EXPECT_EQ(last.state(), DoorState::Closed);
+  last.update_from_wire(1000 + 360000, WireState::Closed, 1000);
+  EXPECT_EQ(last.state(), DoorState::Unknown);
+  EXPECT_EQ(last.request_press(1000 + 360000), PressResult::RefusedState);
+}
+
+TEST(WireState, IsUnknownWhenAMovingDoorWasLastHeardLongerAgoThanTheTravelTime) {
+  Door d(trusting_the_last_status());
+  d.update_from_wire(1000 + 29999, WireState::Opening, 1000);
+  EXPECT_EQ(d.state(), DoorState::Moving);
+  d.update_from_wire(1000 + 30000, WireState::Closing, 1000);  // stopped part way, or the end was missed
   EXPECT_EQ(d.state(), DoorState::Unknown);
-  EXPECT_EQ(d.request_press(3000), PressResult::RefusedState);
+}
+
+TEST(WireState, IsUnknownWhenADamagedPacketCameAfterTheLastStatus) {
+  Door d(trusting_the_last_status());
+  d.update_from_wire(2000, WireState::Closed, 1000, false);
+  EXPECT_EQ(d.state(), DoorState::Closed);
+  d.update_from_wire(2000, WireState::Closed, 1000, true);  // the newest packet may be the lost one
+  EXPECT_EQ(d.state(), DoorState::Unknown);
+  EXPECT_EQ(d.request_press(2000), PressResult::RefusedState);
 }
 
 TEST(WireState, IsUnknownBeforeTheOpenerHasSaidAnything) {
@@ -422,4 +453,31 @@ TEST(Health, CountsEachKindOfUartTroubleApart) {
   EXPECT_EQ(t.parity, 1u);
   EXPECT_EQ(t.overflow, 1u);
   EXPECT_EQ(t.breaks, 3u);
+}
+
+TEST(Listener, MarksDamageAfterTheLastStatusUntilTheNextOne) {
+  garage::Listener l;
+  EXPECT_FALSE(l.damaged_since_status());
+  feed_all(l, kClosing, 0);
+  l.feed(100, 0x00);  // the break before a packet reads as 00: not damage
+  EXPECT_FALSE(l.damaged_since_status());
+  l.feed(200, 0x98);  // a stray byte: a packet may have been lost
+  EXPECT_TRUE(l.damaged_since_status());
+  feed_all(l, kStopped, 1000);  // a whole status clears it
+  EXPECT_FALSE(l.damaged_since_status());
+  for (std::size_t i = 0; i < 10; ++i) {
+    l.feed(1500, kOpening[i]);  // a packet cut short by a pause
+  }
+  feed_all(l, kStopped, 3000);
+  EXPECT_FALSE(l.damaged_since_status());  // cleared again by the status that followed
+  for (std::size_t i = 0; i < 10; ++i) {
+    l.feed(4000, kOpening[i]);
+  }
+  l.feed(4100, 0x00);  // the pause shows only at the next byte
+  EXPECT_TRUE(l.damaged_since_status());
+  feed_all(l, kStopped, 5000);
+  Packet broken = kOpening;
+  broken[4] = static_cast<std::uint8_t>(broken[4] | 0xC0);
+  feed_all(l, broken, 2000);  // a packet that does not decode
+  EXPECT_TRUE(l.damaged_since_status());
 }

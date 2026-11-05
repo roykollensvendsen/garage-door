@@ -185,3 +185,12 @@ def test_manual_mode_is_off_after_every_boot_and_has_its_own_press_action():
     actions = {a["action"]: a for a in config["api"]["actions"]}
     assert "request_manual_press(millis())" in actions["manual_press"]["then"][0]["lambda"]
     assert "request_manual_press" not in actions["press"]["then"][0]["lambda"]
+
+
+def test_the_door_state_comes_from_the_wire_trusting_the_last_status_by_default():
+    # decisions/ADR-GD-005: both ways selectable, "last_status" the default for now.
+    config = _esphome_config()
+    assert config["substitutions"]["state_from"] == "wire"
+    assert config["substitutions"]["wire_trust"] == "last_status"
+    glue = (ROOT / "firmware/door_logic/esphome_glue.h").read_text()
+    assert 'c.trust_last_status = std::string(wire_trust) == "last_status";' in glue

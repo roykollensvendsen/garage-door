@@ -69,6 +69,10 @@ struct Config {
   // With the state from the opener's data wire: a status older than this is
   // not trusted (decisions/ADR-GD-003).
   std::uint32_t status_max_age_ms = 2000;
+  // Trust the last status for longer, without asking (decisions/ADR-GD-005):
+  // the opener repeats it about every 5 minutes and sends one at every change.
+  bool trust_last_status = false;
+  std::uint32_t last_status_max_ms = 6U * 60U * 1000U;
   // Whether an accepted press switches the relay. Off is test mode: every
   // press is judged and reported, the relay stays open. The controller
   // starts with it off after every boot (esphome_glue.h).
@@ -138,11 +142,25 @@ class Door {
   }
 
   // Feed the opener's last status from its data wire, heard at `heard_at`.
+  // `damaged`: a broken packet or stray bytes came after it (Listener).
   // Used instead of update() when the state comes from the wire.
-  void update_from_wire(std::uint32_t now, WireState said, std::uint32_t heard_at) {
+  void update_from_wire(std::uint32_t now, WireState said, std::uint32_t heard_at, bool damaged = false) {
     forget_old_press(now);
-    // RULE: wire state is unknown when the last status is older than two seconds
-    if ((now - heard_at) >= config_.status_max_age_ms) {
+    const std::uint32_t age = now - heard_at;
+    const std::uint32_t limit = config_.trust_last_status ? config_.last_status_max_ms : config_.status_max_age_ms;
+    // RULE: wire state is unknown when the last status is older than its limit
+    if (age >= limit) {
+      state_ = DoorState::Unknown;
+      return;
+    }
+    // RULE: wire state is unknown when a damaged packet came after the last status
+    if (damaged) {
+      state_ = DoorState::Unknown;
+      return;
+    }
+    const bool moving = said == WireState::Opening || said == WireState::Closing;
+    // RULE: wire state is unknown when a moving door was last heard longer ago than the travel time
+    if (moving && age >= config_.travel_ms) {
       state_ = DoorState::Unknown;
       return;
     }
