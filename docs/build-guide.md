@@ -252,6 +252,12 @@ not connected to the opener and the controller unarmed:
   side (red 0 to a1, black 2 to the rail, yellow a13 to GPIO36, black rail
   to ESP32 GND, green jumper a5 to b9), and took out the shorted 10 kΩ at
   c5–c9. **Check every jumper wire for continuity before you trust it.**
+- **First press through the relay that moved the door (2026-11-05,
+  10:38:38).** Manual mode, armed, after a spoken yes: the door went from
+  fully open to closed, as the wall button does. The opener sent a packet
+  about a second later and another about 20 s later, at the end of travel.
+  (A press at 10:15 after the rewiring most likely moved it too; Roy did
+  not say.)
 
 ## First press on the real door: manual mode
 
