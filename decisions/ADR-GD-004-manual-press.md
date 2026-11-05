@@ -68,3 +68,7 @@ is a request of its own, not a way to open or close.
 [ADR-GD-002](ADR-GD-002-close-without-photocells.md),
 [ADR-GD-003](ADR-GD-003-opener-data-wire.md), AGENTS.md hard rule 3,
 `firmware/door_logic/door_logic.h`, `src/garage_door/service.py`.
+
+**2026-11-05:** manual mode can also be switched on by voice, after a
+question and a spoken yes, and off at once ([ADR-GD-006](ADR-GD-006-switch-by-voice.md)).
+The exception above is unchanged.

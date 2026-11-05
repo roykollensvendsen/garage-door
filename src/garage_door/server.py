@@ -34,8 +34,9 @@ from mcp.server.mcpserver import MCPServer
 
 from garage_door.door import Action
 from garage_door.manual import ManualPress, ManualPressed, ManualQuestion
-from garage_door.service import Confirmed, GarageService, Question
+from garage_door.service import Confirmed, GarageService, Question, Refused
 from garage_door.simulator import Start, simulated_controller
+from garage_door.switches import Switch, Switched, Switches, SwitchQuestion
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -45,7 +46,9 @@ INSTRUCTIONS = (
     "'say' text to Roy exactly, and call garage_confirm only if Roy clearly answers yes. "
     "If he says anything else, do not confirm. Read every refusal and result aloud. Every answer "
     "has 'controller': say first when it is not armed, or in manual mode. garage_press_button is "
-    "only for when Roy says he is at the door watching it; it never opens or closes by name."
+    "only for when Roy says he is at the door watching it; it never opens or closes by name. "
+    "garage_switch arms or disarms the controller and switches manual mode: switching on returns a "
+    "question to read aloud, confirmed with garage_confirm only on Roy's yes; switching off is at once."
 )
 
 SIMULATED = "SIMULATED: this is a simulated garage door, not a real one. Say so when you report on it. "
@@ -86,8 +89,14 @@ def settings_from(env: Mapping[str, str]) -> Settings:
     )
 
 
-def build_server(service: GarageService, manual: ManualPress, *, simulated: bool = False) -> MCPServer[Any]:
-    """The MCP server with its four tools bound to `service` and `manual`."""
+def build_server(
+    service: GarageService,
+    manual: ManualPress,
+    switches: Switches | None = None,
+    *,
+    simulated: bool = False,
+) -> MCPServer[Any]:
+    """The MCP server with its five tools; `switches` None (the simulated door) refuses switching."""
     server: MCPServer[Any] = MCPServer(
         name="garage-door-simulated" if simulated else "garage-door",
         instructions=(SIMULATED + INSTRUCTIONS) if simulated else INSTRUCTIONS,
@@ -151,11 +160,9 @@ def build_server(service: GarageService, manual: ManualPress, *, simulated: bool
         )
     )
     async def garage_confirm(token: str) -> dict[str, Any]:
-        if manual.owns(token):
-            pressed = await manual.confirm(token)
-            if isinstance(pressed, ManualPressed):
-                return {"outcome": "pressed", "say": pressed.message, "controller": await manual.report()}
-            return {"outcome": "refused", "say": pressed.reason, "controller": await manual.report()}
+        other = await _confirm_switch_or_manual(token, switches, manual)
+        if other is not None:
+            return other
         outcome = await service.confirm(token)
         if isinstance(outcome, Confirmed):
             return {
@@ -174,7 +181,55 @@ def build_server(service: GarageService, manual: ManualPress, *, simulated: bool
             "controller": await manual.report(),
         }
 
+    _add_switching(server, switches, manual)
     return server
+
+
+def _add_switching(server: MCPServer[Any], switches: Switches | None, manual: ManualPress) -> None:
+    @server.tool(
+        description=(
+            "Arm or disarm the controller, or switch manual mode on or off (decisions/ADR-GD-006). "
+            "'arm' and 'manual_on' switch nothing yet: they return a question ('say') with a token, "
+            "to confirm with garage_confirm only after Roy's spoken yes. 'disarm' and 'manual_off' "
+            "switch at once. Read the answer ('say') aloud."
+        )
+    )
+    async def garage_switch(change: Literal["arm", "disarm", "manual_on", "manual_off"]) -> dict[str, Any]:
+        if switches is None:
+            return {
+                "outcome": "refused",
+                "say": "The simulated door is always armed and cannot be switched.",
+                "controller": await manual.report(),
+            }
+        answer = await switches.request(Switch(change), requester="mcp")
+        return _switch_answer(answer, await manual.report())
+
+
+async def _confirm_switch_or_manual(
+    token: str, switches: Switches | None, manual: ManualPress
+) -> dict[str, Any] | None:
+    """Confirm a switch or a manual press, if `token` is one of theirs; None if it is not."""
+    if switches is not None and switches.owns(token):
+        return _switch_answer(await switches.confirm(token), await manual.report())
+    if manual.owns(token):
+        pressed = await manual.confirm(token)
+        if isinstance(pressed, ManualPressed):
+            return {"outcome": "pressed", "say": pressed.message, "controller": await manual.report()}
+        return {"outcome": "refused", "say": pressed.reason, "controller": await manual.report()}
+    return None
+
+
+def _switch_answer(answer: SwitchQuestion | Switched | Refused, controller: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(answer, SwitchQuestion):
+        return {
+            "outcome": "question",
+            "say": answer.question,
+            "token": answer.token,
+            "controller": controller,
+        }
+    if isinstance(answer, Switched):
+        return {"outcome": "switched", "say": answer.message, "controller": controller}
+    return {"outcome": "refused", "say": answer.reason, "controller": controller}
 
 
 def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the controller on the network
@@ -200,4 +255,5 @@ def main(argv: list[str] | None = None) -> None:  # pragma: no cover - needs the
         )
     )
     service = GarageService(device, log_path=settings.log_path, allow_close=settings.allow_close)
-    build_server(service, ManualPress(device, log_path=settings.log_path)).run()
+    log = settings.log_path
+    build_server(service, ManualPress(device, log_path=log), Switches(device, log_path=log)).run()
