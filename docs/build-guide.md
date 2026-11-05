@@ -240,7 +240,11 @@ not connected to the opener and the controller unarmed:
   is open at rest (the meter shows OL).
 - CTH bridged to VCC by hand: the relay clicks and the meter beeps across
   COM and NO.
-- Next: COM to opener terminal 1, NO to terminal 2 (the free "2" screw).
+- Then wired to the opener: COM (middle) to terminal 1, NO (right) to
+  terminal 2, with two blue wires.
+- **Boot check on the real opener:** Roy power-cycled the ESP32. The door
+  did not move and the relay did not click. `garage-door check` afterwards
+  reported Armed off and Manual mode off.
 
 ## First press on the real door: manual mode
 
