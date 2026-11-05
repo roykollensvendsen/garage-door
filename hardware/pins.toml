@@ -78,7 +78,6 @@ active_low = false          # CTH: matches relay_active_low "false" in firmware/
 # Drawn by scripts/bench_breadboard.py.
 parts = [
   { what = "22k", from = "b1", to = "b5" },
-  { what = "10k", from = "c5", to = "c9", note = "shorted by the jumper" },
   { what = "jumper", from = "a5", to = "b9", colour = "green" },
   { what = "10k", from = "d9", to = "gnd" },
   { what = "1k", from = "e9", to = "e13" },

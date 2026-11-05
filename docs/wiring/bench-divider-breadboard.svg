@@ -224,9 +224,6 @@
 <g transform="rotate(0.0 87 138)"><polyline points="87,138 195.0,138" fill="none" stroke="#888" stroke-width="2"/><rect x="113.0" y="131" width="56.0" height="14" rx="6" fill="#e8d3a8" stroke="#555"/><rect x="125.0" y="131" width="5" height="14" fill="#d22"/><rect x="135.0" y="131" width="5" height="14" fill="#d22"/><rect x="145.0" y="131" width="5" height="14" fill="#f80"/><rect x="155.0" y="131" width="5" height="14" fill="#c9a227"/><text x="141.0" y="127" class="v">22k</text></g>
 <circle cx="87" cy="138" r="3" fill="#333"/>
 <circle cx="195" cy="138" r="3" fill="#333"/>
-<g transform="rotate(0.0 195 156)"><polyline points="195,156 303.0,156" fill="none" stroke="#888" stroke-width="2"/><rect x="221.0" y="149" width="56.0" height="14" rx="6" fill="#e8d3a8" stroke="#555"/><rect x="233.0" y="149" width="5" height="14" fill="#7b4a12"/><rect x="243.0" y="149" width="5" height="14" fill="#222"/><rect x="253.0" y="149" width="5" height="14" fill="#f80"/><rect x="263.0" y="149" width="5" height="14" fill="#c9a227"/><text x="249.0" y="145" class="v">10k</text></g>
-<circle cx="195" cy="156" r="3" fill="#333"/>
-<circle cx="303" cy="156" r="3" fill="#333"/>
 <polyline points="195,120 303,138" fill="none" stroke="#2a2" stroke-width="4"/>
 <circle cx="195" cy="120" r="3" fill="#333"/>
 <circle cx="303" cy="138" r="3" fill="#333"/>

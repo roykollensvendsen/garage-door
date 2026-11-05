@@ -121,7 +121,6 @@ holes a–e of each row joined, and the blue rail beside them as ground.
 |---|---|---|
 | red wire from opener terminal 0 | a1 | line |
 | 22 kΩ | b1–b5 | line to row 5 |
-| 10 kΩ, still fitted but shorted | c5–c9 | row 5 to node A |
 | green jumper that shorts it | a5–b9 | so the top is 22 kΩ alone |
 | 10 kΩ | d9 to the rail | node A (row 9) to ground |
 | black wire from opener terminal 2 | rail | ground |
@@ -245,6 +244,14 @@ not connected to the opener and the controller unarmed:
 - **Boot check on the real opener:** Roy power-cycled the ESP32. The door
   did not move and the relay did not click. `garage-door check` afterwards
   reported Armed off and Manual mode off.
+- **Bad jumper wires (2026-11-05, about 10:10).** Three manual presses
+  (09:41, 09:47, 09:49) were accepted by the controller, but the door did
+  not move. Roy found several blue jumper wires with no continuity: bad
+  crimps. He replaced the relay's output wires (COM to terminal 1, NO to
+  terminal 2) with proper wire, continuity-checked every wire on the bus
+  side (red 0 to a1, black 2 to the rail, yellow a13 to GPIO36, black rail
+  to ESP32 GND, green jumper a5 to b9), and took out the shorted 10 kΩ at
+  c5–c9. **Check every jumper wire for continuity before you trust it.**
 
 ## First press on the real door: manual mode
 
