@@ -88,6 +88,15 @@ at 9600, and a 10 nF to 1 nF filter swap did not change it. With the UART at
 after a press, with no rolling-code gap. Why the speed was 4000 before is
 not known; check it with the scope if it ever changes back.
 
+**2026-11-06, measured: it changed again, by itself.** The last packet that
+decoded at 9600 came at 02:00:16. From 02:05:13 every 5-minute repeat, and
+the packets from the remote in the morning, reached the 9600-baud UART as
+about 35 bytes like `00 CE CE CE 00 00 30 C0 F0 …`, with breaks and no
+framing errors: what a 9600 UART makes of a slower signal, most likely the
+4000 baud of 11-04. The controller had not restarted (uptime 14 h), and
+nobody was at the opener. So the speed cannot be fixed in the build: the
+firmware finds it by itself (`firmware/door_logic/wire_speed.h`).
+
 **2026-11-05, measured by eye (Roy): the light goes out about 2 min 50 s
 after the door reaches its end.** Closed at 20:18:10 (from the wire), light
 out at about 20:21. The opener sends no status when the light goes out; it

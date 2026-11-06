@@ -24,8 +24,9 @@ notes: >-
   0+2. Terminals 0+2 carry about 10-11 V and a Security+ 2.0 serial bus.
   The opener sends a status at every change and repeats it about every 5
   minutes, with the door state and the light in it. The speed was about
-  4000 baud on 2026-11-04 and 9600 baud after a power cycle on 2026-11-05;
-  why it changed is not known.
+  4000 baud on 2026-11-04, 9600 baud after a power cycle on 2026-11-05, and
+  slower again from 02:05 on 2026-11-06 with no one near it; why it changes
+  is not known, so the controller finds the speed by itself.
 reported_by: roykollensvendsen
 checks:
   - by: Roy
@@ -55,4 +56,7 @@ checks:
   - by: Roy
     date: 2026-11-05
     what: "The light goes out about 2 min 50 s after the door reaches its end (by eye: closed 20:18:10, out about 20:21); the opener sends no status when it goes out"
+  - by: Roy
+    date: 2026-11-06
+    what: "0+2 stopped decoding at 9600 baud from 02:05 (last status 02:00:16, closed): every 5-minute repeat and the remote's packets arrived as about 35 garbled bytes like 00 CE CE CE 00 00, no framing errors, the controller not restarted; the opener changed its speed again by itself"
 build: ""

@@ -27,6 +27,7 @@
 - Roy, 2026-11-05: 0+2 read by the controller at 9600 baud (after the opener was power cycled about 08:30; 4000 baud no longer decodes): every status decodes, with no rolling-code gap, open (1), closed (2), opening (4), closing (5), and the light; the idle repeat comes about every 296 s.
 - Roy, 2026-11-05: The controller's relay on 1+2 (0.5 s, after a spoken yes) opened and closed the door, with the state from 0+2: first at 10:38 from the terminal, then by voice from the Claude app at 14:33 (closed to open) and 14:35 (open to closed), confirmed at the door.
 - Roy, 2026-11-05: The light goes out about 2 min 50 s after the door reaches its end (by eye: closed 20:18:10, out about 20:21); the opener sends no status when it goes out.
+- Roy, 2026-11-06: 0+2 stopped decoding at 9600 baud from 02:05 (last status 02:00:16, closed): every 5-minute repeat and the remote's packets arrived as about 35 garbled bytes like 00 CE CE CE 00 00, no framing errors, the controller not restarted; the opener changed its speed again by itself.
 
 ## Leave alone
 
@@ -34,7 +35,7 @@
 
 ## Notes
 
-The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Tested on 2026-11-05: the controller opened and closed the door through the relay on 1+2, by voice, with the door state read from 0+2. Terminals 0+2 carry about 10-11 V and a Security+ 2.0 serial bus. The opener sends a status at every change and repeats it about every 5 minutes, with the door state and the light in it. The speed was about 4000 baud on 2026-11-04 and 9600 baud after a power cycle on 2026-11-05; why it changed is not known.
+The project's reference opener. One press steps the door open, stop, close, so the controller only presses when the door is known to be fully open or fully closed. Measure on a wire inserted through the orange lever; probe tips do not reach the contacts. The 30 VDC output reads about 1.1 V while idle (standby). Tested on 2026-11-05: the controller opened and closed the door through the relay on 1+2, by voice, with the door state read from 0+2. Terminals 0+2 carry about 10-11 V and a Security+ 2.0 serial bus. The opener sends a status at every change and repeats it about every 5 minutes, with the door state and the light in it. The speed was about 4000 baud on 2026-11-04, 9600 baud after a power cycle on 2026-11-05, and slower again from 02:05 on 2026-11-06 with no one near it; why it changes is not known, so the controller finds the speed by itself.
 
 Source: [`hardware/openers/lm80evf.yaml`](https://github.com/roykollensvendsen/garage-door/blob/main/hardware/openers/lm80evf.yaml).
 To correct it, edit that file; see [Add your opener](../compatibility.md#add-your-opener).
