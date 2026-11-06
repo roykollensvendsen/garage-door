@@ -236,7 +236,7 @@
 <g transform="rotate(0.0 411 156)"><polyline points="411,156 519.0,156" fill="none" stroke="#888" stroke-width="2"/><rect x="437.0" y="150" width="56.0" height="12" rx="4" fill="#e66"/><rect x="484.0" y="150" width="5" height="12" fill="#111"/><text x="465.0" y="146" class="v">1N4148</text></g>
 <circle cx="411" cy="156" r="3" fill="#333"/>
 <circle cx="519" cy="156" r="3" fill="#333"/>
-<g transform="rotate(0.0 411 174)"><polyline points="411,174 465.0,174" fill="none" stroke="#888" stroke-width="2"/><ellipse cx="438.0" cy="174" rx="9" ry="8" fill="#e9a23b" stroke="#555"/><text x="438.0" y="163" class="v">10n</text></g>
+<g transform="rotate(0.0 411 174)"><polyline points="411,174 465.0,174" fill="none" stroke="#888" stroke-width="2"/><ellipse cx="438.0" cy="174" rx="9" ry="8" fill="#e9a23b" stroke="#555"/><text x="438.0" y="163" class="v">1n</text></g>
 <circle cx="411" cy="174" r="3" fill="#333"/>
 <circle cx="465" cy="174" r="3" fill="#333"/>
 <polyline points="465,192 465,232" fill="none" stroke="#888" stroke-width="4"/>
@@ -265,7 +265,7 @@
 <text x="20" y="514" class="s">Meter on node A: red probe in a9, black probe on the GND rail.</text>
 <text x="20" y="532" class="s">Relay module: CTH (trigger on high) green wire straight to ESP32 GPIO25; CTL unused.</text>
 <text x="20" y="550" class="s">Measured: Node A (row 9): 3.17 V mean.</text>
-<text x="20" y="568" class="s">Measured: Row 13 (GPIO36) with the 10n: idle min about 2.7 V, 0.8 V peak to peak of 50 Hz ripple.</text>
+<text x="20" y="568" class="s">Measured: Row 13 (GPIO36), measured with the 10n before the swap: idle min about 2.7 V, 0.8 V peak to peak of 50 Hz ripple.</text>
 <text x="20" y="586" class="s">Measured: Packets swing about 0 V to 3.4 V; min -240 mV during packets.</text>
 <text x="20" y="604" class="s">Not isolated: ESP32 on a USB power bank in the garage, not the laptop.</text>
 </svg>

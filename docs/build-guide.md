@@ -130,8 +130,8 @@ holes a–e of each row joined, and the blue rail beside them as ground.
 | black wire from opener terminal 2 | rail | ground |
 | 1 kΩ | e9–e13 | node A to GPIO36 (row 13) |
 | 1N4148, black stripe at c17 | c13–c17 | GPIO36 to 3V3 (row 17) |
-| 10 nF ceramic (103) | d13–d15 | GPIO36 to row 15 |
-| wire | e15 to the rail | so the 10 nF is GPIO36 to ground |
+| 1 nF ceramic (102) | d13–d15 | GPIO36 to row 15; a 10 nF was here until 2026-11-05 |
+| wire | e15 to the rail | so the 1 nF is GPIO36 to ground |
 | green scope probe wire | b13 | ground clip on the black wire |
 | yellow wire to ESP32 GPIO36 | a13 | not connected yet |
 | red wire to the relay module's VCC | row 17 | 3V3; not connected yet |
@@ -141,7 +141,7 @@ holes a–e of each row joined, and the blue rail beside them as ground.
 
 Roy measured on the scope:
 - node A: 3.17 V mean;
-- row 13, with the 10 nF: about 2.7 V minimum while idle, with about 0.8 V
+- row 13, with the 10 nF that was there then: about 2.7 V minimum while idle, with about 0.8 V
   peak to peak of 50 Hz ripple;
 - packets swing from about 0 V to 3.4 V, with a minimum of −240 mV.
 
