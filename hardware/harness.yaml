@@ -7,7 +7,8 @@
 #
 # Inside the box, the board is wired as the schematic shows
 # (hardware/garage-door.kicad_sch); nothing here runs inside the opener except
-# the two wires into its terminals 1 and 2.
+# the two wires into its terminals 1 and 2. The door state comes from the
+# opener's data wire (0+2, docs/plan.md); there are no reed contacts.
 
 metadata:
   title: Garage door controller, field wiring
@@ -28,24 +29,6 @@ connectors:
     pins: [1, 2]
     pinlabels: [push button, common]
     notes: Unplug the opener first. Use only 1 and 2. Leave the 4-5 bridge in place.
-  J3:
-    type: Box terminal, 2-pin screw
-    subtype: sensor, fully closed
-    pinlabels: [SENSE_CLOSED (GPIO34), GND]
-  REED_CLOSED:
-    type: Reed contact, normally open
-    subtype: at the fully-closed position
-    pinlabels: [A, B]
-    notes: Closes when the door is fully closed. Either wire to either side.
-  J4:
-    type: Box terminal, 2-pin screw
-    subtype: sensor, fully open
-    pinlabels: [SENSE_OPEN (GPIO35), GND]
-  REED_OPEN:
-    type: Reed contact, normally open
-    subtype: at the fully-open position
-    pinlabels: [A, B]
-    notes: Closes when the door is fully open.
 
 cables:
   W1:
@@ -53,24 +36,8 @@ cables:
     gauge: 0.5 mm2
     length: 1
     colors: [WH, RD]
-  W2:
-    type: Alarm cable, 2 of 4 cores used
-    gauge: 0.22 mm2
-    length: 3
-    colors: [WH, BN]
-  W3:
-    type: Alarm cable, 2 of 4 cores used
-    gauge: 0.22 mm2
-    length: 3
-    colors: [GN, YE]
 
 connections:
   - - J2: [1, 2]
     - W1: [1, 2]
     - OPENER: [1, 2]
-  - - J3: [1, 2]
-    - W2: [1, 2]
-    - REED_CLOSED: [1, 2]
-  - - J4: [1, 2]
-    - W3: [1, 2]
-    - REED_OPEN: [1, 2]

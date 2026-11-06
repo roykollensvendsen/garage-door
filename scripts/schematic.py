@@ -122,13 +122,11 @@ def pins_of(symbol_text: str) -> dict[str, Pin]:
 
 
 def board_symbol(gpio: dict[str, int]) -> str:
-    """The ESP32 Thing, with the three GPIOs from the plan on its right side."""
+    """The ESP32 Thing, with the press GPIO from the plan on its right side."""
     rows = [
         ("power_out", -15.24, 2.54, 0, "3V3", "3V3"),
         ("power_in", -15.24, -2.54, 0, "GND", "GND"),
         ("output", 15.24, 5.08, 180, f"GPIO{gpio['press']}", str(gpio["press"])),
-        ("input", 15.24, 0, 180, f"GPIO{gpio['sensor_closed']}", str(gpio["sensor_closed"])),
-        ("input", 15.24, -5.08, 180, f"GPIO{gpio['sensor_open']}", str(gpio["sensor_open"])),
     ]
     pins = "\n".join(
         BOARD_PIN.format(kind=k, x=_n(x), y=_n(y), angle=a, name=name, number=num)
@@ -141,13 +139,9 @@ def parts_from(plan: dict[str, dict[str, object]]) -> list[Part]:
     """Every part on the sheet, and which net each pin joins, from the plan."""
     gpio = {k: int(str(v)) for k, v in plan["gpio"].items()}
     p = {k: str(v) for k, v in plan["parts"].items()}
-    press, closed, opened = (f"GPIO{gpio[k]}" for k in ("press", "sensor_closed", "sensor_open"))
-    board = {"3V3": "+3V3", "GND": "GND"} | {
-        str(gpio["press"]): press,
-        str(gpio["sensor_closed"]): closed,
-        str(gpio["sensor_open"]): opened,
-    }
-    parts = [
+    press = f"GPIO{gpio['press']}"
+    board = {"3V3": "+3V3", "GND": "GND", str(gpio["press"]): press}
+    return [
         Part("J1", "garage:ESP32_Thing", "SparkFun ESP32 Thing", (60.96, 101.6), board, "USB-powered"),
         Part("R1", "Device:R", p["relay_led_resistor"], (99.06, 76.2), {"1": press, "2": "RELAY_LED"}),
         Part(
@@ -174,29 +168,6 @@ def parts_from(plan: dict[str, dict[str, object]]) -> list[Part]:
             "Opener terminals 1, 2. Leave the 4-5 bridge in place.",
         ),
     ]
-    for row, (net, sense, cap, refs) in enumerate(
-        [
-            (closed, "SENSE_CLOSED", "C1", ("R2", "R4", "J3", "SW1")),
-            (opened, "SENSE_OPEN", "C2", ("R3", "R5", "J4", "SW2")),
-        ]
-    ):
-        y = 116.84 + row * 38.1
-        pull, series, terminal, reed = refs
-        where = "fully closed" if row == 0 else "fully open"
-        parts += [
-            Part(pull, "Device:R", p["pull_up"], (99.06, y), {"1": "+3V3", "2": sense}),
-            Part(series, "Device:R", p["series"], (124.46, y), {"1": sense, "2": net}),
-            Part(cap, "Device:C", p["filter"], (149.86, y), {"1": net, "2": "GND"}),
-            Part(
-                terminal,
-                "Connector:Screw_Terminal_01x02",
-                f"Reed {where}",
-                (185.42, y),
-                {"1": sense, "2": "GND"},
-            ),
-            Part(reed, "Switch:SW_Reed", f"Reed {where}", (233.68, y), {"1": sense, "2": "GND"}),
-        ]
-    return parts
 
 
 def _n(value: float) -> str:
@@ -229,10 +200,7 @@ def render(plan: dict[str, dict[str, object]]) -> str:
     items.append(_power("power:PWR_FLAG", "#FLG01", flag, root))
     items.append(_wire(flag, (flag[0], flag[1] + STUB), "flag"))
     items.append(_power("power:GND", "#PWR_FLAG_GND", (flag[0], flag[1] + STUB), root))
-    pin_summary = (
-        f"Press: GPIO{gpio['press']}. Sensors: GPIO{gpio['sensor_closed']} (closed),"
-        f" GPIO{gpio['sensor_open']} (open)."
-    )
+    pin_summary = f"Press: GPIO{gpio['press']}. Door state: the opener's data wire (0+2)."
     symbols = "\n".join("\t\t" + library[lib_id].replace("\n", "\n\t") for lib_id in lib_ids)
     body = "\n".join(items)
     return f"""(kicad_sch

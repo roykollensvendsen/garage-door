@@ -2,9 +2,11 @@
 #
 # ESPHome configuration for the SparkFun ESP32 Thing that presses the
 # LiftMaster LM80EVF's push-button input (terminals 1 and 2), reads the door
-# state from two reed contacts or from the opener's data wire (terminals 0+2,
-# decisions/ADR-GD-003), and logs every packet on that wire over Wi-Fi. The decisions live in door_logic/door_logic.h, which the
-# laptop tests; this file only connects that logic to pins and the network.
+# state from the opener's data wire (terminals 0+2, decisions/ADR-GD-003), and
+# logs every packet on that wire over Wi-Fi. The decisions live in
+# door_logic/door_logic.h, which the laptop tests; this file only connects that
+# logic to pins and the network. door_logic.h can also take the state from two
+# reed contacts (DoorLogic::update); this build has none (Roy, 2026-11-06).
 #
 # Check without hardware:  esphome config firmware/garage-door.yaml
 # Secrets come from firmware/secrets.yaml (git-ignored); see secrets.example.yaml.
@@ -13,9 +15,6 @@ substitutions:
   # Roy, 2026-11-04: closing by voice is allowed. The opener reverses on its
   # own force limit as with the remote; photocells are recommended, not required.
   allow_close: "true"
-  # Where the door state comes from: "reed" (contacts at each end) or "wire"
-  # (the opener's own status on 0+2). The wire is logged either way.
-  state_from: "wire"
   # With the state from the wire, how long the opener's last status is
   # trusted (decisions/ADR-GD-005): "last_status" for up to 6 minutes, with
   # safeguards; "ask_first" for 2 s only, which refuses every press until a
@@ -224,29 +223,6 @@ sensor:
     update_interval: 10s
     lambda: return static_cast<float>(garage_door::wire_uart().trouble().breaks);
 
-binary_sensor:
-  # Each reed contact closes to ground when its magnet is near. GPIO34 and 35
-  # are input-only with no internal pull-up; the 10 kΩ pull-ups are on the
-  # board (docs/plan.md, section 2).
-  - platform: gpio
-    id: at_closed
-    name: Fully closed
-    pin:
-      number: GPIO34
-      mode: INPUT
-      inverted: true
-    filters:
-      - delayed_on_off: 50ms
-  - platform: gpio
-    id: at_open
-    name: Fully open
-    pin:
-      number: GPIO35
-      mode: INPUT
-      inverted: true
-    filters:
-      - delayed_on_off: 50ms
-
 output:
   # The relay across terminals 1 and 2: the AQY212EH, or for the first test
   # Roy's relay module. ESPHome drives it off during setup; before that, from
@@ -315,13 +291,9 @@ interval:
                      wire.skipped_hex().c_str());
             wire.clear_skipped();
           }
-          if (std::string("${state_from}") == "wire") {
-            door.update_from_wire(now, wire.heard() ? wire.last().door : garage::WireState::Unknown,
-                                  wire.heard() ? wire.heard_at() : now - 0x80000000U,
-                                  wire.damaged_since_status());
-          } else {
-            door.update(now, id(at_closed).state, id(at_open).state);
-          }
+          door.update_from_wire(now, wire.heard() ? wire.last().door : garage::WireState::Unknown,
+                                wire.heard() ? wire.heard_at() : now - 0x80000000U,
+                                wire.damaged_since_status());
           if (door.output(now)) {
             id(press_output).turn_on();
           } else {

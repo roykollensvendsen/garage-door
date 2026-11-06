@@ -46,10 +46,7 @@ def _esphome_config() -> dict:
 def test_the_firmware_uses_the_planned_pins():
     config = _esphome_config()
     outputs = {o["id"]: o["pin"]["number"] for o in config["output"]}
-    sensors = {s["id"]: s["pin"]["number"] for s in config["binary_sensor"]}
     assert outputs["press_output"] == f"GPIO{GPIO['press']}"
-    assert sensors["at_closed"] == f"GPIO{GPIO['sensor_closed']}"
-    assert sensors["at_open"] == f"GPIO{GPIO['sensor_open']}"
 
 
 def test_the_firmware_listens_on_the_planned_wire_pin_and_never_sends_on_it():
@@ -91,13 +88,15 @@ def test_the_controller_starts_unarmed_after_every_boot():
     assert switches["armed"]["restore_mode"] == "ALWAYS_OFF"
 
 
-def test_the_sensor_pins_are_input_only_and_need_the_planned_pull_ups():
-    # GPIO 34-39 have no internal pull-up, so the firmware must not ask for one
-    # and the board must carry the external ones the plan lists.
+def test_the_door_state_comes_only_from_the_opener_wire():
+    # Roy, 2026-11-06: no reed contacts. The opener's own status on 0+2 is the
+    # only source; door_logic.h keeps its tested reed logic for anyone who adds them.
     config = _esphome_config()
-    for sensor in config["binary_sensor"]:
-        assert sensor["pin"]["mode"] == "INPUT"
-    assert PLAN["parts"]["pull_up"]
+    assert "binary_sensor" not in config
+    assert "state_from" not in config["substitutions"]
+    assert "door.update(" not in str(config)
+    assert "door.update_from_wire(" in str(config)
+    assert not {"sensor_closed", "sensor_open"} & set(GPIO)
 
 
 def test_the_press_pin_is_not_a_strapping_pin():
@@ -119,8 +118,6 @@ def test_the_schematic_connects_the_planned_pins():
         for pin, net in part.nets.items():
             nets.setdefault(net, set()).add(f"{part.reference}.{pin}")
     assert f"J1.{GPIO['press']}" in nets[f"GPIO{GPIO['press']}"]
-    assert f"J1.{GPIO['sensor_closed']}" in nets[f"GPIO{GPIO['sensor_closed']}"]
-    assert f"J1.{GPIO['sensor_open']}" in nets[f"GPIO{GPIO['sensor_open']}"]
     assert nets["OPENER_1"] >= {"U1.4", "J5.1"}
     assert nets["OPENER_2"] >= {"U1.3", "J5.2"}
     # The opener side touches only the relay's isolated output, nothing else.
@@ -131,8 +128,7 @@ def test_the_wiring_diagram_names_the_planned_pins_and_terminals():
     harness = yaml.safe_load((ROOT / "hardware/harness.yaml").read_text())
     connectors = harness["connectors"]
     assert connectors["OPENER"]["pins"] == PLAN["opener"]["terminals"]
-    assert f"GPIO{GPIO['sensor_closed']}" in connectors["J3"]["pinlabels"][0]
-    assert f"GPIO{GPIO['sensor_open']}" in connectors["J4"]["pinlabels"][0]
+    assert not {"J3", "J4"} & set(connectors), "no reed contacts"
     assert "4-5 bridge" in connectors["OPENER"]["notes"]
 
 
@@ -187,10 +183,9 @@ def test_manual_mode_is_off_after_every_boot_and_has_its_own_press_action():
     assert "request_manual_press" not in actions["press"]["then"][0]["lambda"]
 
 
-def test_the_door_state_comes_from_the_wire_trusting_the_last_status_by_default():
+def test_the_door_state_from_the_wire_trusts_the_last_status_by_default():
     # decisions/ADR-GD-005: both ways selectable, "last_status" the default for now.
     config = _esphome_config()
-    assert config["substitutions"]["state_from"] == "wire"
     assert config["substitutions"]["wire_trust"] == "last_status"
     glue = (ROOT / "firmware/door_logic/esphome_glue.h").read_text()
     assert 'c.trust_last_status = std::string(wire_trust) == "last_status";' in glue
