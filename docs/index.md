@@ -28,10 +28,10 @@ leaves your home network.
 
 | You need | How much |
 |---|---|
-| **Time** | About 3–4 hours: an hour to build the box, an hour to flash it and mount the sensors, the rest for testing. |
+| **Time** | About 3–4 hours: an hour to build the box, an hour to flash it and connect it to the opener, the rest for testing. |
 | **Cost** | Roughly €60–80 in parts (see below). |
 | **Skills** | Soldering a few parts onto perfboard. **No soldering inside the opener**: two wires go into its push-button terminals. |
-| **Tools** | Soldering iron, multimeter, small screwdriver, drill for the sensor brackets. |
+| **Tools** | Soldering iron, multimeter, small screwdriver. |
 
 Rough prices, November 2026, from typical hobby shops. They are estimates,
 not quotes:
@@ -39,16 +39,17 @@ not quotes:
 | Part | About |
 |---|---|
 | SparkFun ESP32 Thing | €25 |
-| Panasonic AQY212EH relay (×2), resistors, capacitors, terminals, perfboard | €10 |
-| Two reed contacts with magnets | €10–20 |
-| Bell wire and alarm cable | €8 |
+| Panasonic AQY212EH relay, resistors, capacitor, terminals, perfboard | €10 |
+| Resistors and a diode for listening on the opener's data wire | €2 |
+| Bell wire, 4 cores, about 1 m | €3 |
 | Enclosure, USB charger and cable | €12 |
 
 ## How it works
 
 1. You speak to a voice session (Claude, through the MCP tools in this repo).
-2. It asks the controller on your network what the door is doing. It reads
-   two magnetic contacts: one at fully closed, one at fully open.
+2. It asks the controller on your network what the door is doing. The
+   controller listens to the opener's own data wire (terminals 0 and 2),
+   where the opener reports open, closed, opening or closing, and the light.
 3. It reads you a question: "The garage door is closed. Do you want me to open it?"
 4. Only after a clear yes does the controller close an isolated relay across
    the opener's push-button terminals for half a second, as the wall button does.

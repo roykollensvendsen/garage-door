@@ -34,19 +34,24 @@ disagree, the file wins and the tests fail.
 | 2 | PhotoMOS relay (one spare) | Panasonic **AQY212EH** (DIP-4; 60 V, 0.5 A; AC/DC output) | U1 |
 | 1 | DIP-4 socket | any 2.54 mm DIP-4 | under U1 |
 | 1 | Resistor 330 Ω | 1/4 W | R1, relay LED |
-| 2 | Resistor 10 kΩ | 1/4 W | R2, R3, sensor pull-ups |
-| 2 | Resistor 1 kΩ | 1/4 W | R4, R5, sensor input protection |
-| 2 | Capacitor 100 nF | ceramic, ≥ 16 V | C1, C2, sensor filters |
-| 3 | Screw terminal, 2-pin | 5 mm pitch | J2 (opener), J3, J4 (sensors) |
+| 1 | Screw terminal, 2-pin | 5 mm pitch | J2 (opener) |
+| | Parts for listening on the data wire | see [the bench test](#bench-test-listening-on-the-openers-data-wire-02) below | terminals 0 and 2 to GPIO36 |
 | 1 | Perfboard | about 50 × 70 mm, 2.54 mm pitch | the box |
 | 1 | Pin headers | 2.54 mm, to solder onto the Thing | the box |
-| 2 | Reed contact with magnet | normally open, closes when the magnet is near; a heavy-duty or floor-mount one for the closed position | the door |
-| 1 | Bell wire | 2-core, 0.5 mm², about 1 m | box to opener (W1) |
-| 1 | Alarm cable | 4-core, 0.22 mm², about 10 m | box to sensors (W2, W3) |
+| 1 | Bell wire | 2-core, 0.5 mm², about 1 m | box to opener terminals 1 and 2 (W1) |
+| 1 | Bell wire | 2-core, 0.5 mm², about 1 m | box to opener terminals 0 and 2 (data wire) |
 | 1 | USB charger and cable | 5 V, 1 A, micro-USB | power |
 | 1 | Enclosure | about 100 × 70 × 40 mm, two cable glands | mounted clear of the rail and chain |
 
 The part references (U1, R1, …) are the ones in the schematic below.
+
+There are no sensors on the door. The controller learns where the door is
+from the opener itself: the opener reports open, closed, opening and
+closing on its data wire (terminals 0 and 2), and the controller only
+listens. Someone whose opener has no such wire can add two reed contacts:
+the controller's logic still supports them (`DoorLogic::update` in
+`firmware/door_logic/door_logic.h`, with its tests), and GPIO34 and GPIO35
+are free for them.
 
 ## The circuit
 
@@ -63,16 +68,17 @@ In words, for anyone who cannot see the picture:
   anode). U1 pin 2 → GND. U1's output, pins 3 and 4, goes to box terminal J2.
   From there it goes to opener terminals 1 and 2. The output is isolated from
   the board, so either wire can go to either terminal.
-- **Fully-closed sensor.** 3V3 → R2 (10 kΩ) → node SENSE_CLOSED. Box terminal
-  J3 pin 1 is the reed contact; J3 pin 2 is GND. SENSE_CLOSED → R4 (1 kΩ) →
-  GPIO34, with C1 (100 nF) from GPIO34 to GND.
-- **Fully-open sensor.** The same, with R3, R5, C2, J4 and GPIO35.
+- **Listening on the data wire.** Not in this schematic yet: for now it is
+  the divider in [the bench test](#bench-test-listening-on-the-openers-data-wire-02)
+  below, terminal 0 through 22 kΩ and 10 kΩ to GPIO36, with ground on
+  terminal 2. An isolated input is planned
+  ([drawing](wiring/opto-input-schematic.svg)).
 - **Power.** USB into the Thing's micro-USB socket. The Thing's own 3V3 and
-  GND feed the pull-ups and the relay LED.
+  GND feed the relay LED.
 
 ## The cables
 
-![Wiring diagram: box terminals to opener and sensors](wiring/harness.svg)
+![Wiring diagram: box terminal J2 to opener terminals 1 and 2](wiring/harness.svg)
 
 Source: [`hardware/harness.yaml`](https://github.com/roykollensvendsen/garage-door/blob/main/hardware/harness.yaml), rendered with
 WireViz.
@@ -81,10 +87,8 @@ WireViz.
 |---|---|---|
 | J2 pin 1 (OPENER_1) | W1 white | LiftMaster terminal **1** |
 | J2 pin 2 (OPENER_2) | W1 red | LiftMaster terminal **2** |
-| J3 pin 1 (SENSE_CLOSED, GPIO34) | W2 white | fully-closed reed, either side |
-| J3 pin 2 (GND) | W2 brown | fully-closed reed, other side |
-| J4 pin 1 (SENSE_OPEN, GPIO35) | W3 green | fully-open reed, either side |
-| J4 pin 2 (GND) | W3 yellow | fully-open reed, other side |
+
+The data wire, terminals 0 and 2, is wired as the bench test below shows.
 
 ## Bench test: listening on the opener's data wire (0+2)
 
@@ -214,7 +218,8 @@ output:
 - The relay did not click at power-up, after flashing, or on the RST
   button.
 - `garage-door check` over Wi-Fi reported: not armed, door state **fault**.
-  With no reed contacts fitted, GPIO34 and GPIO35 float and both read
+  (The firmware then read reed contacts; it no longer does.) With none
+  fitted, GPIO34 and GPIO35 float and both read
   "on"; both ends at once is a fault, so every press is refused. That is the
   intended fail-closed answer, not a bug. Fit the pull-ups or tie the pins
   (GPIO34 to GND, GPIO35 to 3V3 through 10 kΩ) before a press test.
@@ -274,14 +279,13 @@ not connected to the opener and the controller unarmed:
 
 ## First press on the real door: manual mode
 
-Before the reed contacts or the opener's data wire can say where the door
-is, every ordinary press is refused. Manual mode allows one kind of press
+Until the opener's data wire says where the door is, every ordinary press
+is refused. Manual mode allows one kind of press
 anyway, while you stand at the door and watch it
 ([ADR-GD-004](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-004-manual-press.md)).
 
-1. **Take the jumper wires off GPIO34 and GPIO35** (the ones that fake
-   "closed" on the bench) before the relay goes near the opener. The door
-   state should then read unknown or fault, never closed.
+1. **Check that the door state reads unknown** before the relay goes near
+   the opener, never closed or open, if nothing is connected to 0 and 2.
 2. Wire the relay's COM and NO to opener terminals 1 and 2, as above.
 3. Stand where you can see the whole door, with nobody in the doorway.
 4. `garage-door arm`, then `garage-door manual on`. Manual mode switches
@@ -307,19 +311,19 @@ Open and close by name stay refused until the door's state is known.
    is why the controller only presses when it knows the door is fully open
    or fully closed.
 3. **Solder the headers** onto the ESP32 Thing.
-4. **Build the board** as the schematic shows: the relay in its socket, the
-   five resistors, the two capacitors and the three screw terminals.
+4. **Build the board** as the schematic shows: the relay in its socket, R1
+   and the screw terminal. Add the data-wire divider from the bench test.
 5. **Test on the desk** before going near the opener. Put an LED and a 1 kΩ
    resistor in series across J2, with a 3 V coin cell as the source. It should
-   light for half a second when the controller presses. Close a wire across
-   J3 and across J4, and watch "Door state" change.
+   light for half a second when the controller presses. "Door state" reads
+   unknown, since nothing is heard yet.
 6. **Flash the firmware over USB** the first time (see the README, "Updating
    the controller"). Later updates go over Wi-Fi.
-7. **Mount the reed contacts.** One where the door rests fully closed, one
-   where it rests fully open, each with its magnet on the moving part, about
-   10 mm apart when the door is at that end.
-8. **Unplug the opener.** Run W1 to terminals 1 and 2 and push the wires in.
-   Check that the 4–5 bridge is untouched. Plug the opener back in.
+7. **Unplug the opener.** Run W1 to terminals 1 and 2, and the data wire to
+   terminals 0 and 2, and push the wires in. Check that the 4–5 bridge is
+   untouched. Plug the opener back in.
+8. **Check that the door state is read.** Use the remote once; "Door state"
+   should follow it (open, closed), and `garage-door check` reports it.
 9. **Run the reversal test** (50 mm obstacle, see above). Then try "open the
    garage" and "close the garage" with the door in view.
 

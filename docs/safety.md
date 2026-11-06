@@ -46,9 +46,11 @@ The tests for every row run on every change, without hardware, against a
   If it does not, fix the opener before using voice closing.
 - **The opener runs on mains power.** Unplug it before opening any cover or
   touching the terminals. Leave the bridge between terminals 4 and 5 in place.
-- **The reed contacts can be wrong** if a magnet falls off. Then the door's
-  state reads as unknown and nothing is pressed. That fails safe, but you
-  will have to fix the contact before voice control works again.
+- **The door's state comes from the opener's own messages.** If the wire
+  goes quiet for more than six minutes, a message arrives damaged, or a
+  moving door is not heard from within its travel time, the state reads as
+  unknown and nothing is pressed. That fails safe, but voice control waits
+  until the opener reports again (any use of the remote or wall button does).
 
 ## Recommended: photocells
 

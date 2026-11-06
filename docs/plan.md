@@ -7,10 +7,11 @@ flashed. Written 2026-11-04.*
 
 Roy says "open the garage". The voice session asks back "The door is closed.
 Do you want me to open it?", Roy says yes, and only then does a small box next to the opener
-press the opener's push-button input for half a second. Two magnetic sensors
-tell the system whether the door is fully open, fully closed, or somewhere in
-between, so the door's state is reported before and after every press, and
-nothing is pressed when the state is not known.
+press the opener's push-button input for half a second. The opener's own
+status messages on its data wire (terminals 0+2) tell the system whether the
+door is fully open, fully closed or moving, so the door's state is reported
+before and after every press, and nothing is pressed when the state is not
+known. There are no sensors on the door (Roy, 2026-11-06).
 
 ## 1. What the opener's terminals are for
 
@@ -83,10 +84,12 @@ how sure it is.
 **Decision (revised, proposed in [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md)):**
 the 0+2 bus works on this opener. Roy's captures decode as Security+ 2.0
 status messages with the door state in them (see the measurements below).
-So the controller can take its state from the wire (`state_from: wire`) or
-from reed contacts (`state_from: reed`). It can press through the relay or
-by a command on the wire (`press_by: relay | wire`). A status older than
-2 s counts as unknown, and on the wire only open and close are ever sent.
+So the controller takes its state from the wire. Reed contacts were the
+first plan and were never fitted; Roy dropped them on 2026-11-06. The
+controller's logic still supports them (`DoorLogic::update`, with its tests)
+for anyone whose opener has no such wire. It can press through the relay or
+by a command on the wire (`press_by: relay | wire`). How long a status is
+trusted is set in ADR-GD-005 (6 minutes, with safeguards), and on the wire only open and close are ever sent.
 The original reasoning, for the record: reed contacts say exactly where the
 door is and need nothing from the opener; the bus was unproven on this model.
 The optocoupler on 6+7 stays an option.
@@ -119,7 +122,8 @@ capture showed the true bit is about **250 µs, about 4000 baud, 8N1**. The
 126 µs pulse measured by hand was the half-bit high after the break. The
 message starts `55 01 00`, the Security+ 2.0 sync (see the table above). Each
 message starts with a break of 2.624 ms, about 10 bit times. Where the
-settings below say 7900, use **4000**. A whole 19-byte packet takes about
+settings below say 7900, use **4000**. (After a power cycle on 2026-11-05
+the opener sent at **9600 baud**, and has since; see the measurements.) A whole 19-byte packet takes about
 48 ms, so capture at 10 ms/div.
 
 *What is known about the rate.* ratgdo's ESPHome firmware opens Security+
@@ -289,10 +293,8 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   │                  output 3,4 ───▶ 1                     │
   │                             ───▶ 2   (polarity free)   │
   │                                 │ 4═5 bridge: untouched│
-  │ 3V3 ─10k─┬─1k── GPIO34 ◀── reed "fully closed" ── GND  │
-  │          └100nF─GND                                    │
-  │ 3V3 ─10k─┬─1k── GPIO35 ◀── reed "fully open"   ── GND  │
-  │          └100nF─GND                                    │
+  │ GPIO36 ◀─1k─┬─ 22k ─────────────── 0  (data wire)      │
+  │             └ 10k ─ GND ─────────── 2                  │
   │ micro-USB ◀── 5 V USB charger (wall socket)            │
   └──────────────┘                  └──────────────────────┘
 ```
@@ -311,16 +313,13 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 - **Pulse length:** 500 ms, enforced on the ESP32 itself (the output switches
   itself off after 500 ms whatever the laptop asks), well under the 4 s that
   the opener treats as a stuck button.
-- **Door state:** two magnetic reed contacts (the kind used on alarm
-  systems), one where the door rests fully closed and one where it rests fully
-  open. Each closes to ground when its magnet is near. External 10 kΩ pull-ups
-  to 3.3 V, 1 kΩ series and 100 nF to ground for the long cable run, so a
-  cable that picks up noise near the motor does not flicker the state.
-- **Pins:** GPIO25 (output), GPIO34 and GPIO35 (inputs). None is a strapping
-  pin (0, 2, 12, 15), so the board boots the same whether or not the opener is
-  connected. 34 and 35 are input-only and have no internal pull-ups, which
-  suits a sensor input with the external pull-ups above: firmware cannot
-  drive them by mistake. GPIO32 and GPIO33 are avoided because the Thing has a
+- **Door state:** the opener's own status on its data wire (0+2), heard
+  through a resistor divider into GPIO36, listen-only. See "First bench
+  test" and ADR-GD-003 and ADR-GD-005. No sensors on the door.
+- **Pins:** GPIO25 (output) and GPIO36 (the data wire, input). Neither is a
+  strapping pin (0, 2, 12, 15), so the board boots the same whether or not
+  the opener is connected. 36 is input-only, so firmware cannot drive the
+  opener's bus by mistake. GPIO34 and 35 are free. GPIO32 and GPIO33 are avoided because the Thing has a
   32 kHz crystal fitted next to them (seen in Roy's photo), and 36–39 because
   the board ties them to the ADC's capacitors. GPIO5 (the on-board LED) shows
   a pulse.
@@ -331,13 +330,13 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   the opener's electronics for no gain. No LiPo for now (a garage gets hot and
   cold, and the opener does not run in a power cut anyway).
 
-| State from the two sensors | Meaning | May press? |
+| The opener's last status | Meaning | May press? |
 |---|---|---|
-| closed sensor on, open sensor off | **closed** | yes, after a yes |
-| open sensor on, closed sensor off | **open** | yes, after a yes |
-| neither, within 30 s of a press | moving | no, wait |
-| neither, longer | stopped part way, or a sensor fault | no, reported as unknown |
-| both on | sensor fault | no |
+| closed, at most 6 minutes old | **closed** | yes, after a yes |
+| open, at most 6 minutes old | **open** | yes, after a yes |
+| opening or closing, within the travel time | moving | no, wait |
+| stopped part way, or anything else | unknown | no |
+| older than 6 minutes, or a damaged packet since | unknown | no |
 | controller not answering | unknown | no |
 
 ### Parts list
@@ -347,17 +346,14 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | Panasonic AQY212EH PhotoMOS relay (DIP-4) | 2 | one spare |
 | DIP-4 socket | 1 | so the relay can be swapped |
 | Relay module, Songle SRD-03VDC-SL-C on a red board (Roy has one) | 1 | first door test only; the AQY212EH is for keeps |
-| Resistors 330 Ω, 1 kΩ ×2, 10 kΩ ×2 | | 1/4 W |
-| Capacitors 100 nF ×2 | | ceramic |
-| Reed contact, surface mount, normally open with magnet | 1 | fully-open position |
-| Reed contact for garage doors (floor or heavy-duty), normally open | 1 | fully-closed position |
-| Perfboard, 2-pin 5 mm screw terminals ×3, male pin headers for the Thing | | headers must be soldered on |
+| Resistor 330 Ω | | 1/4 W |
+| Perfboard, 2-pin 5 mm screw terminal, male pin headers for the Thing | | headers must be soldered on |
 | Enclosure, about 100×70×40 mm, with two cable glands | 1 | mount clear of the rail and chain |
 | 2-core bell wire, about 1 m | | box to terminals 1 and 2 |
-| 4-core alarm cable, about 10 m | | the two reed contacts |
+| 2-core bell wire, about 1 m | | box to terminals 0 and 2 (data wire) |
 | 5 V 1 A USB charger and micro-USB cable | 1 | |
 | Multimeter | | for the bench measurements |
-| Bench test on 0+2: resistors 22 kΩ, 10 kΩ, 1 kΩ; 1N4148 (a Schottky, BAT85 or 1N5819, for keeps); 1 nF ceramic; breadboard | | listen-only, first test |
+| Listening on 0+2: resistors 22 kΩ, 10 kΩ, 1 kΩ; 1N4148 (a Schottky, BAT85 or 1N5819, for keeps); 1 nF ceramic; breadboard | | listen-only; the door state comes from here |
 
 ## 3. Firmware and how the laptop talks to it
 
@@ -413,7 +409,7 @@ address from the internet entirely.
 | Rule | Enforced by |
 |---|---|
 | Never press without Roy's spoken yes | The MCP module has two tools: `garage_request(action)` returns the current state and a one-time token valid for 30 s together with the question to read aloud; `garage_confirm(token)` presses. No single call can press. The voice session must only call confirm after Roy says yes. |
-| Door state from the opener's wire | ESP32 (`state_from: wire`): only status packets that decode count. Open and closed map to open and closed, opening and closing to moving, and everything else (stopped part way included) to unknown. A status older than 2 s is unknown, so a press needs a fresh one; with the sender fitted, the controller asks for it. [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md). |
+| Door state from the opener's wire | ESP32: only status packets that decode count. Open and closed map to open and closed, opening and closing to moving, and everything else (stopped part way included) to unknown. How long a status is trusted is set in [ADR-GD-005](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-005-trust-the-last-status.md): 6 minutes, with safeguards. [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md). |
 | A press on the opener's wire | ESP32 (`press_by: wire`): the same refusals as the relay. Directional: open sends open and close sends close, never toggle. Only status and door-action commands are ever sent. The rolling code is saved before each send and jumps ahead at boot; the controller waits for an idle line. Off until a bench test with Roy watching. |
 | Refuse when the state is unknown | MCP module: refuses on unknown, moving, fault or controller offline. Also refuses "open" when already open and "close" when already closed, since one press would do the opposite. |
 | Log every press | MCP module appends one line per request and per press to a local log: time, who asked, state before, state after, result. Kept on the laptop. |
@@ -431,8 +427,8 @@ address from the internet entirely.
 2. Order parts.
 3. Solder the Thing's headers and the small board; test on the desk with an
    LED in place of the opener.
-4. Flash ESPHome over USB, then fit at the opener and mount the reed
-   contacts.
+4. Flash ESPHome over USB, then fit at the opener: 1+2 for the relay, 0+2
+   for listening.
 5. Write the MCP module (walking skeleton: status only, then request and
    confirm), with tests for every refusal.
 6. Live test with Roy watching the door.

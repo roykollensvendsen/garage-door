@@ -19,14 +19,15 @@ rollback, and an encrypted API, without writing that ourselves. The safety
 logic is our own small C++ file with its own tests. See
 [the decision](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-001-esphome-native-api.md).
 
-**Why reed contacts? Can't the opener tell us whether the door is open?**
-Not simply. Its manual shows no output that says "open" or "closed". Terminals
-6 and 7 carry a warning-light output that is on while the door moves, which
-can add "moving" but not where the door stopped. Terminals 0 and 2 carry the
-opener's own digital bus, which community projects such as ratgdo read on
-some related models, but nobody has reported it on the LM80EVF. Two magnetic
-contacts are cheap and say exactly where the door is. The sources are in
-[the plan](plan.md#door-state-from-the-opener-itself).
+**How does it know whether the door is open? Are there sensors on the door?**
+No sensors. Terminals 0 and 2 carry the opener's own digital bus (Security+
+2.0), the one community projects such as ratgdo read. The opener sends a
+status at every change and repeats it about every five minutes: open, closed,
+opening, closing or stopped, and whether the light is on. The controller only
+listens. Measured on an LM80EVF on 2026-11-05; the details are in
+[the plan](plan.md#door-state-from-the-opener-itself). If your opener has no
+such bus, the controller's logic can also take the state from two reed
+contacts, but this build does not wire them.
 
 **What if the Wi-Fi drops halfway through a press?**
 The controller ends every press after half a second by its own clock,

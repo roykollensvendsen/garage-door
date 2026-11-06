@@ -10,6 +10,11 @@ to many without touching the safety rules each time. The plan
 
 The door is in one of these states. The voice answer names it.
 
+*Update, 2026-11-06:* the LM80EVF build reads its state from the opener's
+own data wire (0+2), with no contacts on the door. The table below was
+written for the reed contacts; an opener without such a wire would still use
+them, so the design keeps them as one kind of input.
+
 | State | Meaning | How it is known today | With the optional "moving" input |
 |---|---|---|---|
 | **closed** | at the fully-closed contact | reed contact | same |
