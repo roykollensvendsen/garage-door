@@ -104,11 +104,13 @@ block = 6
 [tool.quality.layers]
 _version = 0        # generated from the Git tag; imports nothing
 door = 1            # hardware abstraction: the door's states, the Device interface
+phrases = 2         # magic phrases (ADR-GD-008), core like the service
 service = 2         # core: confirm, refuse, log
 manual = 3          # the manual press (ADR-GD-004), built on the core's rules
 switches = 3        # arming and manual mode by voice (ADR-GD-006), the same way
 esphome_device = 3  # drivers behind the Device interface: the real controller
 simulator = 3       #   and the simulated one
+settings = 3         # the MCP server's settings, read from the environment and files
 server = 4          # adapters: the MCP server and the command line
 cli = 4
 # Layer 0 is the opener profiles (hardware/openers/*.yaml), data only so far.

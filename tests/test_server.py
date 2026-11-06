@@ -337,3 +337,40 @@ def test_the_voice_is_told_to_keep_one_question_open_and_confirm_the_newest_toke
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
     assert "most recent" in tools["garage_confirm"].description
     assert "cancels the question" in tools["garage_confirm"].description
+
+
+def test_a_magic_phrase_through_the_tool_presses_without_a_question(tmp_path):
+    # decisions/ADR-GD-008
+    from garage_door.phrases import Phrases  # noqa: PLC0415
+
+    device = FakeDevice(DoorState.CLOSED, DoorState.OPEN)
+    log = tmp_path / "presses.jsonl"
+    phrases = Phrases.from_table({"nb": {"open": ["sesam lukk deg opp"]}})
+    service = GarageService(device, log_path=log, sleep=_no_wait, phrases=phrases)
+    server = build_server(service, ManualPress(device, log_path=log), Switches(device, log_path=log))
+    answer = call(server, "garage_request", {"action": "open", "phrase": "sesam, lukk deg opp"})
+    assert answer["outcome"] == "pressed"
+    assert device.presses == 1
+    assert answer["say"] == "Pressed. The garage door was closed and is now open."
+
+
+def test_the_phrase_is_optional_and_the_voice_is_told_never_to_make_it_up(tmp_path):
+    from garage_door.server import INSTRUCTIONS  # noqa: PLC0415
+
+    server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
+    tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
+    schema = tools["garage_request"].input_schema
+    assert "phrase" in schema["properties"]
+    assert schema["required"] == ["action"]
+    for text in (INSTRUCTIONS, tools["garage_request"].description):
+        assert "exactly as Roy said them" in text
+        assert "never" in text.lower()
+
+
+def test_the_phrase_file_comes_from_the_users_config_folder_or_the_setting(tmp_path):
+    base = {"GARAGE_DOOR_HOST": "garage-door.local", "GARAGE_DOOR_API_KEY": "k"}
+    assert settings_from({**base, "XDG_CONFIG_HOME": str(tmp_path)}).phrases_path == (
+        tmp_path / "garage-door" / "phrases.toml"
+    )
+    chosen = tmp_path / "mine.toml"
+    assert settings_from({**base, "GARAGE_DOOR_PHRASES": str(chosen)}).phrases_path == chosen

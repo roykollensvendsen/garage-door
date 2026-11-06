@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from garage_door.door import Action, DeviceUnavailableError, DoorState
+from garage_door.phrases import Phrases
 from garage_door.service import Confirmed, GarageService, Question, Refused
 
 if TYPE_CHECKING:
@@ -70,6 +71,7 @@ def make(
     tmp_path: pathlib.Path,
     *,
     allow_close: bool = True,
+    phrases: Phrases | None = None,
 ) -> tuple[GarageService, FakeClock]:
     clock = FakeClock()
     tokens = iter(f"token-{n}" for n in range(100))
@@ -77,6 +79,7 @@ def make(
         device,
         log_path=tmp_path / "presses.jsonl",
         allow_close=allow_close,
+        phrases=phrases,
         clock=clock,
         sleep=clock.sleep,
         new_token=lambda: next(tokens),
@@ -380,3 +383,95 @@ def test_a_confirm_is_refused_when_the_controller_stops_answering(tmp_path):
     assert answer.state is DoorState.UNKNOWN
     assert "not reachable" in answer.reason
     assert device.presses == 0
+
+
+# --- Magic phrases (decisions/ADR-GD-008) ----------------------------------------
+
+MAGIC = Phrases.from_table({"nb": {"open": ["sesam lukk deg opp"], "close": ["sesam lukk deg igjen"]}})
+
+
+def test_a_magic_phrase_presses_at_once_without_a_question(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    outcome = run(service.request(Action.OPEN, requester="voice", phrase="Sesam, lukk deg opp!"))
+    assert isinstance(outcome, Confirmed)
+    assert device.presses == 1
+    assert outcome.message == "Pressed. The garage door was closed and is now open."
+
+
+def test_a_magic_phrase_closes_too(tmp_path):
+    device = FakeDevice(DoorState.OPEN, after_press=DoorState.CLOSED)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    outcome = run(service.request(Action.CLOSE, requester="voice", phrase="sesam lukk deg igjen"))
+    assert isinstance(outcome, Confirmed)
+    assert device.presses == 1
+
+
+@pytest.mark.parametrize("phrase", [None, "", "sesam", "sesam lukk deg igjen"])
+def test_without_the_right_phrase_the_question_is_asked_as_before(tmp_path, phrase):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    answer = run(service.request(Action.OPEN, requester="voice", phrase=phrase))
+    assert isinstance(answer, Question)
+    assert device.presses == 0
+
+
+def test_with_no_phrase_file_a_phrase_only_asks(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path)
+    answer = run(service.request(Action.OPEN, requester="voice", phrase="sesam lukk deg opp"))
+    assert isinstance(answer, Question)
+    assert device.presses == 0
+
+
+@pytest.mark.parametrize(
+    ("state", "action"),
+    [
+        (DoorState.UNKNOWN, Action.OPEN),
+        (DoorState.MOVING, Action.OPEN),
+        (DoorState.OPEN, Action.OPEN),
+        (DoorState.CLOSED, Action.CLOSE),
+    ],
+)
+def test_a_magic_phrase_is_refused_where_a_yes_would_be(tmp_path, state, action):
+    device = FakeDevice(state, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    phrase = "sesam lukk deg opp" if action is Action.OPEN else "sesam lukk deg igjen"
+    assert isinstance(run(service.request(action, requester="voice", phrase=phrase)), Refused)
+    assert device.presses == 0
+
+
+def test_a_magic_phrase_cannot_close_when_closing_is_switched_off(tmp_path):
+    device = FakeDevice(DoorState.OPEN, after_press=DoorState.CLOSED)
+    service, _ = make(device, tmp_path, allow_close=False, phrases=MAGIC)
+    answer = run(service.request(Action.CLOSE, requester="voice", phrase="sesam lukk deg igjen"))
+    assert isinstance(answer, Refused)
+    assert device.presses == 0
+
+
+def test_a_magic_phrase_press_is_logged_without_the_phrase(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    run(service.request(Action.OPEN, requester="voice", phrase="sesam lukk deg opp"))
+    lines = log_lines(tmp_path)
+    assert [line["event"] for line in lines] == ["pressed"]
+    assert lines[0]["by"] == "phrase"
+    assert "sesam" not in (tmp_path / "presses.jsonl").read_text()
+
+
+def test_a_press_after_a_yes_is_logged_as_by_yes(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    run(service.confirm(question.token))
+    assert log_lines(tmp_path)[-1]["by"] == "yes"
+
+
+def test_a_magic_phrase_cancels_an_open_question(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path, phrases=MAGIC)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    run(service.request(Action.OPEN, requester="voice", phrase="sesam lukk deg opp"))
+    device.current = DoorState.CLOSED
+    assert isinstance(run(service.confirm(question.token)), Refused)
+    assert device.presses == 1

@@ -324,3 +324,46 @@ Open and close by name stay refused until the door's state is known.
    garage" and "close the garage" with the door in view.
 
 Photos of each step will be added after the first build.
+
+## Magic phrases (optional)
+
+By default, every open and close asks a question and waits for your yes.
+To open or close with one sentence, write your own phrases, in any
+language you speak to the voice, in `~/.config/garage-door/phrases.toml`.
+Then make it readable by you only, and restart the voice bridge:
+
+```toml
+[nb]
+open = ["sesam, lukk deg opp"]
+close = ["sesam, lukk deg igjen"]
+
+[en]
+open = ["open sesame now"]
+close = ["close sesame now"]
+
+[de]
+open = ["Sesam, öffne dich"]
+close = ["Sesam, schließ dich"]
+```
+
+```sh
+chmod 600 ~/.config/garage-door/phrases.toml
+```
+
+Saying "sesam, lukk deg opp, åpne garasjedøra" then opens the door
+straight away. Every other rule still applies: the door's state must be
+known, the controller armed, and closing allowed. How it matches:
+
+- Case, commas, spacing and accents don't matter.
+- A word said twice counts once, because speech recognition often drops
+  the repeat.
+- One letter wrong, missing or extra is forgiven in the whole phrase, in a
+  word of five letters or more.
+- The words must all be there, in order. The phrase is not translated:
+  list each one you will say.
+
+Choose words you never say otherwise, because there is no length limit.
+The phrase is a code word, not a password: your phone's speech recognition
+and the voice model both see it. The log records that a phrase was used,
+never which one. Without the file, nothing changes. Background:
+[ADR-GD-008](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-008-magic-phrases.md).

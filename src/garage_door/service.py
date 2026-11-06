@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     import pathlib
     from collections.abc import Awaitable, Callable
 
+    from garage_door.phrases import Phrases
+
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
 #: Longer than a full open or close; matches the firmware's travel time.
@@ -95,8 +97,10 @@ class GarageService:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         new_token: Callable[[], str] = lambda: secrets.token_urlsafe(16),
         wall_clock: Callable[[], str] = _now_iso,
+        phrases: Phrases | None = None,
     ) -> None:
-        """Wire the service to a controller and a log file."""
+        """Wire the service to a controller and a log file; `phrases` None keeps magic phrases off."""
+        self._phrases = phrases
         self._device = device
         self._log_path = log_path
         self._allow_close = allow_close
@@ -120,8 +124,14 @@ class GarageService:
         except DeviceUnavailableError:
             return None
 
-    async def request(self, action: Action, *, requester: str) -> Question | Refused:
-        """Check that `action` is safe now and return the question to ask, or why not."""
+    async def request(
+        self, action: Action, *, requester: str, phrase: str | None = None
+    ) -> Question | Confirmed | Refused:
+        """Check that `action` is safe now and return the question to ask, or why not.
+
+        With a `phrase` from the user's own list for `action` (decisions/ADR-GD-008),
+        it presses at once instead of asking: the phrase stands in for the yes.
+        """
         self._pending = None  # a new request always replaces an older question
         try:
             state = await self._device.state()
@@ -138,6 +148,9 @@ class GarageService:
         # RULE: closing is refused when it is switched off
         if action is Action.CLOSE and not self._allow_close:
             return self._refuse(state, "Closing by voice is switched off on this laptop.", action, requester)
+        # RULE: without the right phrase the question is asked as before
+        if self._phrases is not None and self._phrases.matches(action, phrase):
+            return await self._press(_Pending("", action, state, self._clock(), requester), by="phrase")
         token = self._new_token()
         self._pending = _Pending(token, action, state, self._clock(), requester)
         self._log("asked", requester=requester, action=action, before=state)
@@ -157,6 +170,10 @@ class GarageService:
             return self._refuse(
                 pending.state, "That question expired; ask again.", pending.action, pending.requester
             )
+        return await self._press(pending, by="yes")
+
+    async def _press(self, pending: _Pending, *, by: str) -> Confirmed | Refused:
+        """Press once for `pending`, if the door is still as it was; `by` is "yes" or "phrase"."""
         try:
             before = await self._device.state()
             # RULE: a press is refused when the door changed since the question
@@ -187,6 +204,7 @@ class GarageService:
             after=after,
             armed=armed,
             controller=verdict,
+            by=by,
         )
         # A press is never repeated here: if the door stopped or reversed, a
         # person has to look before anything moves it again.

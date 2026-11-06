@@ -7,7 +7,9 @@
 #
 # `find` is a regular expression matching the single line to replace; `replace`
 # is what replaces it, keeping the file valid. The line's own indentation is
-# kept, so do not write indentation here.
+# kept, so do not write indentation here. `replace` takes the WHOLE line, not
+# just the part `find` matched: a partial line breaks the file, every test
+# fails at import, and the rule reads "BY LUCK" instead of "KILLED".
 #
 # [[rule]]
 # name = "what the rule says, in words"
@@ -49,6 +51,30 @@ replace = 'pending = self._pending'
 name = "a switch token expires after thirty seconds"
 file = "src/garage_door/switches.py"
 find = 'if self\._clock\(\) - asked_at >= TOKEN_SECONDS:'
+replace = 'if False:'
+
+[[rule]]
+name = "without the right phrase the question is asked as before"
+file = "src/garage_door/service.py"
+find = 'if self\._phrases is not None and self\._phrases\.matches\(action, phrase\):'
+replace = 'if self._phrases is not None:'
+
+[[rule]]
+name = "the whole phrase must be there in order"
+file = "src/garage_door/phrases.py"
+find = 'if sum\(_slips\(s, w\) for s, w in zip\(window, phrase, strict=True\)\) <= 1:'
+replace = 'if sum(_slips(s, w) for s, w in zip(window, phrase, strict=True)) <= 99:'
+
+[[rule]]
+name = "a phrase works only for its own action"
+file = "src/garage_door/phrases.py"
+find = 'return any\(_found_in\(heard, phrase\) for phrase in self\.by_action\.get\(action, \(\)\)\)'
+replace = 'return any(_found_in(heard, phrase) for listed in self.by_action.values() for phrase in listed)'
+
+[[rule]]
+name = "a phrase file others can read is refused"
+file = "src/garage_door/phrases.py"
+find = 'if path\.stat\(\)\.st_mode & \(stat\.S_IRWXG \| stat\.S_IRWXO\):'
 replace = 'if False:'
 
 [[rule]]
