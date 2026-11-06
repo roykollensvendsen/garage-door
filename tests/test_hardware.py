@@ -56,10 +56,12 @@ def test_the_firmware_listens_on_the_planned_wire_pin_and_never_sends_on_it():
     config = _esphome_config()
     assert "uart" not in config
     assert config["substitutions"]["wire_rx_gpio"] == str(GPIO["wire_rx"])
-    assert "begin(${wire_rx_gpio}, ${wire_baud})" in str(config["esphome"]["on_boot"])
+    assert "begin(${wire_rx_gpio}," in str(config["esphome"]["on_boot"])
+    assert "wire_speed().baud()" in str(config["esphome"]["on_boot"])
     glue = (ROOT / "firmware/door_logic/wire_uart.h").read_text()
     assert "uart_set_pin(kPort, UART_PIN_NO_CHANGE, rx_gpio, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)" in glue
     assert "uart_write" not in glue
+    assert "uart_set_baudrate(kPort, baud)" in glue  # the speed changes; the pins never do
     assert "uart_tx" not in glue
     assert "door_logic/wire_uart.h" in config["esphome"]["includes"]
     assert 34 <= GPIO["wire_rx"] <= 39, "an input-only pin cannot drive the opener's bus by mistake"

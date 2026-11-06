@@ -30,12 +30,6 @@ substitutions:
   # test"). Security+ 2.0 wireline at about 4000 baud, 8N1, idle high. Read by
   # door_logic/wire_uart.h, which never assigns a TX pin: nothing is sent.
   wire_rx_gpio: "36"
-  # The wire's speed. Roy's scope captures (2026-11-04) and the first garage
-  # run (2026-11-05 08:16) decoded at 4000 baud. After the opener was power
-  # cycled at about 08:30, every packet arrived as 8 bytes starting 18/38/88/
-  # 98 00: what a 4000-baud UART makes of a 19-byte packet sent at 9600, the
-  # speed ratgdo uses for Security+ 2.0. Trying 9600.
-  wire_baud: "9600"
 
 esphome:
   name: garage-door
@@ -44,7 +38,9 @@ esphome:
     priority: 600
     then:
       - lambda: |-
-          if (!garage_door::wire_uart().begin(${wire_rx_gpio}, ${wire_baud})) {
+          // The opener's speed changes (4000 and 9600 baud seen); wire_speed.h finds it.
+          if (!garage_door::wire_uart().begin(${wire_rx_gpio},
+                                              static_cast<int>(garage_door::wire_speed().baud()))) {
             ESP_LOGE("wire", "the wire's UART did not start: nothing will be heard on 0+2");
           }
   includes:
@@ -52,6 +48,7 @@ esphome:
     - door_logic/wire_health.h
     - door_logic/rolling_code.h
     - door_logic/opener_wire.h
+    - door_logic/wire_speed.h
     - door_logic/esphome_glue.h
     - door_logic/wire_uart.h
     - third_party/secplus/secplus.h
@@ -167,6 +164,14 @@ sensor:
   - platform: uptime
     name: Uptime
     update_interval: 60s
+  # The speed the wire is read at now (wire_speed.h).
+  - platform: template
+    id: wire_baud
+    name: Wire speed
+    unit_of_measurement: baud
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: return static_cast<float>(garage_door::wire_speed().baud());
   # How well the opener's wire is heard: counted since boot, only ever up.
   - platform: template
     name: Wire bytes received
@@ -285,6 +290,14 @@ interval:
                 break;
             }
           });
+          // Two bursts in a row that do not decode: the opener changed its speed.
+          auto &speed = garage_door::wire_speed();
+          if (speed.check(now, wire.health())) {
+            const bool ok = garage_door::wire_uart().set_baud(speed.baud());
+            ESP_LOGW("wire", "nothing decodes: now listening at %u baud%s", static_cast<unsigned>(speed.baud()),
+                     ok ? "" : " (the UART refused)");
+            id(wire_baud).publish_state(speed.baud());
+          }
           // Nothing on the wire vanishes unseen: bytes outside any packet are logged too.
           if (wire.skipped() > 0) {
             ESP_LOGI("wire", "skipped %u bytes outside any packet | %s", static_cast<unsigned>(wire.skipped()),

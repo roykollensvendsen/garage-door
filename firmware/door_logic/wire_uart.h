@@ -84,6 +84,15 @@ class WireUart {
     }
   }
 
+  // A new speed, keeping everything else; what is buffered was read at the old one.
+  bool set_baud(std::uint32_t baud) {
+    if (!ready_ || uart_set_baudrate(kPort, baud) != ESP_OK) {
+      return false;
+    }
+    uart_flush_input(kPort);
+    return true;
+  }
+
   bool ready() const { return ready_; }
   const garage::UartTrouble &trouble() const { return trouble_; }
 

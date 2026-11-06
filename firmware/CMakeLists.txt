@@ -45,7 +45,14 @@ target_include_directories(opener_wire_test PRIVATE door_logic)
 target_compile_options(opener_wire_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
 target_link_libraries(opener_wire_test PRIVATE secplus GTest::gtest_main)
 
+# Finding the opener's speed when it changes (wire_speed.h).
+add_executable(wire_speed_test tests/wire_speed_test.cpp)
+target_include_directories(wire_speed_test PRIVATE door_logic)
+target_compile_options(wire_speed_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
+target_link_libraries(wire_speed_test PRIVATE secplus GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(door_logic_test)
 gtest_discover_tests(door_sim_test)
 gtest_discover_tests(opener_wire_test)
+gtest_discover_tests(wire_speed_test)

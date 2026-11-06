@@ -11,6 +11,7 @@
 
 #include "door_logic.h"
 #include "opener_wire.h"
+#include "wire_speed.h"
 
 namespace garage_door {
 
@@ -30,6 +31,12 @@ inline garage::Door &door(bool allow_close, const char *wire_trust) {
 // What the controller has heard on the opener's data wire (terminals 0+2).
 inline garage::Listener &wire() {
   static garage::Listener instance;
+  return instance;
+}
+
+// The speed the wire is read at, changed when the opener changes its own (wire_speed.h).
+inline garage::WireSpeed &wire_speed() {
+  static garage::WireSpeed instance;
   return instance;
 }
 
