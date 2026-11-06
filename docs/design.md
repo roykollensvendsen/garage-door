@@ -92,7 +92,7 @@ row per model:
 Each cell links to its manual citation. "Verified by" names who confirmed it
 on a real door, and when.
 
-## Quality, as in claude-voice
+## Quality
 
 Built 2026-11-04 (step 5 below, done first at Roy's request). The levels
 are in [`quality.json`](https://github.com/roykollensvendsen/garage-door/blob/main/quality.json).
