@@ -17,7 +17,7 @@ from aioesphomeapi.model import SensorState, SwitchState, TextSensorState
 from garage_door.door import DeviceUnavailableError, DoorState
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
 
 STATE_SENSOR = "Door state"
 LIGHT_SENSOR = "Opener light"  # from the opener's last status on the wire; read only
@@ -32,7 +32,11 @@ FAILURES = (APIConnectionError, TimeoutError, OSError)
 class Client(Protocol):
     """The part of aioesphomeapi.APIClient this module uses."""
 
-    async def connect(self, *, login: bool = False) -> None: ...  # noqa: D102
+    async def connect(  # noqa: D102
+        self,
+        on_stop: Callable[[bool], Coroutine[Any, Any, None]] | None = None,
+        login: bool = False,  # noqa: FBT001, FBT002 - aioesphomeapi's own signature
+    ) -> None: ...
     async def list_entities_services(self) -> tuple[list[Any], list[Any]]: ...  # noqa: D102
     def subscribe_states(self, on_state: Callable[[Any], None]) -> None: ...  # noqa: D102
     async def execute_service(self, service: Any, data: dict[str, Any]) -> Any: ...  # noqa: ANN401, D102
@@ -147,7 +151,7 @@ class EsphomeDevice:
         if self._connected:
             return
         try:
-            await self._client.connect(login=True)
+            await self._client.connect(on_stop=self._stopped, login=True)
             entities, services = await self._client.list_entities_services()
         except FAILURES as error:
             msg = f"the garage door controller is not reachable: {error}"
@@ -158,9 +162,7 @@ class EsphomeDevice:
         self._press = next((s for s in services if s.name == PRESS_ACTION), None)
         self._manual_key = next((e.key for e in entities if e.name == MANUAL_SWITCH), None)
         self._manual_press = next((s for s in services if s.name == MANUAL_PRESS_ACTION), None)
-        self._manual = None  # off after a restart; wait to be told
-        self._door = None
-        self._armed = None  # a controller that restarted comes back unarmed; wait to be told
+        self._forget()
         self._client.subscribe_states(self._on_state)
         self._connected = True
         # The controller sends its states a moment after connecting. Wait a
@@ -170,6 +172,21 @@ class EsphomeDevice:
         while self._door is None and waited < self._first_state_wait:
             await asyncio.sleep(step)
             waited += step
+
+    def _forget(self) -> None:
+        """Drop every reading: after a new connection, nothing from before counts."""
+        self._door = None
+        self._armed = None  # a controller that restarted comes back unarmed; wait to be told
+        self._manual = None  # off after a restart; wait to be told
+        self._light = None
+        self._status_age = None
+        self._seen = {}
+
+    async def _stopped(self, expected_disconnect: bool) -> None:  # noqa: FBT001 - the library's callback
+        """The connection ended (the controller restarted, or the network went): read afresh next time."""
+        del expected_disconnect  # either way, what we hold is no longer current
+        self._connected = False
+        self._forget()
 
     def _on_state(self, state: object) -> None:
         key = getattr(state, "key", None)

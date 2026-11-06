@@ -11,13 +11,22 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
-from aioesphomeapi import APIConnectionError, TextSensorInfo, TextSensorState, UserService
+from aioesphomeapi import (
+    APIConnectionError,
+    SensorInfo,
+    SensorState,
+    SwitchInfo,
+    SwitchState,
+    TextSensorInfo,
+    TextSensorState,
+    UserService,
+)
 
 from garage_door.door import DeviceUnavailableError, DoorState
 from garage_door.esphome_device import EsphomeDevice
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Awaitable, Callable
 
 
 class FakeClient:
@@ -35,13 +44,22 @@ class FakeClient:
         self.fail_connect = False
         self.fail_execute = False
         self._on_state: Callable[[object], None] | None = None
+        self._on_stop: Callable[[bool], Awaitable[None]] | None = None
 
-    async def connect(self, *, login: bool = False) -> None:
+    async def connect(
+        self, on_stop: Callable[[bool], Awaitable[None]] | None = None, *, login: bool = False
+    ) -> None:
         assert login
         if self.fail_connect:
             msg = "refused"
             raise APIConnectionError(msg)
+        self._on_stop = on_stop
         self.connects += 1
+
+    async def drop(self) -> None:
+        """The controller went away, as when it restarts after an update."""
+        assert self._on_stop is not None, "the device must ask to be told when the connection stops"
+        await self._on_stop(False)  # noqa: FBT003 - the library calls it with expected_disconnect
 
     async def list_entities_services(self) -> tuple[list[TextSensorInfo], list[UserService]]:
         return self.entities, self.services
@@ -298,3 +316,31 @@ def test_the_opener_light_and_the_age_of_its_last_status_are_read():
     client.deliver(SensorState(key=16, state=float("nan"), missing_state=True))
     assert run(device.light()) == (False, None)  # the age is not known: never trusted as fresh
     assert client.executed == []
+
+
+def test_a_lost_connection_is_made_again_and_nothing_from_before_is_reported():
+    # 2026-11-06 11:13: the controller restarted after an update, and the voice
+    # kept hearing the light's age from before the restart. Stale readings
+    # must never be reported as current.
+    client = FakeClient("closed")
+    client.entities += [
+        SwitchInfo(name="Armed", key=31),
+        TextSensorInfo(name="Opener light", key=41),
+        SensorInfo(name="Opener status age", key=42),
+    ]
+    device = EsphomeDevice(lambda: client, first_state_wait=0.05)
+
+    async def scenario():
+        assert await device.state() is DoorState.CLOSED
+        client.deliver(SwitchState(key=31, state=True))
+        client.send(41, "on")
+        client.deliver(SensorState(key=42, state=120.0))
+        assert await device.light() == (True, 120.0)
+        client.door = None  # the restarted controller has not reported yet
+        await client.drop()
+        assert await device.state() is DoorState.UNKNOWN
+        assert await device.armed() is None
+        assert await device.light() == (None, None)
+        assert client.connects == 2
+
+    run(scenario())
