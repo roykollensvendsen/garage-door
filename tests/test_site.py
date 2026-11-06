@@ -53,7 +53,7 @@ def test_every_picture_on_the_site_has_a_description():
 
 
 def test_llms_txt_has_a_title_a_summary_and_a_link_per_page():
-    hooks = _script("site_hooks")
+    hooks = _script("site_text")
     pages = [("Build it", "Build guide", "build-guide.md"), ("Build it", "Safety", "safety.md")]
     text = hooks.llms_txt("https://example.org/", pages)
     lines = text.splitlines()
@@ -64,6 +64,18 @@ def test_llms_txt_has_a_title_a_summary_and_a_link_per_page():
 
 
 def test_published_markdown_has_no_front_matter_or_comments():
-    hooks = _script("site_hooks")
+    hooks = _script("site_text")
     page = "---\ntitle: x\n---\n<!-- SPDX-License-Identifier: GPL-3.0-or-later -->\n# Title\n\nText.\n"
     assert hooks.clean(page) == "# Title\n\nText.\n"
+
+
+def test_every_page_in_the_menu_and_every_other_page_gets_a_text_copy(tmp_path):
+    text = _script("site_text")
+    config = ROOT / "mkdocs.yml"
+    text.write(config, tmp_path)
+    assert (tmp_path / "build-guide.md").read_text().startswith("# ")
+    assert (tmp_path / "openers/lm80evf.md").exists()  # outside the menu, still published
+    index = (tmp_path / "llms.txt").read_text()
+    assert "## Build it" in index
+    assert "## More pages" in index
+    assert not list(tmp_path.rglob("photos/*")), "photos are never published"

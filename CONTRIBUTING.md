@@ -31,7 +31,7 @@ sh scripts/firmware-tests.sh
 sh scripts/firmware-coverage.sh
 sh scripts/esphome-config.sh
 uv run python scripts/openers.py --check
-uv run --group docs mkdocs build --strict
+uv run --group docs zensical build --strict && uv run python scripts/site_text.py
 python3 scripts/skill_lint.py check
 python3 scripts/structure.py
 uv run python scripts/ratchet.py check --base origin/main

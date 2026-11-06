@@ -205,9 +205,9 @@ jobs:
       - name: The compatibility pages are current
         run: uv run python scripts/openers.py --check
       - name: The site builds with no warnings
-        env:
-          NO_MKDOCS_2_WARNING: "1"
-        run: uv run --group docs mkdocs build --strict
+        run: uv run --group docs zensical build --strict
+      - name: Every page is published as text too
+        run: uv run python scripts/site_text.py
       - name: The site has llms.txt and Markdown pages
         run: test -s site/llms.txt && test -s site/llms-full.txt && test -s site/build-guide.md
 

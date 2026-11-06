@@ -35,12 +35,13 @@ mutate:
 # Regenerate the compatibility pages and build the site into site/.
 docs:
     uv run python scripts/openers.py
-    uv run --group docs mkdocs build --strict
+    uv run --group docs zensical build --strict
+    uv run python scripts/site_text.py
 
 # Serve the site locally while editing.
 serve:
     uv run python scripts/openers.py
-    uv run --group docs mkdocs serve
+    uv run --group docs zensical serve
 
 # Regenerate the schematic and the cable diagram (needs KiCad 10, Graphviz).
 diagrams:
@@ -79,4 +80,5 @@ ratchet-check base="main":
 check: lint test mutate skills structure
     uv run python scripts/openers.py --check
     python3 scripts/schematic.py --check
-    uv run --group docs mkdocs build --strict
+    uv run --group docs zensical build --strict
+    uv run python scripts/site_text.py
