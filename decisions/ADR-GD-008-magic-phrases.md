@@ -47,6 +47,9 @@ asks the usual question.
   and only in a word of five letters or more. The words must all be there,
   in order. Languages are not translated: each phrase the user says must
   be listed.
+- **One phrase may serve both open and close** (Roy, 2026-11-06). The
+  door's state decides the direction, and a press the wrong way is refused
+  as "already open" or "already closed".
 - **Open and close only.** Status, the light, the manual press, arming and
   manual mode are unchanged.
 - **Every other rule still holds:** the door state known, not already
@@ -64,8 +67,9 @@ asks the usual question.
   A model that repeats the phrase from earlier in the conversation, or
   picks it up from something it reads, can press. The instructions forbid
   it, but the server cannot check it.
-- **Worse:** the phrase is not a password. Speech recognition and the
-  voice model both see it as text. It is a deliberate code word.
+- The phrases are a convenience setting, not a secret (Roy, 2026-11-06).
+  Speech recognition and the voice model both see them as text. They are
+  kept outside git by default because they belong to the user.
 - **Worse:** a short or everyday phrase can press by accident, and Roy
   chose not to limit that.
 - Closing by phrase relies on the opener's force reversal alone, as

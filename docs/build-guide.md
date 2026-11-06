@@ -363,7 +363,8 @@ known, the controller armed, and closing allowed. How it matches:
   list each one you will say.
 
 Choose words you never say otherwise, because there is no length limit.
-The phrase is a code word, not a password: your phone's speech recognition
-and the voice model both see it. The log records that a phrase was used,
+The phrases are a convenience setting, not a secret: your phone's speech
+recognition and the voice model both see them. They are kept outside git by
+default because they are yours, not the project's. The log records that a phrase was used,
 never which one. Without the file, nothing changes. Background:
 [ADR-GD-008](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-008-magic-phrases.md).

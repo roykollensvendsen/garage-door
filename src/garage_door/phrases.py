@@ -99,9 +99,6 @@ class Phrases:
                         msg = f"[{language}] {key}: a phrase with no words"
                         raise PhraseError(msg)
                     found[Action(key)].append(reduced)
-        if set(found[Action.OPEN]) & set(found[Action.CLOSE]):
-            msg = "the same phrase is listed for both open and close"
-            raise PhraseError(msg)
         return cls({action: tuple(listed) for action, listed in found.items()})
 
     def matches(self, action: Action, said: str | None) -> bool:

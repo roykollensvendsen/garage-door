@@ -107,9 +107,12 @@ def test_a_phrase_without_words_is_refused(phrase):
         Phrases.from_table({"nb": {"open": [phrase]}})
 
 
-def test_the_same_phrase_for_open_and_close_is_refused():
-    with pytest.raises(PhraseError, match="both"):
-        Phrases.from_table({"nb": {"open": ["sesam lukk deg"], "close": ["Sesam, lukk deg!"]}})
+def test_the_same_phrase_may_open_and_close():
+    # Roy, 2026-11-06. The door's state decides the direction: a press the
+    # other way is refused as "already open" or "already closed".
+    phrases = Phrases.from_table({"en": {"open": ["please"], "close": ["please"]}})
+    assert phrases.matches(Action.OPEN, "please open the garage")
+    assert phrases.matches(Action.CLOSE, "close the garage, please")
 
 
 def test_only_open_and_close_can_have_phrases():
