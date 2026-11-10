@@ -9,11 +9,12 @@
     "service.py": 9,
     "settings.py": 10,
     "simulator.py": 7,
-    "switches.py": 5
+    "switches.py": 5,
+    "tools.py": 2
   },
   "coverage": 100.0,
   "cycles": 0,
-  "duplication": 0.53,
+  "duplication": 0.52,
   "firmware_branch_coverage": 97.6,
   "firmware_line_coverage": 99.7,
   "firmware_tests": 96,
@@ -28,7 +29,7 @@
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 4.5,
-  "tests": 308,
+  "test_seconds": 4.6,
+  "tests": 310,
   "type_errors": 0
 }

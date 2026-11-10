@@ -38,6 +38,7 @@ from garage_door.service import Confirmed, GarageService, Question, Refused
 from garage_door.settings import settings_from, state_folder
 from garage_door.simulator import Start, simulated_controller
 from garage_door.switches import Switch, Switched, Switches, SwitchQuestion
+from garage_door.tools import tool as _tool
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -87,23 +88,27 @@ def build_server(
         instructions=(SIMULATED + INSTRUCTIONS) if simulated else INSTRUCTIONS,
     )
 
-    @server.tool(
+    @_tool(
+        server,
+        simulated=simulated,
         description=(
             "Door status; no press.\n"
             "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
             "the controller is armed (false: test mode, a press switches nothing; null: not known)."
-        )
+        ),
     )
     async def garage_status() -> dict[str, Any]:
         report = await manual.report()
         return {"state": report["state"], "armed": report["armed"], "controller": report}
 
-    @server.tool(
+    @_tool(
+        server,
+        simulated=simulated,
         description=(
             "Ask to open or close.\n"
             "Ask to open or close the garage door. Returns a question ('say') to read to Roy with "
             "a token, or a refusal ('say') to read to him. " + PHRASE_RULE
-        )
+        ),
     )
     async def garage_request(action: Literal["open", "close"], phrase: str | None = None) -> dict[str, Any]:
         answer = await service.request(Action(action), requester="mcp", phrase=phrase)
@@ -124,13 +129,15 @@ def build_server(
             "controller": await manual.report(),
         }
 
-    @server.tool(
+    @_tool(
+        server,
+        simulated=simulated,
         description=(
             "Manual press at the door.\n"
             "Manual mode only, while Roy stands at the door and watches it: ask to press the "
             "button once, with no direction. Presses nothing. Returns a question ('say') with a "
             "token, or a refusal ('say'), e.g. when the controller is not armed. Read it aloud."
-        )
+        ),
     )
     async def garage_press_button() -> dict[str, Any]:
         answer = await manual.request(requester="mcp")
@@ -143,14 +150,16 @@ def build_server(
             }
         return {"outcome": "refused", "say": answer.reason, "controller": await manual.report()}
 
-    @server.tool(
+    @_tool(
+        server,
+        simulated=simulated,
         description=(
             "Press after Roy's yes.\n"
             "Press the garage door button. Call only with the token from the most recent "
             "garage_request (or garage_press_button, garage_switch), and only after Roy has given a "
             "spoken yes to its question. A wrong or old token is refused and cancels the question. "
             "Read the result ('say') aloud."
-        )
+        ),
     )
     async def garage_confirm(token: str) -> dict[str, Any]:
         other = await _confirm_switch_or_manual(token, switches, manual)
@@ -166,19 +175,23 @@ def build_server(
             "controller": await manual.report(),
         }
 
-    _add_switching(server, switches, manual)
+    _add_switching(server, switches, manual, simulated=simulated)
     return server
 
 
-def _add_switching(server: MCPServer[Any], switches: Switches | None, manual: ManualPress) -> None:
-    @server.tool(
+def _add_switching(
+    server: MCPServer[Any], switches: Switches | None, manual: ManualPress, *, simulated: bool
+) -> None:
+    @_tool(
+        server,
+        simulated=simulated,
         description=(
             "Arm, disarm or manual.\n"
             "Arm or disarm the controller, or switch manual mode on or off (decisions/ADR-GD-006). "
             "'arm' and 'manual_on' switch nothing yet: they return a question ('say') with a token, "
             "to confirm with garage_confirm only after Roy's spoken yes. 'disarm' and 'manual_off' "
             "switch at once. Read the answer ('say') aloud."
-        )
+        ),
     )
     async def garage_switch(change: Literal["arm", "disarm", "manual_on", "manual_off"]) -> dict[str, Any]:
         if switches is None:
