@@ -405,3 +405,11 @@ def test_a_switch_the_controller_never_received_is_read_out_as_refused(tmp_path)
     answer = call(server, "garage_switch", {"change": "disarm"})
     assert answer["outcome"] == "refused"
     assert answer["say"]
+
+
+def test_only_the_status_tool_is_marked_read_only(tmp_path):
+    # claude-voice docs/plugin-standard.md, rule 9: a tool that changes nothing says so.
+    server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
+    tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
+    read_only = {name for name, tool in tools.items() if tool.annotations and tool.annotations.read_only_hint}
+    assert read_only == {"garage_status"}
