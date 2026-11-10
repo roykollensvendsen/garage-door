@@ -15,7 +15,7 @@ import pytest
 
 from garage_door.door import Action, DeviceUnavailableError, DoorState
 from garage_door.phrases import Phrases
-from garage_door.service import Confirmed, GarageService, Question, Refused
+from garage_door.service import POLL_SECONDS, REPLY_SECONDS, Confirmed, GarageService, Question, Refused
 
 if TYPE_CHECKING:
     import pathlib
@@ -139,7 +139,10 @@ def test_a_close_that_does_not_finish_warns_that_the_door_may_have_reversed(tmp_
     assert log_lines(tmp_path)[-1]["after"] == "open"
 
 
-def test_a_press_that_does_not_reach_the_end_says_so(tmp_path):
+def test_a_press_answers_in_the_voices_time_while_the_door_is_still_moving(tmp_path):
+    # The voice gives a tool about 15 seconds (claude-voice docs/plugin-standard.md,
+    # rule 3); a full travel takes longer. Roy chose (2026-11-10) to hear in time
+    # that the door is on its way and not yet confirmed, rather than nothing.
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
     service, clock = make(device, tmp_path)
     question = run(service.request(Action.OPEN, requester="voice"))
@@ -149,8 +152,37 @@ def test_a_press_that_does_not_reach_the_end_says_so(tmp_path):
     assert isinstance(outcome, Confirmed)
     assert outcome.reached is False
     assert outcome.after is DoorState.MOVING
-    assert "did not reach open" in outcome.message
-    assert clock.now - started >= 30  # it waited the full travel time
+    assert outcome.message == (
+        "Pressed. The garage door is moving, and not yet confirmed open. "
+        "Ask me for its status in half a minute."
+    )
+    assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
+    assert device.presses == 1
+
+
+def test_a_close_still_moving_says_it_is_not_yet_confirmed_closed(tmp_path):
+    # It may still reverse after the answer: say plainly that closed is not
+    # known yet, and how to find out. Never pressed again on its own.
+    device = FakeDevice(DoorState.OPEN, after_press=DoorState.MOVING)
+    service, clock = make(device, tmp_path)
+    question = run(service.request(Action.CLOSE, requester="voice"))
+    assert isinstance(question, Question)
+    started = clock.now
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert outcome.reached is False
+    assert outcome.message == (
+        "Pressed. The garage door is moving, and NOT yet confirmed closed. Ask me for its status "
+        "in half a minute; if it is not closed then, it may have reversed."
+    )
+    assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
+    assert device.presses == 1
+    assert log_lines(tmp_path)[-1]["after"] == "moving"
+
+
+def test_the_wait_for_the_door_fits_in_the_voices_time():
+    # 3 s for the first state, the wait, one more read, 2 s to spare: 15 s.
+    assert REPLY_SECONDS == 9.0
 
 
 def test_a_press_in_test_mode_says_the_relay_did_not_switch(tmp_path):

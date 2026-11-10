@@ -30,8 +30,12 @@ if TYPE_CHECKING:
 
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
-#: Longer than a full open or close; matches the firmware's travel time.
-TRAVEL_SECONDS = 30.0
+#: How long a press waits for the door before it answers. Shorter than a full
+#: open or close, so the answer reaches the voice in time: about 15 s for a
+#: tool (claude-voice docs/plugin-standard.md, rule 3) = 3 s for the first
+#: state + this + one more read + 2 s to spare. Roy chose (2026-11-10) to hear
+#: in time that the door is not yet confirmed, rather than to hear nothing.
+REPLY_SECONDS = 9.0
 #: How often the door is read while waiting for it to arrive.
 POLL_SECONDS = 1.0
 
@@ -208,30 +212,12 @@ class GarageService:
         )
         # A press is never repeated here: if the door stopped or reversed, a
         # person has to look before anything moves it again.
-        if armed is False:
-            message = (
-                "Test mode: the controller is not armed, so the relay did not switch "
-                f"and the door did not move. It is {after}."
-            )
-        elif reached:
-            message = f"Pressed. The garage door was {before} and is now {after}."
-        elif pending.action is Action.CLOSE:
-            message = (
-                "The garage door did NOT close, possibly reversed. "
-                f"Something may be in the way: it is {after}. Please check it before trying again."
-            )
-        else:
-            message = (
-                f"Pressed, but the garage door did not reach {pending.action.end_state}: "
-                f"it is {after}. Please check it."
-            )
-        if armed is None and not reached:
-            message += " I could not tell whether the controller is armed."
+        message = _press_answer(pending.action, before, after, armed=armed)
         return Confirmed(before, after, reached, armed, message)
 
     async def _wait_for(self, wanted: DoorState) -> DoorState:
-        """Read the door until it is `wanted` or the travel time has passed."""
-        deadline = self._clock() + TRAVEL_SECONDS
+        """Read the door until it is `wanted` or the answer is due."""
+        deadline = self._clock() + REPLY_SECONDS
         state = await self.status()
         while state is not wanted and self._clock() < deadline:
             await self._sleep(POLL_SECONDS)
@@ -249,3 +235,37 @@ class GarageService:
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         with self._log_path.open("a", encoding="utf-8") as log:
             log.write(json.dumps(entry) + "\n")
+
+
+def _press_answer(action: Action, before: DoorState, after: DoorState, *, armed: bool | None) -> str:
+    """What to say after a press: arrived, still moving and not yet confirmed, or stopped short."""
+    reached = after is action.end_state
+    if armed is False:
+        message = (
+            "Test mode: the controller is not armed, so the relay did not switch "
+            f"and the door did not move. It is {after}."
+        )
+    elif reached:
+        message = f"Pressed. The garage door was {before} and is now {after}."
+    elif after is DoorState.MOVING and action is Action.CLOSE:
+        message = (
+            "Pressed. The garage door is moving, and NOT yet confirmed closed. Ask me for its status "
+            "in half a minute; if it is not closed then, it may have reversed."
+        )
+    elif after is DoorState.MOVING:
+        message = (
+            f"Pressed. The garage door is moving, and not yet confirmed {action.end_state}. "
+            "Ask me for its status in half a minute."
+        )
+    elif action is Action.CLOSE:
+        message = (
+            "The garage door did NOT close, possibly reversed. "
+            f"Something may be in the way: it is {after}. Please check it before trying again."
+        )
+    else:
+        message = (
+            f"Pressed, but the garage door did not reach {action.end_state}: it is {after}. Please check it."
+        )
+    if armed is None and not reached:
+        message += " I could not tell whether the controller is armed."
+    return message

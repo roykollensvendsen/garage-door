@@ -35,16 +35,16 @@ OVER = pytest.mark.xfail(strict=True, reason="known to run past the voice's limi
 FIRST_STATE = inspect.signature(EsphomeDevice).parameters["first_state_wait"].default
 #: A controller that is off the network: nothing in this code bounds the connect.
 UNREACHABLE = aioesphomeapi.connection.TCP_CONNECT_TIMEOUT
-#: The door travelling, read every POLL_SECONDS until it arrives or the time is up.
-TRAVEL = service.TRAVEL_SECONDS + service.POLL_SECONDS
+#: After a press, the door read every POLL_SECONDS until it arrives or the answer is due.
+TRAVEL = service.REPLY_SECONDS + service.POLL_SECONDS
 
 LONGEST = {
     "status, a controller that answers": FIRST_STATE,
     "request a question, a controller that answers": FIRST_STATE,
     "switch, a controller that answers": FIRST_STATE,
     "status, a controller off the network": pytest.param(UNREACHABLE + FIRST_STATE, marks=OVER),
-    "confirm a press, the door never arriving": pytest.param(FIRST_STATE + TRAVEL, marks=OVER),
-    "a magic phrase, the door never arriving": pytest.param(FIRST_STATE + TRAVEL, marks=OVER),
+    "confirm a press, the door never arriving": FIRST_STATE + TRAVEL,
+    "a magic phrase, the door never arriving": FIRST_STATE + TRAVEL,
 }
 
 
