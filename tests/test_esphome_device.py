@@ -367,3 +367,75 @@ def test_a_lost_connection_is_made_again_and_nothing_from_before_is_reported():
         assert client.connects == 2
 
     run(scenario())
+
+
+def every_reading_client() -> FakeClient:
+    client = FakeClient("closed")
+    client.entities += [
+        SwitchInfo(name="Armed", key=14),
+        SwitchInfo(name="Manual mode", key=15),
+        TextSensorInfo(name="Opener light", key=16),
+        SensorInfo(name="Opener status age", key=17),
+    ]
+    return client
+
+
+def readings_of(device: EsphomeDevice) -> tuple[object, ...]:
+    return (
+        run(device.state()),
+        run(device.armed()),
+        run(device.manual()),
+        run(device.light()),
+    )
+
+
+@pytest.mark.parametrize(
+    ("delivered", "expected"),
+    [
+        # Each reading lands only where its own entity and type say it belongs.
+        (TextSensorState(key=11, state="open"), (DoorState.OPEN, None, None, (None, None))),
+        (TextSensorState(key=12, state="open"), (DoorState.CLOSED, None, None, (None, None))),
+        (SwitchState(key=14, state=True), (DoorState.CLOSED, True, None, (None, None))),
+        (SwitchState(key=15, state=True), (DoorState.CLOSED, None, True, (None, None))),
+        (SwitchState(key=11, state=True), (DoorState.CLOSED, None, None, (None, None))),
+        (TextSensorState(key=14, state="on"), (DoorState.CLOSED, None, None, (None, None))),
+        (TextSensorState(key=16, state="on"), (DoorState.CLOSED, None, None, (True, None))),
+        (TextSensorState(key=16, state="off"), (DoorState.CLOSED, None, None, (False, None))),
+        (TextSensorState(key=16, state="dim"), (DoorState.CLOSED, None, None, (None, None))),
+        (SwitchState(key=16, state=True), (DoorState.CLOSED, None, None, (None, None))),
+        (SensorState(key=17, state=42.0), (DoorState.CLOSED, None, None, (None, 42.0))),
+        (SensorState(key=17, state=float("nan")), (DoorState.CLOSED, None, None, (None, None))),
+        (SensorState(key=17, state=42.0, missing_state=True), (DoorState.CLOSED, None, None, (None, None))),
+        (TextSensorState(key=17, state="42"), (DoorState.CLOSED, None, None, (None, None))),
+        (SensorState(key=99, state=1.0), (DoorState.CLOSED, None, None, (None, None))),
+    ],
+)
+def test_each_reading_is_kept_only_for_its_own_entity_and_type(delivered, expected):
+    client = every_reading_client()
+    device = EsphomeDevice(lambda: client)
+    run(device.state())
+    client.deliver(delivered)
+    assert readings_of(device) == expected
+
+
+def test_readings_list_every_named_entity_and_nothing_unnamed():
+    client = every_reading_client()
+    device = EsphomeDevice(lambda: client)
+    run(device.state())
+    client.deliver(SwitchState(key=14, state=True))
+    client.deliver(SensorState(key=17, state=12.4))
+    client.deliver(SensorState(key=99, state=1.0))
+    assert run(device.readings(wait=0)) == {"Armed": "on", "Door state": "closed", "Opener status age": "12"}
+
+
+def test_connecting_reads_the_entities_and_actions_by_name():
+    client = every_reading_client()
+    client.services.append(UserService(name="manual_press", key=22))
+    device = EsphomeDevice(lambda: client)
+    run(device.press())
+    run(device.manual_press())
+    run(device.set_armed(on=True))
+    run(device.set_manual(on=False))
+    assert client.executed == ["press", "manual_press"]
+    assert client.switched == [(14, True), (15, False)]
+    assert client.connects == 1
