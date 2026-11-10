@@ -82,3 +82,5 @@ check: lint test mutate skills structure
     python3 scripts/schematic.py --check
     uv run --group docs zensical build --strict
     uv run python scripts/site_text.py
+    # mutate above has run the mutation suite, so the ratchet keeps its figures
+    uv run python scripts/ratchet.py check --base main --skip-mutation
