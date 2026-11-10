@@ -89,6 +89,7 @@ def build_server(
 
     @server.tool(
         description=(
+            "Report the door; presses nothing.\n"
             "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
             "the controller is armed (false: test mode, a press switches nothing; null: not known)."
         )
@@ -99,6 +100,7 @@ def build_server(
 
     @server.tool(
         description=(
+            "Open or close: asks Roy first.\n"
             "Ask to open or close the garage door. Returns a question ('say') to read to Roy with "
             "a token, or a refusal ('say') to read to him. " + PHRASE_RULE
         )
@@ -124,6 +126,7 @@ def build_server(
 
     @server.tool(
         description=(
+            "Manual press, Roy at the door.\n"
             "Manual mode only, while Roy stands at the door and watches it: ask to press the "
             "button once, with no direction. Presses nothing. Returns a question ('say') with a "
             "token, or a refusal ('say'), e.g. when the controller is not armed. Read it aloud."
@@ -142,6 +145,7 @@ def build_server(
 
     @server.tool(
         description=(
+            "Press after Roy's spoken yes.\n"
             "Press the garage door button. Call only with the token from the most recent "
             "garage_request (or garage_press_button, garage_switch), and only after Roy has given a "
             "spoken yes to its question. A wrong or old token is refused and cancels the question. "
@@ -169,6 +173,7 @@ def build_server(
 def _add_switching(server: MCPServer[Any], switches: Switches | None, manual: ManualPress) -> None:
     @server.tool(
         description=(
+            "Arm, disarm or manual mode.\n"
             "Arm or disarm the controller, or switch manual mode on or off (decisions/ADR-GD-006). "
             "'arm' and 'manual_on' switch nothing yet: they return a question ('say') with a token, "
             "to confirm with garage_confirm only after Roy's spoken yes. 'disarm' and 'manual_off' "

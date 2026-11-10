@@ -374,3 +374,21 @@ def test_the_phrase_file_comes_from_the_users_config_folder_or_the_setting(tmp_p
     )
     chosen = tmp_path / "mine.toml"
     assert settings_from({**base, "GARAGE_DOOR_PHRASES": str(chosen)}).phrases_path == chosen
+
+
+SHORT_OPENING = 36  # the voice app shows only ~26 characters of an unloaded tool; keep well under 40
+
+
+def test_each_tool_opens_with_a_short_whole_sentence_of_its_own(tmp_path):
+    # claude-voice, 2026-11-10: the app cuts each unloaded tool's line, so the
+    # first sentence must say on its own what sets the tool apart.
+    server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
+    tools = asyncio.run(server.list_tools())
+    openings = {tool.name: tool.description.split("\n", 1) for tool in tools}
+    for name, (first, *rest) in openings.items():
+        assert first.endswith("."), f"{name}: the first line is not a whole sentence"
+        assert first.count(". ") == 0, f"{name}: the first line holds more than one sentence"
+        assert len(first) <= SHORT_OPENING, f"{name}: {first!r} is too long"
+        assert rest, f"{name}: the details belong on the next lines"
+    first_words = [first.split()[0].strip(",:;").casefold() for first, *_ in openings.values()]
+    assert len(set(first_words)) == len(first_words), "two tools open with the same word"
