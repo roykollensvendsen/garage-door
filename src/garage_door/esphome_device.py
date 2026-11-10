@@ -157,26 +157,38 @@ class EsphomeDevice:
     async def _ensure_connected(self) -> None:
         if self._connected:
             return
+        entities, services = await self._connect()
+        self._learn(entities, services)
+        self._forget()
+        self._client.subscribe_states(self._on_state)
+        self._connected = True
+        await self._wait_for_first_state()
+
+    async def _connect(self) -> tuple[list[Any], list[Any]]:
+        """Connect and list what the controller offers, or give up after `connect_wait` seconds."""
         try:
             async with asyncio.timeout(self._connect_wait):
                 await self._client.connect(on_stop=self._stopped, login=True)
-                entities, services = await self._client.list_entities_services()
+                return await self._client.list_entities_services()
         except FAILURES as error:
             await self._give_up()
             msg = f"the garage door controller is not reachable: {error}"
             raise DeviceUnavailableError(msg) from error
+
+    def _learn(self, entities: list[Any], services: list[Any]) -> None:
+        """Find, by name, the entities and actions this module reads and uses."""
         self._names = {e.key: e.name for e in entities}
-        self._state_key = next((e.key for e in entities if e.name == STATE_SENSOR), None)
-        self._armed_key = next((e.key for e in entities if e.name == ARMED_SWITCH), None)
-        self._press = next((s for s in services if s.name == PRESS_ACTION), None)
-        self._manual_key = next((e.key for e in entities if e.name == MANUAL_SWITCH), None)
-        self._manual_press = next((s for s in services if s.name == MANUAL_PRESS_ACTION), None)
-        self._forget()
-        self._client.subscribe_states(self._on_state)
-        self._connected = True
-        # The controller sends its states a moment after connecting. Wait a
-        # bounded time for the door's; without it the read stays UNKNOWN and
-        # the service refuses, as before.
+        self._state_key = _key_named(entities, STATE_SENSOR)
+        self._armed_key = _key_named(entities, ARMED_SWITCH)
+        self._manual_key = _key_named(entities, MANUAL_SWITCH)
+        self._press = _first_named(services, PRESS_ACTION)
+        self._manual_press = _first_named(services, MANUAL_PRESS_ACTION)
+
+    async def _wait_for_first_state(self) -> None:
+        """Wait a bounded time for the door's first state, which comes a moment after connecting.
+
+        Without it the read stays UNKNOWN and the service refuses, as before.
+        """
         waited, step = 0.0, 0.02
         while self._door is None and waited < self._first_state_wait:
             await asyncio.sleep(step)
@@ -208,18 +220,40 @@ class EsphomeDevice:
         key = getattr(state, "key", None)
         if key in self._names:
             self._seen[self._names[key]] = _shown(state)
-        if isinstance(state, TextSensorState) and state.key == self._state_key:
+        if isinstance(state, TextSensorState):
+            self._on_text(state)
+        elif isinstance(state, SwitchState):
+            self._on_switch(state)
+        elif isinstance(state, SensorState):
+            self._on_sensor(state)
+
+    def _on_text(self, state: TextSensorState) -> None:
+        if state.key == self._state_key:
             self._door = state.state
-        if isinstance(state, SwitchState) and state.key == self._armed_key:
-            self._armed = state.state
-        if isinstance(state, SwitchState) and state.key == self._manual_key:
-            self._manual = state.state
-        name = self._names.get(key) if isinstance(key, int) else None
-        if name == LIGHT_SENSOR and isinstance(state, TextSensorState):
+        if self._names.get(state.key) == LIGHT_SENSOR:
             self._light = {"on": True, "off": False}.get(state.state)
-        if name == STATUS_AGE_SENSOR and isinstance(state, SensorState):
+
+    def _on_switch(self, state: SwitchState) -> None:
+        if state.key == self._armed_key:
+            self._armed = state.state
+        if state.key == self._manual_key:
+            self._manual = state.state
+
+    def _on_sensor(self, state: SensorState) -> None:
+        if self._names.get(state.key) == STATUS_AGE_SENSOR:
             age = state.state
             self._status_age = None if state.missing_state or math.isnan(age) else age
+
+
+def _first_named(items: list[Any], name: str) -> Any:  # noqa: ANN401 - an entity or an action, as the library gives it
+    """The first entity or action called `name`; None if there is none."""
+    return next((item for item in items if item.name == name), None)
+
+
+def _key_named(entities: list[Any], name: str) -> int | None:
+    """The key of the first entity called `name`; None if there is none."""
+    entity = _first_named(entities, name)
+    return entity.key if entity is not None else None
 
 
 def _shown(state: object) -> str:
