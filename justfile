@@ -82,3 +82,5 @@ check: lint test mutate skills structure
     python3 scripts/schematic.py --check
     uv run --group docs zensical build --strict
     uv run python scripts/site_text.py
+    # mutate above has already run, so the ratchet skips it
+    uv run python scripts/ratchet.py check --base main --skip-mutation
