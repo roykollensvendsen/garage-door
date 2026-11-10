@@ -376,7 +376,7 @@ def test_the_phrase_file_comes_from_the_users_config_folder_or_the_setting(tmp_p
     assert settings_from({**base, "GARAGE_DOOR_PHRASES": str(chosen)}).phrases_path == chosen
 
 
-SHORT_OPENING = 36  # the voice app shows only ~26 characters of an unloaded tool; keep well under 40
+SHORT_OPENING = 26  # the voice app shows only about 26 characters of an unloaded tool (claude-voice)
 
 
 def test_each_tool_opens_with_a_short_whole_sentence_of_its_own(tmp_path):
