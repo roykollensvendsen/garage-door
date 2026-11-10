@@ -28,7 +28,7 @@
     "seconds": 30,
     "tolerance": 0.5
   },
-  "test_seconds": 4.5,
-  "tests": 308,
+  "test_seconds": 6.6,
+  "tests": 311,
   "type_errors": 0
 }
