@@ -33,7 +33,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
 from garage_door.door import Action
-from garage_door.manual import ManualPress, ManualPressed, ManualQuestion
+from garage_door.manual import ManualPress, ManualPressed, ManualQuestion, status_sentence
 from garage_door.phrases import PhraseError, load_phrases
 from garage_door.service import Confirmed, GarageService, Question, Refused
 from garage_door.settings import settings_from, state_folder
@@ -96,12 +96,19 @@ def build_server(
         description=(
             "Door status; no press.\n"
             "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
-            "the controller is armed (false: test mode, a press switches nothing; null: not known)."
+            "the controller is armed (false: test mode, a press switches nothing; null: not known). "
+            "'say' gives the opener's light as last reported; light_reported_s_ago is the age of that "
+            "report, not how long the light has been on or off."
         ),
     )
     async def garage_status() -> dict[str, Any]:
         report = await manual.report()
-        return {"state": report["state"], "armed": report["armed"], "controller": report}
+        return {
+            "state": report["state"],
+            "armed": report["armed"],
+            "say": status_sentence(report),
+            "controller": report,
+        }
 
     @_tool(
         server,

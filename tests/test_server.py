@@ -232,9 +232,10 @@ def test_every_answer_says_what_the_controller_reports(tmp_path):
         "armed": True,
         "manual": False,
         "light": None,
-        "light_age_s": None,
+        "light_reported_s_ago": None,
     }
     assert call(server, "garage_status", {})["controller"] == report
+    assert call(server, "garage_status", {})["say"] == "The garage door is closed."
     question = call(server, "garage_request", {"action": "open"})
     assert question["controller"] == report
     assert call(server, "garage_confirm", {"token": question["token"]})["controller"]["state"] == "open"

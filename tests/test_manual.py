@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from garage_door.door import DeviceUnavailableError, DoorState
-from garage_door.manual import QUESTION, ManualPress, ManualQuestion, controller_report
+from garage_door.manual import QUESTION, ManualPress, ManualQuestion, controller_report, status_sentence
 from garage_door.service import Refused
 
 if TYPE_CHECKING:
@@ -116,7 +116,7 @@ def test_the_question_carries_what_the_controller_reports(tmp_path):
         "armed": True,
         "manual": True,
         "light": None,
-        "light_age_s": None,
+        "light_reported_s_ago": None,
     }
 
 
@@ -228,7 +228,7 @@ def test_the_controller_report_says_whether_the_state_can_be_trusted():
         "armed": True,
         "manual": False,
         "light": None,
-        "light_age_s": None,
+        "light_reported_s_ago": None,
     }
 
 
@@ -241,7 +241,7 @@ def test_the_controller_report_says_unknown_when_the_controller_does_not_answer(
         "armed": None,
         "manual": None,
         "light": None,
-        "light_age_s": None,
+        "light_reported_s_ago": None,
     }
 
 
@@ -291,7 +291,28 @@ def test_the_controller_report_says_whether_the_opener_light_is_on_and_how_old_t
     light, age, said, said_age
 ):
     report = run(controller_report(LitDevice(light, age)))
-    assert (report["light"], report["light_age_s"]) == (said, said_age)
+    assert (report["light"], report["light_reported_s_ago"]) == (said, said_age)
+
+
+@pytest.mark.parametrize(
+    ("light", "ago", "said"),
+    [
+        (
+            False,
+            128,
+            "The garage door is closed; the light was off at the opener's last report, 2 minutes ago.",
+        ),
+        (True, 61, "The garage door is closed; the light was on at the opener's last report, 1 minute ago."),
+        (False, 20, "The garage door is closed; the light was off at the opener's last report, just now."),
+        (None, 400, "The garage door is closed."),
+    ],
+)
+def test_the_status_sentence_says_when_the_light_was_last_reported_not_how_long_it_has_been(light, ago, said):
+    # Roy, 2026-11-10: "the light has been off for about three minutes" was
+    # wrong; the age is of the opener's last report, which it repeats about
+    # every 5 minutes, not of the light's last change.
+    report = {"state": "closed", "light": light, "light_reported_s_ago": ago}
+    assert status_sentence(report) == said
 
 
 def test_the_manual_question_is_plainly_a_question_when_spoken():
