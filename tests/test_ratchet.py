@@ -147,3 +147,11 @@ def test_a_measure_left_out_on_either_side_is_not_compared(ratchet):
     # A quick local check skips the slow mutation run on both sides.
     now = {k: v for k, v in LEVELS.items() if k != "mutation"}
     assert ratchet.compare(LEVELS, now, set(), BUDGET) == []
+
+
+def test_the_local_check_runs_the_ratchet_too():
+    # It did not, and quality slipped unseen from 2026-11-04 to 2026-11-10
+    # (claude-voice docs/plugin-standard.md, rule 14).
+    justfile = (ROOT / "justfile").read_text()
+    recipe = justfile.split("\ncheck:", 1)[1].split("\n\n", 1)[0]
+    assert "scripts/ratchet.py check" in recipe
