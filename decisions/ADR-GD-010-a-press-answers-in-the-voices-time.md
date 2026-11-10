@@ -26,7 +26,7 @@ closed. `tests/test_voice_time_limit.py` showed it, marked as a known defect.
 
 ## Decision
 
-A press waits for the door at most `REPLY_SECONDS` (9 s), so the answer
+A press waits for the door at most `REPLY_SECONDS` (9 s) from the yes, so the answer
 fits in 15 s: 3 s for the first state, the wait, one more read, 2 s to spare.
 If the door has arrived, the answer says so. If it is still moving, the
 answer says it is **not yet confirmed** open or closed, and to ask for its

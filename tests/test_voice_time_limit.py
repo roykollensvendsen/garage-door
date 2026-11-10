@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import inspect
 
-import aioesphomeapi.connection
 import pytest
 
 from garage_door import service
@@ -33,18 +32,19 @@ OVER = pytest.mark.xfail(strict=True, reason="known to run past the voice's limi
 
 #: The first status after connecting (EsphomeDevice's default).
 FIRST_STATE = inspect.signature(EsphomeDevice).parameters["first_state_wait"].default
-#: A controller that is off the network: nothing in this code bounds the connect.
-UNREACHABLE = aioesphomeapi.connection.TCP_CONNECT_TIMEOUT
-#: After a press, the door read every POLL_SECONDS until it arrives or the answer is due.
-TRAVEL = service.REPLY_SECONDS + service.POLL_SECONDS
+#: Connecting, or reconnecting after the connection dropped: given up on after this.
+CONNECT = inspect.signature(EsphomeDevice).parameters["connect_wait"].default
 
 LONGEST = {
-    "status, a controller that answers": FIRST_STATE,
-    "request a question, a controller that answers": FIRST_STATE,
-    "switch, a controller that answers": FIRST_STATE,
-    "status, a controller off the network": pytest.param(UNREACHABLE + FIRST_STATE, marks=OVER),
-    "confirm a press, the door never arriving": FIRST_STATE + TRAVEL,
-    "a magic phrase, the door never arriving": FIRST_STATE + TRAVEL,
+    "status, a controller slow to connect": CONNECT + FIRST_STATE,
+    "request a question, a controller slow to connect": CONNECT + FIRST_STATE,
+    "switch, a controller slow to connect": CONNECT + FIRST_STATE,
+    "status, a controller off the network": CONNECT,
+    # The wait for the door counts from the yes, so connecting comes out of it.
+    "confirm a press, the door never arriving": max(CONNECT + FIRST_STATE, service.REPLY_SECONDS)
+    + service.POLL_SECONDS,
+    "a magic phrase, the door never arriving": max(CONNECT + FIRST_STATE, service.REPLY_SECONDS)
+    + service.POLL_SECONDS,
 }
 
 
