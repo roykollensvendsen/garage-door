@@ -180,6 +180,35 @@ def test_a_close_still_moving_says_it_is_not_yet_confirmed_closed(tmp_path):
     assert log_lines(tmp_path)[-1]["after"] == "moving"
 
 
+class SlowToReconnect(FakeDevice):
+    """A controller whose connection dropped: the next read first reconnects, which takes time."""
+
+    def __init__(self, clock: FakeClock, *args: DoorState) -> None:
+        super().__init__(*args)
+        self.clock = clock
+        self.reconnect = 0.0
+
+    async def state(self) -> DoorState:
+        self.clock.now += self.reconnect
+        self.reconnect = 0.0
+        return await super().state()
+
+
+def test_the_wait_for_the_door_counts_from_the_yes(tmp_path):
+    # Reconnecting before the press already used part of the voice's time.
+    clock = FakeClock()
+    device = SlowToReconnect(clock, DoorState.CLOSED, DoorState.MOVING)
+    service = GarageService(device, log_path=tmp_path / "presses.jsonl", clock=clock, sleep=clock.sleep)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    assert isinstance(question, Question)
+    device.reconnect = 8.0
+    started = clock.now
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert device.presses == 1
+    assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
+
+
 def test_the_wait_for_the_door_fits_in_the_voices_time():
     # 3 s for the first state, the wait, one more read, 2 s to spare: 15 s.
     assert REPLY_SECONDS == 9.0

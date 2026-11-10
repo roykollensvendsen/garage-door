@@ -178,6 +178,8 @@ class GarageService:
 
     async def _press(self, pending: _Pending, *, by: str) -> Confirmed | Refused:
         """Press once for `pending`, if the door is still as it was; `by` is "yes" or "phrase"."""
+        # The answer is due REPLY_SECONDS from here, however long reconnecting took.
+        due = self._clock() + REPLY_SECONDS
         try:
             before = await self._device.state()
             # RULE: a press is refused when the door changed since the question
@@ -198,7 +200,7 @@ class GarageService:
                 pending.requester,
             )
         # In test mode the relay stays open, so there is no travel to wait for.
-        after = await self.status() if armed is False else await self._wait_for(pending.action.end_state)
+        after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)
         reached = after is pending.action.end_state
         self._log(
             "pressed",
@@ -215,11 +217,10 @@ class GarageService:
         message = _press_answer(pending.action, before, after, armed=armed)
         return Confirmed(before, after, reached, armed, message)
 
-    async def _wait_for(self, wanted: DoorState) -> DoorState:
-        """Read the door until it is `wanted` or the answer is due."""
-        deadline = self._clock() + REPLY_SECONDS
+    async def _wait_for(self, wanted: DoorState, due: float) -> DoorState:
+        """Read the door until it is `wanted` or the answer is `due`."""
         state = await self.status()
-        while state is not wanted and self._clock() < deadline:
+        while state is not wanted and self._clock() < due:
             await self._sleep(POLL_SECONDS)
             state = await self.status()
         return state
