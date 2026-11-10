@@ -110,3 +110,16 @@ TEST(WireSpeed, ASilentWireNeverChangesTheSpeed) {
   }
   EXPECT_EQ(speed.baud(), 9600U);
 }
+
+TEST(WireSpeed, ABurstEndsOnlyAfterTheQuietGap) {
+  // The firmware polls every 20 ms, so most checks fall inside a burst's gaps.
+  Listener wire;
+  WireSpeed speed;
+  EXPECT_FALSE(burst(wire, speed, 0, kGarbled));
+  feed(wire, 300000, kGarbled);
+  EXPECT_FALSE(speed.check(300000, wire.health()));
+  EXPECT_FALSE(speed.check(300000 + WireSpeed::kQuietMs - 1, wire.health()));
+  EXPECT_EQ(speed.baud(), 9600U);
+  EXPECT_TRUE(speed.check(300000 + WireSpeed::kQuietMs, wire.health()));
+  EXPECT_EQ(speed.baud(), 4000U);
+}

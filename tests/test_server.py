@@ -392,3 +392,16 @@ def test_each_tool_opens_with_a_short_whole_sentence_of_its_own(tmp_path):
         assert rest, f"{name}: the details belong on the next lines"
     first_words = [first.split()[0].strip(",:;").casefold() for first, *_ in openings.values()]
     assert len(set(first_words)) == len(first_words), "two tools open with the same word"
+
+
+def test_a_switch_the_controller_never_received_is_read_out_as_refused(tmp_path):
+    from garage_door.door import DeviceUnavailableError  # noqa: PLC0415
+
+    class Unreachable(FakeDevice):
+        async def set_armed(self, *, on: bool) -> None:  # noqa: ARG002 - fails whatever it is asked
+            raise DeviceUnavailableError
+
+    server = server_for(Unreachable(DoorState.CLOSED, DoorState.OPEN, armed=True), tmp_path)
+    answer = call(server, "garage_switch", {"change": "disarm"})
+    assert answer["outcome"] == "refused"
+    assert answer["say"]

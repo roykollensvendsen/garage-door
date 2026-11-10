@@ -220,6 +220,8 @@ TEST(Names, EveryStateAndResultHasAName) {
   EXPECT_STREQ(garage::to_string(PressResult::RefusedClose), "refused: closing is switched off");
   EXPECT_STREQ(garage::to_string(PressResult::RefusedBusy), "refused: a press is in progress");
   EXPECT_STREQ(garage::to_string(PressResult::RefusedTooSoon), "refused: too soon after the last press");
+  EXPECT_STREQ(garage::to_string(PressResult::RefusedManualOff), "refused: manual mode is off");
+  EXPECT_STREQ(garage::to_string(PressResult::RefusedNotArmed), "refused: not armed");
 }
 
 TEST(Names, AValueOutsideTheListIsNamedAsTheSafeOne) {

@@ -145,3 +145,8 @@ def test_a_broken_file_is_refused_with_its_reason(tmp_path):
     path = write(tmp_path, "[nb\nopen = \n")
     with pytest.raises(PhraseError, match="cannot read"):
         load_phrases(path)
+
+
+def test_a_language_without_open_and_close_lists_is_refused():
+    with pytest.raises(PhraseError, match=r"\[nb\] must hold open"):
+        Phrases.from_table({"nb": ["sesam lukk deg opp"]})
