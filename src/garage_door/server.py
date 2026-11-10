@@ -198,11 +198,14 @@ async def _confirm_switch_or_manual(
     if switches is not None and switches.owns(token):
         return _switch_answer(await switches.confirm(token), await manual.report())
     if manual.owns(token):
-        pressed = await manual.confirm(token)
-        if isinstance(pressed, ManualPressed):
-            return {"outcome": "pressed", "say": pressed.message, "controller": await manual.report()}
-        return {"outcome": "refused", "say": pressed.reason, "controller": await manual.report()}
+        return _manual_answer(await manual.confirm(token), await manual.report())
     return None
+
+
+def _manual_answer(pressed: ManualPressed | Refused, controller: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(pressed, ManualPressed):
+        return {"outcome": "pressed", "say": pressed.message, "controller": controller}
+    return {"outcome": "refused", "say": pressed.reason, "controller": controller}
 
 
 def _pressed(outcome: Confirmed, controller: dict[str, Any]) -> dict[str, Any]:
