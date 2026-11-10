@@ -25,9 +25,11 @@ the person asking may not be able to see the door.
 ## Decision
 
 Closing by voice is allowed. It is offered only when the sensors show the
-door fully open, and only after a spoken yes. After the travel time, if the
-door is not fully closed, the answer is "The garage door did NOT close,
-possibly reversed." Nothing is pressed again on its own. Every press is
+door fully open, and only after a spoken yes. If the door is not fully
+closed, the answer is "The garage door did NOT close, possibly reversed."
+(Since [ADR-GD-010](ADR-GD-010-a-press-answers-in-the-voices-time.md), a door
+still moving when the answer is due is "not yet confirmed closed" instead.)
+Nothing is pressed again on its own. Every press is
 logged with the door's state before and after. Closing can still be
 switched off on the laptop (`GARAGE_DOOR_ALLOW_CLOSE=no`) and on the
 controller (`allow_close: "false"`).

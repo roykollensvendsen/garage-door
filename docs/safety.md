@@ -25,7 +25,7 @@ what is left to you. Page numbers refer to the LM80EVF manual, document
 | Nothing is pressed when the door is moving, part-way, faulty or unknown. | laptop **and** controller | yes, both |
 | A press lasts half a second, never longer, even if the network drops. | controller, from its own clock | yes |
 | Closing only from fully open. | laptop and controller | yes |
-| If a closing door has not closed after the travel time, you hear "did NOT close, possibly reversed", and nothing is pressed again automatically. | laptop | yes, with a simulated obstacle |
+| The answer to a press comes within about 12 s. A closing door still moving then is "NOT yet confirmed closed"; one that stopped short is "did NOT close, possibly reversed". Nothing is pressed again automatically. | laptop | yes, with a simulated obstacle and a slow door |
 | Every request and press is logged with the state before and after. | laptop | yes |
 | Nothing is reachable from the internet. | encrypted, password-protected connection on your home network only | by design |
 
