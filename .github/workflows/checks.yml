@@ -189,6 +189,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The schematic is current
         run: python3 scripts/schematic.py --check
+      - name: KiCad's own symbol libraries, which a root user has no table for
+        run: mkdir -p "$HOME/.config/kicad/10.0" && cp /usr/share/kicad/template/sym-lib-table "$HOME/.config/kicad/10.0/"
       - name: No electrical-rule violations
         run: kicad-cli sch erc --severity-all --exit-code-violations -o /tmp/erc.rpt hardware/garage-door.kicad_sch
       - name: KiCad's netlist matches the plan
