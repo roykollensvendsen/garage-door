@@ -99,8 +99,9 @@ on a real door, and when.
 
 ## Quality
 
-Built 2026-11-04 (step 5 below, done first at Roy's request). The levels
-are in [`quality.json`](https://github.com/roykollensvendsen/garage-door/blob/main/quality.json).
+Built 2026-11-04 (step 5 below, done first at Roy's request). Main keeps
+its measured levels with each run of its checks
+([ADR-GD-009](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-009-main-keeps-the-quality-levels.md)).
 
 | Measure | Level now | Enforced by |
 |---|---|---|
@@ -113,11 +114,11 @@ are in [`quality.json`](https://github.com/roykollensvendsen/garage-door/blob/ma
 | Layers and import cycles | none broken, no cycle | `scripts/structure.py`, layers in `[tool.quality.layers]` |
 | Copied code | 0 % of the product's lines in a repeated 6-line block | the ratchet |
 | Lint and types | 0 ruff errors (every rule), 0 mypy strict errors | `checks`, the ratchet |
-| Quality ratchet | `quality.json`; a worse level fails unless the pull request says `Ratchet-Exception: <measure> - why` | `ratchet` job |
+| Quality ratchet | main's kept levels; a worse level fails unless the pull request says `Ratchet-Exception: <measure> - why` | `ratchet` job, and `just check` |
 | Test time | 2.5 s for the Python suite | budget of 30 s + 50 %, set by hand |
 | Required checks and branch protection | every job in `checks.yml` | not possible while private on the free plan; turn on when public, with no direct pushes |
 | Dependabot | monthly, actions and uv | still to do: one grouped pull request per ecosystem |
-| Status page | none | still to do: a site page with the levels and their trend through `quality.json`'s history |
+| Status page | none | still to do: a site page with the levels and their trend through main's kept runs |
 
 ## Order, once approved
 

@@ -1,34 +1,6 @@
 {
-  "complexity": {
-    "cli.py": 7,
-    "door.py": 2,
-    "esphome_device.py": 16,
-    "manual.py": 6,
-    "phrases.py": 9,
-    "server.py": 4,
-    "service.py": 9,
-    "settings.py": 10,
-    "simulator.py": 7,
-    "switches.py": 5
-  },
-  "coverage": 100.0,
-  "cycles": 0,
-  "duplication": 0.53,
-  "firmware_branch_coverage": 97.6,
-  "firmware_line_coverage": 99.7,
-  "firmware_tests": 96,
-  "layer_violations": 0,
-  "lint_errors": 0,
-  "mutation": {
-    "killed": 39,
-    "total": 39
-  },
-  "oversized_modules": 0,
   "test_budget": {
     "seconds": 30,
     "tolerance": 0.5
-  },
-  "test_seconds": 4.5,
-  "tests": 308,
-  "type_errors": 0
+  }
 }
