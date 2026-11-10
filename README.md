@@ -5,6 +5,11 @@
 [![Site](https://img.shields.io/badge/site-garage--door-teal)](https://roykollensvendsen.github.io/garage-door/)
 [![Try it without hardware](https://img.shields.io/badge/try%20it-simulated%20door-orange)](docs/voice.md#try-it-without-a-garage)
 
+> **Not ready for others yet.** This is Roy's own project for his own garage,
+> shared as it is built. It has been tested on one opener only, the parts and
+> instructions still change, and nothing here is promised to be safe for your
+> door. Read it, learn from it, but do not build it for real use yet.
+
 **Talk to your garage door.** *"Open the garage." "The garage door is closed.
 Open it?" "Yes."* An ESP32 joins a LiftMaster (Chamberlain) opener's
 push-button terminals through an isolated relay, and a local MCP server lets
