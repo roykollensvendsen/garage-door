@@ -21,7 +21,12 @@ A conversation looks like this:
 > **You:** Close the garage.
 > **Claude** *(calls `garage_request`)*: The garage door is open. Do you want me to close it?
 > **You:** Yes.
-> **Claude** *(calls `garage_confirm`)*: The garage door is closed.
+> **Claude** *(calls `garage_confirm`)*: Pressed. The garage door is moving, and NOT yet
+> confirmed closed. Ask me for its status in half a minute; if it is not closed then, it may have reversed.
+
+A full close takes longer than the voice waits for a tool, so the answer
+usually comes while the door is still moving. Ask again for the status to
+hear that it closed. A door that arrives in time is reported as arrived.
 
 If the door meets something on the way down:
 
