@@ -34,7 +34,7 @@ uv run python scripts/openers.py --check
 uv run --group docs zensical build --strict && uv run python scripts/site_text.py
 python3 scripts/skill_lint.py check
 python3 scripts/structure.py
-uv run python scripts/ratchet.py check --base origin/main
+uv run python scripts/ratchet.py check --base origin/main --skip-mutation
 committed --no-merge-commit origin/main..HEAD
 ```
 

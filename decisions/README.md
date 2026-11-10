@@ -37,6 +37,7 @@ decision nobody writes down.
 | [ADR-GD-006](ADR-GD-006-switch-by-voice.md) | Arm, disarm and switch manual mode by voice | Accepted |
 | [ADR-GD-007](ADR-GD-007-light-by-voice.md) | Switch the opener's light by voice, over the data wire | Proposed |
 | [ADR-GD-008](ADR-GD-008-magic-phrases.md) | A magic phrase stands in for the spoken yes | Accepted |
+| [ADR-GD-009](ADR-GD-009-main-keeps-the-quality-levels.md) | Main keeps the quality levels, so a pull request never records them | Accepted |
 
 What is deliberately left undone, and what would make each worth doing, is
 [`deferred.md`](deferred.md). A thing left undone with no trigger is a thing

@@ -68,11 +68,11 @@ skills:
 structure:
     python3 scripts/structure.py
 
-# Measure everything and record the levels in quality.json (the ratchet).
+# Measure every level, as main does after each push (decisions/ADR-GD-009).
 ratchet:
-    uv run python scripts/ratchet.py update
+    uv run python scripts/ratchet.py measure
 
-# Fail if a measure in quality.json got worse than on main.
+# Fail if a level got worse than on main (main is measured in a copy).
 ratchet-check base="main":
     uv run python scripts/ratchet.py check --base {{base}}
 
