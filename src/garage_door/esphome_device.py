@@ -8,6 +8,7 @@ ones firmware/garage-door.yaml defines.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import math
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -47,14 +48,20 @@ class Client(Protocol):
 class EsphomeDevice:
     """A Device backed by the garage controller."""
 
-    def __init__(self, make_client: Callable[[], Client], *, first_state_wait: float = 3.0) -> None:
-        """Connect on first use, and again after any failure.
+    def __init__(
+        self, make_client: Callable[[], Client], *, first_state_wait: float = 3.0, connect_wait: float = 5.0
+    ) -> None:
+        """Connect on first use, and again after any failure, giving up after `connect_wait` seconds.
+
+        Off the network, aioesphomeapi would wait 60 s to connect; the voice
+        gives a tool about 15 (claude-voice docs/plugin-standard.md, rule 3).
 
         The client is made on first use rather than passed in, because
         aioesphomeapi's client can only be created inside a running event loop.
         """
         self._make_client = make_client
         self._first_state_wait = first_state_wait
+        self._connect_wait = connect_wait
         self._client_made: Client | None = None
         self._connected = False
         self._state_key: int | None = None
@@ -151,9 +158,11 @@ class EsphomeDevice:
         if self._connected:
             return
         try:
-            await self._client.connect(on_stop=self._stopped, login=True)
-            entities, services = await self._client.list_entities_services()
+            async with asyncio.timeout(self._connect_wait):
+                await self._client.connect(on_stop=self._stopped, login=True)
+                entities, services = await self._client.list_entities_services()
         except FAILURES as error:
+            await self._give_up()
             msg = f"the garage door controller is not reachable: {error}"
             raise DeviceUnavailableError(msg) from error
         self._names = {e.key: e.name for e in entities}
@@ -172,6 +181,13 @@ class EsphomeDevice:
         while self._door is None and waited < self._first_state_wait:
             await asyncio.sleep(step)
             waited += step
+
+    async def _give_up(self) -> None:
+        """Drop a connection that failed half-way, so the next call starts afresh."""
+        client, self._client_made = self._client_made, None
+        if client is not None:
+            with contextlib.suppress(*FAILURES):
+                await client.disconnect()
 
     def _forget(self) -> None:
         """Drop every reading: after a new connection, nothing from before counts."""

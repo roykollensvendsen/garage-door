@@ -42,6 +42,7 @@ class FakeClient:
         self.executed: list[str] = []
         self.switched: list[tuple[int, bool]] = []
         self.fail_connect = False
+        self.hang = False  # a controller off the network: the connect never answers
         self.fail_execute = False
         self._on_state: Callable[[object], None] | None = None
         self._on_stop: Callable[[bool], Awaitable[None]] | None = None
@@ -50,6 +51,8 @@ class FakeClient:
         self, on_stop: Callable[[bool], Awaitable[None]] | None = None, *, login: bool = False
     ) -> None:
         assert login
+        if self.hang:
+            await asyncio.Event().wait()
         if self.fail_connect:
             msg = "refused"
             raise APIConnectionError(msg)
@@ -155,6 +158,26 @@ def test_a_press_calls_the_controllers_press_action():
     device = EsphomeDevice(lambda: client)
     run(device.press())
     assert client.executed == ["press"]
+
+
+def test_a_controller_that_never_answers_is_given_up_on_in_the_voices_time():
+    # Off the network, aioesphomeapi waits 60 s to connect; the voice gives a
+    # tool about 15 (claude-voice docs/plugin-standard.md, rule 3). Fail closed,
+    # in time: unreachable, so nothing is pressed.
+    client = FakeClient()
+    client.hang = True
+    device = EsphomeDevice(lambda: client, connect_wait=0.05)
+
+    async def go() -> None:
+        with pytest.raises(DeviceUnavailableError, match="not reachable"):
+            await asyncio.wait_for(device.state(), 1.0)
+        with pytest.raises(DeviceUnavailableError, match="not reachable"):
+            await asyncio.wait_for(device.press(), 1.0)
+
+    run(go())
+    assert client.executed == []
+    client.hang = False
+    assert run(device.state()) is DoorState.CLOSED  # back on the network: tried afresh
 
 
 def test_no_connection_is_reported_as_unavailable():
