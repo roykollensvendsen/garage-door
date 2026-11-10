@@ -30,6 +30,7 @@ import pathlib
 from typing import TYPE_CHECKING, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
 
 from garage_door.door import Action
 from garage_door.manual import ManualPress, ManualPressed, ManualQuestion
@@ -88,6 +89,7 @@ def build_server(
     )
 
     @server.tool(
+        annotations=ToolAnnotations(read_only_hint=True),
         description=(
             "Door status; no press.\n"
             "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
