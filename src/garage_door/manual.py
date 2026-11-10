@@ -16,14 +16,14 @@ import json
 import secrets
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from garage_door.door import DeviceUnavailableError, DoorState
 from garage_door.service import KNOWN, TOKEN_SECONDS, Refused
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
 #: What the controller says, attached to every answer so the voice session can say it first.
 Report = dict[str, str | bool | int | None]
@@ -91,8 +91,21 @@ async def controller_report(device: ManualDevice) -> Report:
         "armed": armed,
         "manual": manual,
         "light": light if fresh else None,
-        "light_age_s": round(age) if age is not None else None,
+        # Seconds since the opener's last status, which it sends at every change
+        # and repeats about every 5 minutes: not how long the light has been so.
+        "light_reported_s_ago": round(age) if age is not None else None,
     }
+
+
+def status_sentence(report: Mapping[str, Any]) -> str:
+    """The status in one sentence; the light as last reported, never as "off for so long"."""
+    said = f"The garage door is {report['state']}."
+    light, ago = report.get("light"), report.get("light_reported_s_ago")
+    if light is None or ago is None:
+        return said
+    minutes = round(ago / 60)
+    when = "just now" if minutes == 0 else f"{minutes} minute{'' if minutes == 1 else 's'} ago"
+    return f"{said[:-1]}; the light was {'on' if light else 'off'} at the opener's last report, {when}."
 
 
 class ManualPress:
