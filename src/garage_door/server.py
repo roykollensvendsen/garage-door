@@ -94,7 +94,7 @@ def build_server(
             "Door status; no press.\n"
             "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
             "the controller is armed (false: test mode, a press switches nothing; null: not known)."
-        )
+        ),
     )
     async def garage_status() -> dict[str, Any]:
         report = await manual.report()
