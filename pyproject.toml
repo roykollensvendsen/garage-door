@@ -110,6 +110,7 @@ switches = 3        # arming and manual mode by voice (ADR-GD-006), the same way
 esphome_device = 3  # drivers behind the Device interface: the real controller
 simulator = 3       #   and the simulated one
 settings = 3         # the MCP server's settings, read from the environment and files
+tools = 3           # how a tool is added, and the simulated door's mark on every answer
 server = 4          # adapters: the MCP server and the command line
 cli = 4
 # Layer 0 is the opener profiles (hardware/openers/*.yaml), data only so far.
