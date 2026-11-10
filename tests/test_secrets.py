@@ -41,3 +41,23 @@ def test_the_scan_catches_a_key_and_a_local_secret_value(tmp_path, monkeypatch):
         assert scan.findings([leak]) == ["work/leak-test.txt: holds a 32-byte base64 key"]
     finally:
         leak.unlink()
+
+
+def test_ci_scans_every_commit_for_secrets_and_lets_only_the_example_key_through():
+    # Public since 2026-11-10: a secret deleted later is still in every clone.
+    import tomllib  # noqa: PLC0415
+
+    import yaml  # noqa: PLC0415
+
+    job = yaml.safe_load((ROOT / ".github/workflows/checks.yml").read_text())["jobs"]["secrets"]
+    checkout = next(step for step in job["steps"] if "uses" in step)
+    assert checkout["with"]["fetch-depth"] == 0
+    scan_step = next(step for step in job["steps"] if "gitleaks" in step.get("run", ""))
+    assert "--redact" in scan_step["run"]
+    assert "@sha256:" in scan_step["run"]
+    allowed = tomllib.loads((ROOT / ".gitleaks.toml").read_text())["allowlists"]
+    example = (ROOT / "firmware/secrets.example.yaml").read_text()
+    for entry in allowed:
+        assert set(entry) <= {"description", "regexes"}, "allow values, never whole files or rules"
+        for value in entry["regexes"]:
+            assert value.replace("\\", "") in example, f"{value} is not an example value"

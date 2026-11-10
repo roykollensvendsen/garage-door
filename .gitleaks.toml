@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# gitleaks' own rules, plus one exception: the made-up key in
+# firmware/secrets.example.yaml, which looks like a real one on purpose.
+# Allow values only, never a whole file or rule (tests/test_secrets.py).
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "the example key in firmware/secrets.example.yaml (base64 of example-key-do-not-use-0123456!!)"
+regexes = ['''ZXhhbXBsZS1rZXktZG8tbm90LXVzZS0wMTIzNDU2ISE=''']
