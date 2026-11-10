@@ -413,3 +413,29 @@ def test_only_the_status_tool_is_marked_read_only(tmp_path):
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
     read_only = {name for name, tool in tools.items() if tool.annotations and tool.annotations.read_only_hint}
     assert read_only == {"garage_status"}
+
+
+def test_every_answer_from_the_simulated_door_says_so_first(tmp_path):
+    # claude-voice docs/plugin-standard.md, rule 11: a pretend door is never taken for the real one.
+    from garage_door.server import simulated_service  # noqa: PLC0415
+    from garage_door.simulator import Start  # noqa: PLC0415
+
+    server = build_server(*simulated_service({"XDG_STATE_HOME": str(tmp_path)}, Start.CLOSED), simulated=True)
+    asked = call(server, "garage_request", {"action": "open"})
+    answers = [
+        call(server, "garage_status", {}),
+        asked,
+        call(server, "garage_confirm", {"token": "not-the-token"}),  # a real press takes the door's time
+        call(server, "garage_press_button", {}),
+        call(server, "garage_switch", {"change": "arm"}),
+    ]
+    for answer in answers:
+        assert answer["simulated"] is True
+        assert answer["say"].startswith("Simulated: ")
+
+
+def test_answers_from_the_real_door_do_not_say_simulated(tmp_path):
+    server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
+    answer = call(server, "garage_request", {"action": "open"})
+    assert "simulated" not in answer
+    assert not answer["say"].startswith("Simulated")
