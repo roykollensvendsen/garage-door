@@ -38,10 +38,11 @@ class Clock:
 
 
 def garage(
-    tmp_path: pathlib.Path, start: Start, *, allow_close: bool = True
+    tmp_path: pathlib.Path, start: Start, *, allow_close: bool = True, travel_seconds: float = 8.0
 ) -> tuple[GarageService, SimulatedController, Clock]:
+    # A door that arrives before the answer is due (REPLY_SECONDS), unless a test says otherwise.
     clock = Clock()
-    controller = simulated_controller(start=start, travel_seconds=12.0, clock=clock)
+    controller = simulated_controller(start=start, travel_seconds=travel_seconds, clock=clock)
     controller.allow_close = allow_close
     service = GarageService(
         controller,
@@ -75,6 +76,17 @@ def test_closing_an_open_door_ends_closed(tmp_path):
     outcome = ask_and_confirm(service, Action.CLOSE)
     assert isinstance(outcome, Confirmed)
     assert outcome.after is DoorState.CLOSED
+    assert controller.door.presses == 1
+
+
+def test_a_door_slower_than_the_answer_is_reported_as_not_yet_closed(tmp_path):
+    service, controller, clock = garage(tmp_path, Start.OPEN, travel_seconds=12.0)
+    outcome = ask_and_confirm(service, Action.CLOSE)
+    assert isinstance(outcome, Confirmed)
+    assert (outcome.after, outcome.reached) == (DoorState.MOVING, False)
+    assert "NOT yet confirmed closed" in outcome.message
+    clock.now += 12.0
+    assert asyncio.run(service.status()) is DoorState.CLOSED  # asking again finds it closed
     assert controller.door.presses == 1
 
 
