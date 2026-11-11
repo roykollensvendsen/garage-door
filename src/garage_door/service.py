@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from garage_door.door import (
+    CONTROLLER_REFUSED,
     WRONG_KEY,
     Action,
     Device,
@@ -36,20 +37,20 @@ if TYPE_CHECKING:
 
     from garage_door.phrases import Phrases
 
-#: What a refused press says, by the firmware's reason; "" for a reason not listed here.
-CONTROLLER_REFUSED = {
-    "too soon after the last press": "The controller refused the press: too soon after the last press. "
-    "Wait a moment, then ask again.",
-    "a press is in progress": "The controller refused the press: a press is in progress. "
-    "Wait a moment, then ask again.",
-    "door state not known": "The controller refused the press: it does not know where the door is. "
-    "Wait until it stops, then ask again; if it stays like this, check the controller's power and Wi-Fi.",
-    "closing is switched off": "The controller refused the press: closing is switched off on the controller. "
-    "Use the wall button or the remote to close it.",
-    "": "The controller refused the press. Look at the door, then ask again.",
-}
-#: Said when the controller does not answer.
-UNREACHABLE = "The garage door controller is not reachable."
+#: Every refusal says what to do next; `{}` is the door's state.
+UNREACHABLE = (
+    "The garage door controller is not reachable. Check that it has power and Wi-Fi, "
+    "then ask me for its status again."
+)
+NOT_KNOWN = (
+    "The garage door is {}, so I won't press. Wait until it stops, then ask again; "
+    "if it stays like this, check the controller's power and Wi-Fi."
+)
+ALREADY = "The garage door is already {}, so I did nothing. Ask for its status to check."
+CLOSE_OFF = "Closing by voice is switched off on this laptop. Use the wall button or the remote to close it."
+CHANGED = "The garage door changed to {} since I asked. Ask again."
+NO_QUESTION = "There is no open question to confirm. Ask again."
+EXPIRED = "That question expired. Ask again."
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
 #: How long a press waits for the door before it answers (decisions/ADR-GD-010): the voice
@@ -58,7 +59,7 @@ TOKEN_SECONDS = 30.0
 REPLY_SECONDS = 9.0
 #: How often the door is read while waiting for it to arrive.
 POLL_SECONDS = 1.0
-
+#: The states a press may start from.
 KNOWN = frozenset({DoorState.OPEN, DoorState.CLOSED})
 
 
@@ -155,13 +156,13 @@ class GarageService:
             return self._unanswered(error, action, requester)
         # RULE: a press is refused when the door state is not known
         if state not in KNOWN:
-            return self._refuse(state, f"The garage door is {state}, so I won't press.", action, requester)
+            return self._refuse(state, NOT_KNOWN.format(state), action, requester)
         # RULE: a request the door already satisfies is refused
         if state is action.end_state:
-            return self._refuse(state, f"The garage door is already {state}.", action, requester)
+            return self._refuse(state, ALREADY.format(state), action, requester)
         # RULE: closing is refused when it is switched off
         if action is Action.CLOSE and not self._allow_close:
-            return self._refuse(state, "Closing by voice is switched off on this laptop.", action, requester)
+            return self._refuse(state, CLOSE_OFF, action, requester)
         # RULE: without the right phrase the question is asked as before
         if self._phrases is not None and self._phrases.matches(action, phrase):
             return await self._press(_Pending("", action, state, self._clock(), requester), by="phrase")
@@ -178,12 +179,10 @@ class GarageService:
         pending, self._pending = self._pending, None
         # RULE: a token works once
         if pending is None or not secrets.compare_digest(pending.token, token):
-            return self._refuse(DoorState.UNKNOWN, "There is no open question to confirm.", None, "")
+            return self._refuse(DoorState.UNKNOWN, NO_QUESTION, None, "")
         # RULE: a token expires after thirty seconds
         if self._clock() - pending.asked_at >= TOKEN_SECONDS:
-            return self._refuse(
-                pending.state, "That question expired; ask again.", pending.action, pending.requester
-            )
+            return self._refuse(pending.state, EXPIRED, pending.action, pending.requester)
         return await self._press(pending, by="yes")
 
     async def _press(self, pending: _Pending, *, by: str) -> Confirmed | Refused:
@@ -194,12 +193,7 @@ class GarageService:
             before = await self._device.state()
             # RULE: a press is refused when the door changed since the question
             if before is not pending.state:
-                return self._refuse(
-                    before,
-                    f"The garage door changed to {before} since I asked; ask again.",
-                    pending.action,
-                    pending.requester,
-                )
+                return self._refuse(before, CHANGED.format(before), pending.action, pending.requester)
             armed = await self.armed()
             verdict = await self._device.press()
         except DeviceUnavailableError as error:
@@ -270,7 +264,8 @@ def _press_answer(action: Action, before: DoorState, after: DoorState, *, armed:
     if armed is False:
         message = (
             "Test mode: the controller is not armed, so the relay did not switch "
-            f"and the door did not move. It is {after}."
+            f"and the door did not move. It is {after}. "
+            "Arm it on the laptop to make a press move the door; the README shows how."
         )
     elif reached:
         message = f"Pressed. The garage door was {before} and is now {after}."
