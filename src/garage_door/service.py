@@ -30,6 +30,13 @@ if TYPE_CHECKING:
 
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
+#: Said when the controller does not answer, with what Roy can do about it.
+UNREACHABLE = (
+    "The garage door controller is not reachable. Check that it has power and Wi-Fi, "
+    "then ask me for its status again."
+)
+NO_QUESTION = "There is no open question to confirm. Ask again."
+EXPIRED = "That question expired. Ask again."
 #: How long a press waits for the door before it answers. Shorter than a full
 #: open or close, so the answer reaches the voice in time: about 15 s for a
 #: tool (claude-voice docs/plugin-standard.md, rule 3) = 3 s for the first
@@ -140,18 +147,35 @@ class GarageService:
         try:
             state = await self._device.state()
         except DeviceUnavailableError:
-            return self._refuse(
-                DoorState.UNKNOWN, "The garage door controller is not reachable.", action, requester
-            )
+            return self._refuse(DoorState.UNKNOWN, UNREACHABLE, action, requester)
         # RULE: a press is refused when the door state is not known
         if state not in KNOWN:
-            return self._refuse(state, f"The garage door is {state}, so I won't press.", action, requester)
+            return self._refuse(
+                state,
+                (
+                    f"The garage door is {state}, so I won't press. Wait until it stops, then ask again; "
+                    "if it stays like this, check the controller's power and Wi-Fi."
+                ),
+                action,
+                requester,
+            )
         # RULE: a request the door already satisfies is refused
         if state is action.end_state:
-            return self._refuse(state, f"The garage door is already {state}.", action, requester)
+            return self._refuse(
+                state,
+                f"The garage door is already {state}, so I did nothing. Ask for its status to check.",
+                action,
+                requester,
+            )
         # RULE: closing is refused when it is switched off
         if action is Action.CLOSE and not self._allow_close:
-            return self._refuse(state, "Closing by voice is switched off on this laptop.", action, requester)
+            return self._refuse(
+                state,
+                "Closing by voice is switched off on this laptop. "
+                "Use the wall button or the remote to close it.",
+                action,
+                requester,
+            )
         # RULE: without the right phrase the question is asked as before
         if self._phrases is not None and self._phrases.matches(action, phrase):
             return await self._press(_Pending("", action, state, self._clock(), requester), by="phrase")
@@ -168,12 +192,10 @@ class GarageService:
         pending, self._pending = self._pending, None
         # RULE: a token works once
         if pending is None or not secrets.compare_digest(pending.token, token):
-            return self._refuse(DoorState.UNKNOWN, "There is no open question to confirm.", None, "")
+            return self._refuse(DoorState.UNKNOWN, NO_QUESTION, None, "")
         # RULE: a token expires after thirty seconds
         if self._clock() - pending.asked_at >= TOKEN_SECONDS:
-            return self._refuse(
-                pending.state, "That question expired; ask again.", pending.action, pending.requester
-            )
+            return self._refuse(pending.state, EXPIRED, pending.action, pending.requester)
         return await self._press(pending, by="yes")
 
     async def _press(self, pending: _Pending, *, by: str) -> Confirmed | Refused:
@@ -186,7 +208,7 @@ class GarageService:
             if before is not pending.state:
                 return self._refuse(
                     before,
-                    f"The garage door changed to {before} since I asked; ask again.",
+                    f"The garage door changed to {before} since I asked. Ask again.",
                     pending.action,
                     pending.requester,
                 )
@@ -195,7 +217,7 @@ class GarageService:
         except DeviceUnavailableError:
             return self._refuse(
                 DoorState.UNKNOWN,
-                "The garage door controller is not reachable.",
+                UNREACHABLE,
                 pending.action,
                 pending.requester,
             )
@@ -244,7 +266,8 @@ def _press_answer(action: Action, before: DoorState, after: DoorState, *, armed:
     if armed is False:
         message = (
             "Test mode: the controller is not armed, so the relay did not switch "
-            f"and the door did not move. It is {after}."
+            f"and the door did not move. It is {after}. "
+            "Arm it on the laptop to make a press move the door; the README shows how."
         )
     elif reached:
         message = f"Pressed. The garage door was {before} and is now {after}."

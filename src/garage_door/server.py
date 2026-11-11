@@ -206,7 +206,10 @@ def _add_switching(
         if switches is None:
             return {
                 "outcome": "refused",
-                "say": "The simulated door is always armed and cannot be switched.",
+                "say": (
+                    "The simulated door is always armed and cannot be switched. "
+                    "Run the server without --simulate to switch the real controller."
+                ),
                 "controller": await manual.report(),
             }
         answer = await switches.request(Switch(change), requester="mcp")

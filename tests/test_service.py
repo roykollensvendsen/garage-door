@@ -230,7 +230,8 @@ def test_a_press_in_test_mode_says_the_relay_did_not_switch(tmp_path):
     assert outcome.reached is False
     assert outcome.message == (
         "Test mode: the controller is not armed, so the relay did not switch "
-        "and the door did not move. It is closed."
+        "and the door did not move. It is closed. "
+        "Arm it on the laptop to make a press move the door; the README shows how."
     )
     assert "Pressed" not in outcome.message
     assert device.presses == 1  # still sent: the controller judges and logs it
@@ -292,7 +293,7 @@ def test_a_request_the_door_already_satisfies_is_refused(tmp_path):
     service, _ = make(device, tmp_path, allow_close=True)
     answer = run(service.request(Action.OPEN, requester="voice"))
     assert isinstance(answer, Refused)
-    assert answer.reason == "The garage door is already open."
+    assert answer.reason == "The garage door is already open, so I did nothing. Ask for its status to check."
 
 
 def test_closing_is_refused_when_it_is_switched_off(tmp_path):

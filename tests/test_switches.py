@@ -144,7 +144,7 @@ def test_a_switch_that_is_already_on_is_not_asked_about(tmp_path):
     switches, _ = make(device, tmp_path)
     answer = run(switches.request(Switch.ARM, requester="voice"))
     assert isinstance(answer, Refused)
-    assert answer.reason == "The controller is already armed."
+    assert answer.reason == "The controller is already armed. Ask to open or close the door."
 
 
 def test_switching_on_is_refused_when_the_controller_does_not_answer(tmp_path):
