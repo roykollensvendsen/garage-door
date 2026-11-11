@@ -20,13 +20,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from garage_door.door import WRONG_KEY, DeviceUnavailableError, DoorState, WrongKeyError
-from garage_door.service import TOKEN_SECONDS, Refused
+from garage_door.service import EXPIRED, NO_QUESTION, TOKEN_SECONDS, UNREACHABLE, Refused
 
 if TYPE_CHECKING:
     import pathlib
     from collections.abc import Callable
-
-UNREACHABLE = "The garage door controller is not reachable."
 
 
 class Switch(enum.StrEnum):
@@ -48,8 +46,8 @@ QUESTIONS = {
     ),
 }
 ALREADY = {
-    Switch.ARM: "The controller is already armed.",
-    Switch.MANUAL_ON: "Manual mode is already on.",
+    Switch.ARM: "The controller is already armed. Ask to open or close the door.",
+    Switch.MANUAL_ON: "Manual mode is already on. Ask for a manual press only while you can see the door.",
 }
 DONE = {
     Switch.ARM: "Armed: a confirmed press now moves the door.",
@@ -130,11 +128,11 @@ class Switches:
         pending, self._pending = self._pending, None
         # RULE: a switch token works once
         if pending is None or not secrets.compare_digest(pending[0], token):
-            return Refused(DoorState.UNKNOWN, "There is no open question to confirm.")
+            return Refused(DoorState.UNKNOWN, NO_QUESTION)
         _, asked_at, switch, requester = pending
         # RULE: a switch token expires after thirty seconds
         if self._clock() - asked_at >= TOKEN_SECONDS:
-            return self._refuse(switch, "That question expired; ask again.", requester)
+            return self._refuse(switch, EXPIRED, requester)
         return await self._switch(switch, requester)
 
     async def _switch(self, switch: Switch, requester: str) -> Switched | Refused:

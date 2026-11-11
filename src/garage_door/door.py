@@ -45,6 +45,20 @@ def refusal(verdict: str, known: Collection[str]) -> str | None:
     return next(iter({reason} & set(known)), "")  # the reason if it is known, else ""
 
 
+#: What a refused press says, by the firmware's reason; "" for a reason not listed here.
+CONTROLLER_REFUSED = {
+    "too soon after the last press": "The controller refused the press: too soon after the last press. "
+    "Wait a moment, then ask again.",
+    "a press is in progress": "The controller refused the press: a press is in progress. "
+    "Wait a moment, then ask again.",
+    "door state not known": "The controller refused the press: it does not know where the door is. "
+    "Wait until it stops, then ask again; if it stays like this, check the controller's power and Wi-Fi.",
+    "closing is switched off": "The controller refused the press: closing is switched off on the controller. "
+    "Use the wall button or the remote to close it.",
+    "": "The controller refused the press. Look at the door, then ask again.",
+}
+
+
 #: Said when the controller answers but refuses the laptop's key, with what Roy can do about it.
 WRONG_KEY = (
     "The garage door controller refused the laptop's key. "

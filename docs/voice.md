@@ -38,7 +38,8 @@ press is sent but the relay does not switch, and Claude says so instead of
 "pressed":
 
 > **Claude:** Test mode: the controller is not armed, so the relay did not
-> switch and the door did not move. It is closed.
+> switch and the door did not move. It is closed. Arm it on the laptop to
+> make a press move the door; the README shows how.
 
 ## Try it without a garage
 

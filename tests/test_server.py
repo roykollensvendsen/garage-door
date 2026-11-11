@@ -172,7 +172,10 @@ def test_a_refusal_comes_back_as_something_to_say(tmp_path):
     assert {k: v for k, v in refused.items() if k != "controller"} == {
         "outcome": "refused",
         "state": "moving",
-        "say": "The garage door is moving, so I won't press.",
+        "say": (
+            "The garage door is moving, so I won't press. Wait until it stops, then ask again; "
+            "if it stays like this, check the controller's power and Wi-Fi."
+        ),
     }
 
 

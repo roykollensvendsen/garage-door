@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from garage_door.door import DeviceUnavailableError, DoorState, refusal
-from garage_door.service import KNOWN, TOKEN_SECONDS, Refused
+from garage_door.service import EXPIRED, KNOWN, NO_QUESTION, TOKEN_SECONDS, UNREACHABLE, Refused
 
 if TYPE_CHECKING:
     import pathlib
@@ -198,12 +198,12 @@ class ManualPress:
         pending, self._pending = self._pending, None
         # RULE: a manual token works once
         if pending is None or not secrets.compare_digest(pending[0], token):
-            return Refused(DoorState.UNKNOWN, "There is no open question to confirm.")
+            return Refused(DoorState.UNKNOWN, NO_QUESTION)
         _, asked_at, requester = pending
         report = await controller_report(self._device)
         # RULE: a manual token expires after thirty seconds
         if self._clock() - asked_at >= TOKEN_SECONDS:
-            return self._refuse(report, "That question expired; ask again.", requester)
+            return self._refuse(report, EXPIRED, requester)
         # RULE: a manual press is refused when the controller changed since the question
         changed = self._refusal(report)
         if changed:
@@ -215,7 +215,7 @@ class ManualPress:
         try:
             verdict = await self._device.manual_press()
         except DeviceUnavailableError:
-            return self._refuse(report, "The garage door controller is not reachable.", requester)
+            return self._refuse(report, UNREACHABLE, requester)
         reason = refusal(verdict, MANUAL_REFUSED)
         # RULE: a manual press the controller refused is said as refused
         if reason is not None:
@@ -227,16 +227,19 @@ class ManualPress:
     def _refusal(report: Report) -> str:
         """Why a manual press is not allowed now, or "" when it is."""
         if report["armed"] is None:
-            return "The garage door controller is not reachable."
+            return UNREACHABLE
         # RULE: a manual press is refused unless the controller is armed
         if report["armed"] is not True:
-            return "The controller is not armed, so a press would do nothing. Arm it first."
+            return (
+                "The controller is not armed, so a press would do nothing. "
+                "Arm it on the laptop first; the README shows how."
+            )
         # RULE: a manual press is refused unless manual mode is on
         if report["manual"] is not True:
-            return "Manual mode is off. Switch it on with 'garage-door manual on' first."
+            return "Manual mode is off. Ask me to switch manual mode on first."
         # RULE: a manual press is refused while the door is moving
         if report["state"] == DoorState.MOVING:
-            return "The garage door is moving, so I won't press."
+            return "The garage door is moving, so I won't press. Wait until it stops, then ask again."
         return ""
 
     def _refuse(self, report: Report, reason: str, requester: str) -> Refused:
