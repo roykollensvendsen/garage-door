@@ -35,6 +35,11 @@ it may have reversed. If it has already stopped short, the old warnings
 stand ("did NOT close, possibly reversed"). Nothing is pressed again on its
 own, and the log records the state at the time of the answer.
 
+No read in that wait runs past the 9 s: a reconnect there (up to 8 s) is cut
+short, and the door counts as unknown. The report that follows every answer
+gets 2 s (`REPORT_SECONDS`), then reads as unknown. Without these two limits,
+a link that dropped during the wait could stretch the answer to about 25 s.
+
 ## Consequences
 
 - A full open or close usually takes longer than 9 s, so the usual answer

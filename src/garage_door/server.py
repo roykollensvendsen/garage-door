@@ -122,20 +122,20 @@ def build_server(
     async def garage_request(action: Literal["open", "close"], phrase: str | None = None) -> dict[str, Any]:
         answer = await service.request(Action(action), requester="mcp", phrase=phrase)
         if isinstance(answer, Confirmed):
-            return _pressed(answer, await manual.report())
+            return _pressed(answer, await manual.report_after())
         if isinstance(answer, Question):
             return {
                 "outcome": "question",
                 "state": str(answer.state),
                 "say": answer.question,
                 "token": answer.token,
-                "controller": await manual.report(),
+                "controller": await manual.report_after(),
             }
         return {
             "outcome": "refused",
             "state": str(answer.state),
             "say": answer.reason,
-            "controller": await manual.report(),
+            "controller": await manual.report_after(),
         }
 
     @_tool(
@@ -157,7 +157,7 @@ def build_server(
                 "token": answer.token,
                 "controller": answer.controller,
             }
-        return {"outcome": "refused", "say": answer.reason, "controller": await manual.report()}
+        return {"outcome": "refused", "say": answer.reason, "controller": await manual.report_after()}
 
     @_tool(
         server,
@@ -176,12 +176,12 @@ def build_server(
             return other
         outcome = await service.confirm(token)
         if isinstance(outcome, Confirmed):
-            return _pressed(outcome, await manual.report())
+            return _pressed(outcome, await manual.report_after())
         return {
             "outcome": "refused",
             "state": str(outcome.state),
             "say": outcome.reason,
-            "controller": await manual.report(),
+            "controller": await manual.report_after(),
         }
 
     _add_switching(server, switches, manual, simulated=simulated)
@@ -207,10 +207,10 @@ def _add_switching(
             return {
                 "outcome": "refused",
                 "say": "The simulated door is always armed and cannot be switched.",
-                "controller": await manual.report(),
+                "controller": await manual.report_after(),
             }
         answer = await switches.request(Switch(change), requester="mcp")
-        return _switch_answer(answer, await manual.report())
+        return _switch_answer(answer, await manual.report_after())
 
 
 async def _confirm_switch_or_manual(
@@ -218,9 +218,9 @@ async def _confirm_switch_or_manual(
 ) -> dict[str, Any] | None:
     """Confirm a switch or a manual press, if `token` is one of theirs; None if it is not."""
     if switches is not None and switches.owns(token):
-        return _switch_answer(await switches.confirm(token), await manual.report())
+        return _switch_answer(await switches.confirm(token), await manual.report_after())
     if manual.owns(token):
-        return _manual_answer(await manual.confirm(token), await manual.report())
+        return _manual_answer(await manual.confirm(token), await manual.report_after())
     return None
 
 
