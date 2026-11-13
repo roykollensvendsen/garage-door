@@ -28,6 +28,18 @@ if TYPE_CHECKING:
 
     from garage_door.phrases import Phrases
 
+#: What a refused press says, by the firmware's reason; "" for a reason not listed here.
+CONTROLLER_REFUSED = {
+    "too soon after the last press": "The controller refused the press: too soon after the last press. "
+    "Wait a moment, then ask again.",
+    "a press is in progress": "The controller refused the press: a press is in progress. "
+    "Wait a moment, then ask again.",
+    "door state not known": "The controller refused the press: it does not know where the door is. "
+    "Wait until it stops, then ask again; if it stays like this, check the controller's power and Wi-Fi.",
+    "closing is switched off": "The controller refused the press: closing is switched off on the controller. "
+    "Use the wall button or the remote to close it.",
+    "": "The controller refused the press. Look at the door, then ask again.",
+}
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
 #: How long a press waits for the door before it answers. Shorter than a full
@@ -199,12 +211,10 @@ class GarageService:
                 pending.action,
                 pending.requester,
             )
-        reason = refusal(verdict)
+        reason = refusal(verdict, CONTROLLER_REFUSED)
         # RULE: a press the controller refused is said as refused
         if reason is not None:
-            return self._refuse(
-                before, f"The controller refused the press: {reason}.", pending.action, pending.requester
-            )
+            return self._refuse(before, CONTROLLER_REFUSED[reason], pending.action, pending.requester)
         # In test mode the relay stays open, so there is no travel to wait for.
         after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)
         reached = after is pending.action.end_state

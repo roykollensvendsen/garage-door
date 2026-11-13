@@ -34,7 +34,24 @@ QUESTION = (
 )
 PRESSED = "Pressed. I can't tell which way the door went: look at it."
 #: Said when no verdict came back in time: the press may or may not have gone through.
-UNCONFIRMED = "I sent the press, but the controller did not say whether it took it: look at the door."
+UNCONFIRMED = (
+    "I sent the press, but the controller did not say whether it took it. "
+    "Look at the door before you ask again."
+)
+#: What a refused manual press says, by the firmware's reason; "" for a reason not listed here.
+MANUAL_REFUSED = {
+    "manual mode is off": "The controller refused the manual press: manual mode is off. "
+    "Ask me to switch manual mode on first.",
+    "not armed": "The controller refused the manual press: it is not armed. "
+    "Arm it on the laptop first; the README shows how.",
+    "too soon after the last press": "The controller refused the manual press: too soon after the last one. "
+    "Wait a moment, then ask again.",
+    "a press is in progress": "The controller refused the manual press: one is in progress. "
+    "Wait a moment, then ask again.",
+    "door state not known": "The controller refused the manual press: the door is moving. "
+    "Wait until it stops, then ask again.",
+    "": "The controller refused the manual press. Look at the door before you ask again.",
+}
 
 
 class ManualDevice(Protocol):
@@ -173,10 +190,10 @@ class ManualPress:
             verdict = await self._device.manual_press()
         except DeviceUnavailableError:
             return self._refuse(report, "The garage door controller is not reachable.", requester)
-        reason = refusal(verdict)
+        reason = refusal(verdict, MANUAL_REFUSED)
         # RULE: a manual press the controller refused is said as refused
         if reason is not None:
-            return self._refuse(report, f"The controller refused the press: {reason}.", requester)
+            return self._refuse(report, MANUAL_REFUSED[reason], requester)
         self._log("pressed", requester=requester, before=report["state"], controller=verdict)
         return ManualPressed(verdict, PRESSED if verdict.endswith("accepted") else UNCONFIRMED)
 

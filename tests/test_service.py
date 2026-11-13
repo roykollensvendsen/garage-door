@@ -220,7 +220,7 @@ def test_the_wait_for_the_door_fits_in_the_voices_time():
     [
         ("refused: too soon after the last press", "too soon after the last press"),
         ("refused: a press is in progress", "a press is in progress"),
-        ("refused: door state not known", "door state not known"),
+        ("refused: door state not known", "it does not know where the door is"),
     ],
 )
 def test_a_press_the_controller_refused_is_said_as_refused(tmp_path, verdict, reason):
@@ -233,7 +233,7 @@ def test_a_press_the_controller_refused_is_said_as_refused(tmp_path, verdict, re
     started = clock.now
     outcome = run(service.confirm(question.token))
     assert isinstance(outcome, Refused)
-    assert outcome.reason == f"The controller refused the press: {reason}."
+    assert outcome.reason.startswith(f"The controller refused the press: {reason}")
     assert clock.now - started < 1  # nothing moved, so nothing to wait for
     last = log_lines(tmp_path)[-1]
     assert (last["event"], last["reason"]) == ("refused", outcome.reason)

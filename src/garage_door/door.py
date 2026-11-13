@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from collections.abc import Collection
 
 
 class DoorState(StrEnum):
@@ -29,14 +32,17 @@ class Action(StrEnum):
         return DoorState.OPEN if self is Action.OPEN else DoorState.CLOSED
 
 
-def refusal(verdict: str) -> str | None:
-    """The firmware's reason when its verdict on a press is a refusal; None when it accepted or did not say.
+def refusal(verdict: str, known: Collection[str]) -> str | None:
+    """The firmware's reason when its verdict on a press is a refusal, "" if not one of `known`.
 
-    The verdicts are door_logic.h's `to_string(PressResult)`, with "manual: "
-    in front for a manual press: "refused: too soon after the last press".
+    None when it accepted or did not say. The verdicts are door_logic.h's
+    `to_string(PressResult)`, with "manual: " in front for a manual press:
+    "refused: too soon after the last press".
     """
-    judged = verdict.removeprefix("manual: ")
-    return judged.removeprefix("refused: ") if judged.startswith("refused") else None
+    _, refused, reason = verdict.removeprefix("manual: ").partition("refused: ")
+    if not refused:
+        return None
+    return next(iter({reason} & set(known)), "")  # the reason if it is known, else ""
 
 
 class DeviceUnavailableError(Exception):
