@@ -74,6 +74,7 @@ class EsphomeDevice:
         self._client_made: Client | None = None
         self._connected = False
         self._state_key: int | None = None
+        self._verdict_key: int | None = None
         self._press: Any = None
         self._armed_key: int | None = None
         self._armed: bool | None = None
@@ -200,17 +201,21 @@ class EsphomeDevice:
         """Find, by name, the entities and actions this module reads and uses."""
         self._names = {e.key: e.name for e in entities}
         self._state_key = _key_named(entities, STATE_SENSOR)
+        self._verdict_key = _key_named(entities, VERDICT_SENSOR)
         self._armed_key = _key_named(entities, ARMED_SWITCH)
         self._manual_key = _key_named(entities, MANUAL_SWITCH)
         self._press = _first_named(services, PRESS_ACTION)
         self._manual_press = _first_named(services, MANUAL_PRESS_ACTION)
 
     async def _wait_for_first_state(self) -> None:
-        """Wait a bounded time for the door's first state, which comes a moment after connecting.
+        """Wait a bounded time for the door's state and the last verdict, both resent on connecting.
 
-        Without it the read stays UNKNOWN and the service refuses, as before.
+        Without the door's, the read stays UNKNOWN; a verdict not waited for could land after a press.
         """
-        await _until(lambda: self._door is not None, self._first_state_wait)
+        await _until(self._first_states_heard, self._first_state_wait)
+
+    def _first_states_heard(self) -> bool:
+        return self._door is not None and (self._verdict_key is None or self._verdict != NO_VERDICT)
 
     async def _give_up(self) -> None:
         """Drop a connection that failed half-way, so the next call starts afresh."""
@@ -226,6 +231,7 @@ class EsphomeDevice:
         self._manual = None  # off after a restart; wait to be told
         self._light = None
         self._status_age = None
+        self._verdict = NO_VERDICT
         self._seen = {}
 
     async def _stopped(self, expected_disconnect: bool) -> None:  # noqa: FBT001 - the library's callback
@@ -236,7 +242,7 @@ class EsphomeDevice:
 
     def _on_state(self, state: object) -> None:
         key = getattr(state, "key", None)
-        if key in self._names:
+        if key in self._names and not getattr(state, "missing_state", False):
             self._seen[self._names[key]] = _shown(state)
         if isinstance(state, TextSensorState):
             self._on_text(state)
