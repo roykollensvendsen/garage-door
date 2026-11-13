@@ -136,11 +136,7 @@ class EsphomeDevice:
         return self._verdict
 
     async def readings(self, wait: float = 2.0) -> dict[str, str]:
-        """Everything the controller reports, by name, after `wait` seconds.
-
-        For checking the controller from the laptop: it reads and never
-        presses, and switches nothing.
-        """
+        """Everything the controller reports, by name, after `wait` seconds; it never presses or switches."""
         await self._ensure_connected()
         await asyncio.sleep(wait)
         return {name: shown for name, shown in sorted(self._seen.items()) if shown is not None}
@@ -192,6 +188,10 @@ class EsphomeDevice:
             async with asyncio.timeout(self._connect_wait):
                 await self._client.connect(on_stop=self._stopped, login=True)
                 return await self._client.list_entities_services()
+        except asyncio.CancelledError:
+            # A caller's time limit cut it short: drop the half-made client, as on failure.
+            await asyncio.shield(self._give_up())
+            raise
         except FAILURES as error:
             await self._give_up()
             msg = f"the garage door controller is not reachable: {error}"
