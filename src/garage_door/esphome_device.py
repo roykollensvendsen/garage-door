@@ -86,7 +86,7 @@ class EsphomeDevice:
         self._status_age: float | None = None
         self._verdict = NO_VERDICT  # ESPHome sends every publish, so a repeated verdict still arrives
         self._names: dict[int, str] = {}
-        self._seen: dict[str, str] = {}
+        self._seen: dict[str, str | None] = {}
 
     async def state(self) -> DoorState:
         """The door's last reported state; UNKNOWN for anything unrecognised."""
@@ -143,7 +143,7 @@ class EsphomeDevice:
         """
         await self._ensure_connected()
         await asyncio.sleep(wait)
-        return dict(sorted(self._seen.items()))
+        return {name: shown for name, shown in sorted(self._seen.items()) if shown is not None}
 
     async def set_armed(self, *, on: bool) -> None:
         """Switch test mode off (armed) or on. Presses nothing."""
@@ -208,10 +208,7 @@ class EsphomeDevice:
         self._manual_press = _first_named(services, MANUAL_PRESS_ACTION)
 
     async def _wait_for_first_state(self) -> None:
-        """Wait a bounded time for the door's state and the last verdict, both resent on connecting.
-
-        Without the door's, the read stays UNKNOWN; a verdict not waited for could land after a press.
-        """
+        """Wait, bounded, for the door's state and the last verdict: one landing after a press is misread."""
         await _until(self._first_states_heard, self._first_state_wait)
 
     def _first_states_heard(self) -> bool:
@@ -242,7 +239,7 @@ class EsphomeDevice:
 
     def _on_state(self, state: object) -> None:
         key = getattr(state, "key", None)
-        if key in self._names and not getattr(state, "missing_state", False):
+        if key in self._names:
             self._seen[self._names[key]] = _shown(state)
         if isinstance(state, TextSensorState):
             self._on_text(state)
@@ -290,8 +287,10 @@ def _key_named(entities: list[Any], name: str) -> int | None:
     return entity.key if entity is not None else None
 
 
-def _shown(state: object) -> str:
-    """A reading as text: the value, rounded if it is a number."""
+def _shown(state: object) -> str | None:
+    """A reading as text: the value, rounded if it is a number; None for a state never set."""
+    if getattr(state, "missing_state", False):
+        return None
     value = getattr(state, "state", None)
     if isinstance(value, bool):
         return "on" if value else "off"
