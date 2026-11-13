@@ -71,9 +71,11 @@ jobs:
   # The quality ratchet: no measure in quality.json may get worse unless the
   # pull request (or, for a direct push, a commit message) has a line
   # "Ratchet-Exception: <measure> - why", and a better level must be recorded.
+  # No time limit, on purpose: this job holds the ratchet, which grows with every
+  # rule, and a run cut short proves nothing. Never cap it; remove a cap rather
+  # than raise it.
   ratchet:
     runs-on: ubuntu-latest
-    timeout-minutes: 25          # measuring the base too, when main kept no levels for it
     permissions:
       contents: read
       actions: read              # to fetch the levels main kept with its own run
