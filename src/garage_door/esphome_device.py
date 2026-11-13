@@ -12,10 +12,10 @@ import contextlib
 import math
 from typing import TYPE_CHECKING, Any, Protocol
 
-from aioesphomeapi.core import APIConnectionError
+from aioesphomeapi import core
 from aioesphomeapi.model import SensorState, SwitchState, TextSensorState
 
-from garage_door.door import DeviceUnavailableError, DoorState
+from garage_door.door import DeviceUnavailableError, DoorState, WrongKeyError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -29,7 +29,9 @@ ARMED_SWITCH = "Armed"
 MANUAL_SWITCH = "Manual mode"
 PRESS_ACTION = "press"
 MANUAL_PRESS_ACTION = "manual_press"
-FAILURES = (APIConnectionError, TimeoutError, OSError)
+FAILURES = (core.APIConnectionError, TimeoutError, OSError)
+#: The controller answered, but not to this key: a setup fault, which no retry mends.
+KEY_FAILURES = (core.InvalidEncryptionKeyAPIError, core.EncryptionPlaintextAPIError, core.InvalidAuthAPIError)
 
 
 class Client(Protocol):
@@ -60,12 +62,9 @@ class EsphomeDevice:
     ) -> None:
         """Connect on first use, and again after any failure, giving up after `connect_wait` seconds.
 
-        Off the network, aioesphomeapi would wait 60 s to connect; the voice
-        gives a tool about 15 (claude-voice docs/plugin-standard.md, rule 3).
-
-        The client is made on first use rather than passed in, because
-        aioesphomeapi's client can only be created inside a running event loop.
-        An action's verdict comes at once on a working link: `verdict_wait` bounds it.
+        Off the network aioesphomeapi would wait 60 s; the voice gives a tool about 15
+        (claude-voice docs/plugin-standard.md, rule 3). The client is made on first use, as
+        aioesphomeapi needs a running event loop. `verdict_wait` bounds an action's verdict.
         """
         self._make_client = make_client
         self._first_state_wait = first_state_wait
@@ -180,7 +179,7 @@ class EsphomeDevice:
         self._forget()
         self._client.subscribe_states(self._on_state)
         self._connected = True
-        await self._wait_for_first_state()
+        await _until(self._first_states_heard, self._first_state_wait)
 
     async def _connect(self) -> tuple[list[Any], list[Any]]:
         """Connect and list what the controller offers, or give up after `connect_wait` seconds."""
@@ -192,6 +191,10 @@ class EsphomeDevice:
             # A caller's time limit cut it short: drop the half-made client, as on failure.
             await asyncio.shield(self._give_up())
             raise
+        except KEY_FAILURES as error:
+            await self._give_up()
+            msg = f"the garage door controller refused the laptop's key: {error}"
+            raise WrongKeyError(msg) from error
         except FAILURES as error:
             await self._give_up()
             msg = f"the garage door controller is not reachable: {error}"
@@ -207,11 +210,8 @@ class EsphomeDevice:
         self._press = _first_named(services, PRESS_ACTION)
         self._manual_press = _first_named(services, MANUAL_PRESS_ACTION)
 
-    async def _wait_for_first_state(self) -> None:
-        """Wait, bounded, for the door's state and the last verdict: one landing after a press is misread."""
-        await _until(self._first_states_heard, self._first_state_wait)
-
     def _first_states_heard(self) -> bool:
+        """The door's state and the last verdict are in: a verdict landing after a press is misread."""
         return self._door is not None and (self._verdict_key is None or self._verdict != NO_VERDICT)
 
     async def _give_up(self) -> None:

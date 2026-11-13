@@ -45,8 +45,19 @@ def refusal(verdict: str, known: Collection[str]) -> str | None:
     return next(iter({reason} & set(known)), "")  # the reason if it is known, else ""
 
 
+#: Said when the controller answers but refuses the laptop's key, with what Roy can do about it.
+WRONG_KEY = (
+    "The garage door controller refused the laptop's key. "
+    "Check that the controller was flashed with the key in firmware/secrets.yaml, then ask again."
+)
+
+
 class DeviceUnavailableError(Exception):
     """The controller did not answer, so nothing about the door is known."""
+
+
+class WrongKeyError(DeviceUnavailableError):
+    """The controller answered but refused the laptop's encryption key: a setup fault, not the network."""
 
 
 class Device(Protocol):

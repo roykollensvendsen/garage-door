@@ -546,3 +546,19 @@ def test_a_read_cut_short_while_connecting_starts_afresh_next_time():
     assert run(go()) is DoorState.CLOSED
     assert len(made) == 2
     assert made[0].disconnects == 1
+
+
+def test_a_controller_that_refuses_the_key_is_told_apart_from_one_off_the_network():
+    from aioesphomeapi import InvalidEncryptionKeyAPIError  # noqa: PLC0415
+
+    from garage_door.door import WrongKeyError  # noqa: PLC0415
+
+    client = FakeClient()
+
+    async def refuse(on_stop=None, *, login=False):  # noqa: ARG001 - the library's own signature
+        msg = "Invalid encryption key"
+        raise InvalidEncryptionKeyAPIError(msg, "garage-door")
+
+    client.connect = refuse
+    with pytest.raises(WrongKeyError, match="key"):
+        run(EsphomeDevice(lambda: client).state())
