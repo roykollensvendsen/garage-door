@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 STATE_SENSOR = "Door state"
 LIGHT_SENSOR = "Opener light"  # from the opener's last status on the wire; read only
 STATUS_AGE_SENSOR = "Opener status age"  # seconds since that status
+VERDICT_SENSOR = "Last press result"  # the firmware's verdict, published after each action
+NO_VERDICT = "sent"  # what a press answers when no verdict came in time
 ARMED_SWITCH = "Armed"
 MANUAL_SWITCH = "Manual mode"
 PRESS_ACTION = "press"
@@ -49,7 +51,12 @@ class EsphomeDevice:
     """A Device backed by the garage controller."""
 
     def __init__(
-        self, make_client: Callable[[], Client], *, first_state_wait: float = 3.0, connect_wait: float = 5.0
+        self,
+        make_client: Callable[[], Client],
+        *,
+        first_state_wait: float = 3.0,
+        connect_wait: float = 5.0,
+        verdict_wait: float = 1.0,
     ) -> None:
         """Connect on first use, and again after any failure, giving up after `connect_wait` seconds.
 
@@ -58,10 +65,12 @@ class EsphomeDevice:
 
         The client is made on first use rather than passed in, because
         aioesphomeapi's client can only be created inside a running event loop.
+        An action's verdict comes at once on a working link: `verdict_wait` bounds it.
         """
         self._make_client = make_client
         self._first_state_wait = first_state_wait
         self._connect_wait = connect_wait
+        self._verdict_wait = verdict_wait
         self._client_made: Client | None = None
         self._connected = False
         self._state_key: int | None = None
@@ -74,6 +83,7 @@ class EsphomeDevice:
         self._door: str | None = None
         self._light: bool | None = None
         self._status_age: float | None = None
+        self._verdict = NO_VERDICT  # ESPHome sends every publish, so a repeated verdict still arrives
         self._names: dict[int, str] = {}
         self._seen: dict[str, str] = {}
 
@@ -101,11 +111,11 @@ class EsphomeDevice:
         return self._light, self._status_age
 
     async def press(self) -> str:
-        """Ask the controller to press once. Its own logic may still refuse."""
+        """Ask the controller to press once; its verdict, or "sent" if none came in time."""
         return await self._run(PRESS_ACTION)
 
     async def manual_press(self) -> str:
-        """Ask for a manual press (decisions/ADR-GD-004). The controller may still refuse."""
+        """Ask for a manual press (decisions/ADR-GD-004); its verdict, as for `press`."""
         return await self._run(MANUAL_PRESS_ACTION)
 
     async def _run(self, name: str) -> str:
@@ -114,13 +124,15 @@ class EsphomeDevice:
         if action is None:
             msg = f"the controller has no '{name}' action"
             raise DeviceUnavailableError(msg)
+        self._verdict = NO_VERDICT  # only a verdict published after this press answers it
         try:
             await self._client.execute_service(action, {})
         except FAILURES as error:
             self._connected = False
             msg = f"the press was not delivered: {error}"
             raise DeviceUnavailableError(msg) from error
-        return "sent"
+        await _until(lambda: self._verdict != NO_VERDICT, self._verdict_wait)
+        return self._verdict
 
     async def readings(self, wait: float = 2.0) -> dict[str, str]:
         """Everything the controller reports, by name, after `wait` seconds.
@@ -198,10 +210,7 @@ class EsphomeDevice:
 
         Without it the read stays UNKNOWN and the service refuses, as before.
         """
-        waited, step = 0.0, 0.02
-        while self._door is None and waited < self._first_state_wait:
-            await asyncio.sleep(step)
-            waited += step
+        await _until(lambda: self._door is not None, self._first_state_wait)
 
     async def _give_up(self) -> None:
         """Drop a connection that failed half-way, so the next call starts afresh."""
@@ -241,6 +250,8 @@ class EsphomeDevice:
             self._door = state.state
         if self._names.get(state.key) == LIGHT_SENSOR:
             self._light = {"on": True, "off": False}.get(state.state)
+        if self._names.get(state.key) == VERDICT_SENSOR:
+            self._verdict = state.state
 
     def _on_switch(self, state: SwitchState) -> None:
         if state.key == self._armed_key:
@@ -252,6 +263,14 @@ class EsphomeDevice:
         if self._names.get(state.key) == STATUS_AGE_SENSOR:
             age = state.state
             self._status_age = None if state.missing_state or math.isnan(age) else age
+
+
+async def _until(done: Callable[[], bool], seconds: float) -> None:
+    """Wait until `done()`, or for `seconds` at most."""
+    waited, step = 0.0, 0.01
+    while not done() and waited < seconds:
+        await asyncio.sleep(step)
+        waited += step
 
 
 def _first_named(items: list[Any], name: str) -> Any:  # noqa: ANN401 - an entity or an action, as the library gives it

@@ -18,7 +18,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from garage_door.door import DeviceUnavailableError, DoorState
+from garage_door.door import DeviceUnavailableError, DoorState, refusal
 from garage_door.service import KNOWN, TOKEN_SECONDS, Refused
 
 if TYPE_CHECKING:
@@ -33,6 +33,8 @@ QUESTION = (
     "it will go. Do you want me to press the button? Only say yes if you can see the door."
 )
 PRESSED = "Pressed. I can't tell which way the door went: look at it."
+#: Said when no verdict came back in time: the press may or may not have gone through.
+UNCONFIRMED = "I sent the press, but the controller did not say whether it took it: look at the door."
 
 
 class ManualDevice(Protocol):
@@ -163,12 +165,20 @@ class ManualPress:
         changed = self._refusal(report)
         if changed:
             return self._refuse(report, changed, requester)
+        return await self._press(report, requester)
+
+    async def _press(self, report: Report, requester: str) -> ManualPressed | Refused:
+        """Ask the controller for the press, and say what its verdict was."""
         try:
             verdict = await self._device.manual_press()
         except DeviceUnavailableError:
             return self._refuse(report, "The garage door controller is not reachable.", requester)
+        reason = refusal(verdict)
+        # RULE: a manual press the controller refused is said as refused
+        if reason is not None:
+            return self._refuse(report, f"The controller refused the press: {reason}.", requester)
         self._log("pressed", requester=requester, before=report["state"], controller=verdict)
-        return ManualPressed(verdict, PRESSED)
+        return ManualPressed(verdict, PRESSED if verdict.endswith("accepted") else UNCONFIRMED)
 
     @staticmethod
     def _refusal(report: Report) -> str:

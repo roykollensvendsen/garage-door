@@ -33,6 +33,7 @@ class FakeDevice:
         self.presses = 0
         self.reachable = True
         self.is_armed: bool | None = True  # False: test mode, the relay stays open
+        self.verdict = "accepted"  # the firmware's own judgement of the press
 
     async def state(self) -> DoorState:
         if not self.reachable:
@@ -48,9 +49,9 @@ class FakeDevice:
         if not self.reachable:
             raise DeviceUnavailableError(UNREACHABLE)
         self.presses += 1
-        if self.after_press is not None:
+        if not self.verdict.startswith("refused") and self.after_press is not None:
             self.current = self.after_press
-        return "accepted"
+        return self.verdict
 
 
 class FakeClock:
@@ -212,6 +213,41 @@ def test_the_wait_for_the_door_counts_from_the_yes(tmp_path):
 def test_the_wait_for_the_door_fits_in_the_voices_time():
     # 3 s for the first state, the wait, one more read, 2 s to spare: 15 s.
     assert REPLY_SECONDS == 9.0
+
+
+@pytest.mark.parametrize(
+    ("verdict", "reason"),
+    [
+        ("refused: too soon after the last press", "too soon after the last press"),
+        ("refused: a press is in progress", "a press is in progress"),
+        ("refused: door state not known", "door state not known"),
+    ],
+)
+def test_a_press_the_controller_refused_is_said_as_refused(tmp_path, verdict, reason):
+    # The firmware keeps its own rules (firmware/door_logic). When it refuses,
+    # the door does not move, and "Pressed" would be a false answer.
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    device.verdict = verdict
+    service, clock = make(device, tmp_path)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    started = clock.now
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Refused)
+    assert outcome.reason == f"The controller refused the press: {reason}."
+    assert clock.now - started < 1  # nothing moved, so nothing to wait for
+    last = log_lines(tmp_path)[-1]
+    assert (last["event"], last["reason"]) == ("refused", outcome.reason)
+
+
+def test_a_press_without_a_verdict_is_judged_by_the_door(tmp_path):
+    # No verdict came in time: the press may have gone through, so the door decides.
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    device.verdict = "sent"
+    service, _ = make(device, tmp_path)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    outcome = run(service.confirm(question.token))
+    assert isinstance(outcome, Confirmed)
+    assert outcome.message == "Pressed. The garage door was closed and is now open."
 
 
 def test_a_press_in_test_mode_says_the_relay_did_not_switch(tmp_path):

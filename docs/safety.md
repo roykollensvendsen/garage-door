@@ -27,6 +27,7 @@ what is left to you. Page numbers refer to the LM80EVF manual, document
 | Closing only from fully open. | laptop and controller | yes |
 | The answer to a press comes within about 12 s. A closing door still moving then is "NOT yet confirmed closed"; one that stopped short is "did NOT close, possibly reversed". Nothing is pressed again automatically. | laptop | yes, with a simulated obstacle and a slow door |
 | Every request and press is logged with the state before and after. | laptop | yes |
+| A press the controller refuses is said as refused, with its reason, never as "Pressed". When no verdict comes back within a second, a manual press is said as sent but not confirmed. | laptop, from the controller's "Last press result" | yes, with a controller that refuses |
 | Nothing is reachable from the internet. | encrypted, password-protected connection on your home network only | by design |
 
 The tests for every row run on every change, without hardware, against a

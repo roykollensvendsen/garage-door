@@ -34,6 +34,8 @@ OVER = pytest.mark.xfail(strict=True, reason="known to run past the voice's limi
 FIRST_STATE = inspect.signature(EsphomeDevice).parameters["first_state_wait"].default
 #: Connecting, or reconnecting after the connection dropped: given up on after this.
 CONNECT = inspect.signature(EsphomeDevice).parameters["connect_wait"].default
+#: The firmware's verdict on a press, given up on after this.
+VERDICT = inspect.signature(EsphomeDevice).parameters["verdict_wait"].default
 
 LONGEST = {
     "status, a controller slow to connect": CONNECT + FIRST_STATE,
@@ -41,10 +43,11 @@ LONGEST = {
     "switch, a controller slow to connect": CONNECT + FIRST_STATE,
     "status, a controller off the network": CONNECT,
     # The wait for the door counts from the yes, so connecting comes out of it.
-    "confirm a press, the door never arriving": max(CONNECT + FIRST_STATE, service.REPLY_SECONDS)
+    "confirm a press, the door never arriving": max(CONNECT + FIRST_STATE + VERDICT, service.REPLY_SECONDS)
     + service.POLL_SECONDS,
-    "a magic phrase, the door never arriving": max(CONNECT + FIRST_STATE, service.REPLY_SECONDS)
+    "a magic phrase, the door never arriving": max(CONNECT + FIRST_STATE + VERDICT, service.REPLY_SECONDS)
     + service.POLL_SECONDS,
+    "confirm a manual press, no verdict": CONNECT + FIRST_STATE + VERDICT,
 }
 
 
