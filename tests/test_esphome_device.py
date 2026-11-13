@@ -49,6 +49,8 @@ class FakeClient:
         self.old_verdict: str | None = None  # the last verdict, which ESPHome resends on connecting
         self.old_verdict_late = 0.0  # seconds after the door's state that it arrives
         self.verdict_late = 0.0  # seconds after an action that its verdict arrives
+        self.slow = 0.0  # seconds a connect takes, as on a weak link
+        self.disconnects = 0
         self._on_state: Callable[[object], None] | None = None
         self._on_stop: Callable[[bool], Awaitable[None]] | None = None
 
@@ -58,6 +60,7 @@ class FakeClient:
         assert login
         if self.hang:
             await asyncio.Event().wait()
+        await asyncio.sleep(self.slow)
         if self.fail_connect:
             msg = "refused"
             raise APIConnectionError(msg)
@@ -102,7 +105,7 @@ class FakeClient:
         self.switched.append((key, state))
 
     async def disconnect(self) -> None:
-        pass
+        self.disconnects += 1
 
     def send(self, key: int, state: str) -> None:
         self.deliver(TextSensorState(key=key, state=state))
@@ -518,3 +521,28 @@ def test_connecting_reads_the_entities_and_actions_by_name():
     assert client.executed == ["press", "manual_press"]
     assert client.switched == [(14, True), (15, False)]
     assert client.connects == 1
+
+
+def test_a_read_cut_short_while_connecting_starts_afresh_next_time():
+    # The service and the report bound their reads, so a read can be cancelled
+    # mid-connect. The half-made client must go, or the next press reuses it
+    # and the controller keeps the abandoned connection's slot.
+    made: list[FakeClient] = []
+
+    def make() -> FakeClient:
+        client = FakeClient()
+        client.slow = 0.0 if made else 0.5
+        made.append(client)
+        return client
+
+    device = EsphomeDevice(make)
+
+    async def go() -> DoorState:
+        with pytest.raises(TimeoutError):
+            async with asyncio.timeout(0.05):
+                await device.state()
+        return await asyncio.wait_for(device.state(), 0.3)
+
+    assert run(go()) is DoorState.CLOSED
+    assert len(made) == 2
+    assert made[0].disconnects == 1
