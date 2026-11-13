@@ -46,7 +46,7 @@ class FakeDevice:
 
     async def manual_press(self) -> str:
         self.manual_presses += 1
-        return "sent"
+        return "manual: accepted"
 
     async def state(self) -> DoorState:
         return self.current
@@ -57,7 +57,7 @@ class FakeDevice:
     async def press(self) -> str:
         self.presses += 1
         self.current = self.after_press
-        return "sent"
+        return "accepted"
 
 
 async def _no_wait(_seconds: float) -> None:

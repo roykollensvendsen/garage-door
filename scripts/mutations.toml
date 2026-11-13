@@ -278,3 +278,15 @@ name = "a manual press is refused while the door is moving"
 file = "src/garage_door/manual.py"
 find = 'if report\["state"\] == DoorState\.MOVING:'
 replace = 'if False:'
+
+[[rule]]
+name = "a press the controller refused is said as refused"
+file = "src/garage_door/service.py"
+find = 'if reason is not None:'
+replace = 'if False:'
+
+[[rule]]
+name = "a manual press the controller refused is said as refused"
+file = "src/garage_door/manual.py"
+find = 'if reason is not None:'
+replace = 'if False:'

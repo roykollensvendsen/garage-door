@@ -45,7 +45,7 @@ class FakeClient:
         self.hang = False  # a controller off the network: the connect never answers
         self.fail_execute = False
         self.fail_switch = False  # the link dropped after connecting, as aioesphomeapi then raises
-        self.verdict: str | None = None  # what the firmware publishes after an action; None: nothing
+        self.verdict: str | None = "accepted"  # what the firmware publishes after an action; None: nothing
         self._on_state: Callable[[object], None] | None = None
         self._on_stop: Callable[[bool], Awaitable[None]] | None = None
 
@@ -165,6 +165,42 @@ def test_a_press_calls_the_controllers_press_action():
     client = FakeClient()
     device = EsphomeDevice(lambda: client)
     run(device.press())
+    assert client.executed == ["press"]
+
+
+@pytest.mark.parametrize(
+    "verdict",
+    [
+        "accepted",
+        "refused: too soon after the last press",
+        "refused: not armed",
+        "refused: a press is in progress",
+    ],
+)
+def test_a_press_answers_with_the_verdict_the_controller_publishes(verdict):
+    # The firmware judges every press and publishes its verdict on "Last
+    # press result" (firmware/garage-door.yaml); "sent" would hide a refusal.
+    client = FakeClient()
+    client.verdict = verdict
+    assert run(EsphomeDevice(lambda: client).press()) == verdict
+
+
+def test_a_manual_press_answers_with_the_verdict_the_controller_publishes():
+    client = _manual_client()
+    client.verdict = "manual: refused: manual mode is off"
+    assert run(EsphomeDevice(lambda: client).manual_press()) == "manual: refused: manual mode is off"
+
+
+def test_an_earlier_verdict_is_not_taken_for_this_press():
+    # The sensor keeps the last verdict, and sends it on connecting: only one
+    # published after this press answers it. Without one, the press was sent
+    # and nothing more is known.
+    client = FakeClient()
+    client.verdict = None
+    device = EsphomeDevice(lambda: client, verdict_wait=0.05)
+    run(device.state())
+    client.send(12, "accepted")
+    assert run(device.press()) == "sent"
     assert client.executed == ["press"]
 
 
@@ -335,7 +371,8 @@ def test_manual_mode_is_switched_with_the_controllers_manual_mode_switch():
 def test_a_manual_press_calls_the_controllers_manual_press_action_and_never_the_ordinary_one():
     client = _manual_client()
     device = EsphomeDevice(lambda: client)
-    assert run(device.manual_press()) == "sent"
+    client.verdict = "manual: accepted"
+    assert run(device.manual_press()) == "manual: accepted"
     assert client.executed == ["manual_press"]
 
 

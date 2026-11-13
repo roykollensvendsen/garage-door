@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from garage_door.door import Action, Device, DeviceUnavailableError, DoorState
+from garage_door.door import Action, Device, DeviceUnavailableError, DoorState, refusal
 
 if TYPE_CHECKING:
     import pathlib
@@ -198,6 +198,12 @@ class GarageService:
                 "The garage door controller is not reachable.",
                 pending.action,
                 pending.requester,
+            )
+        reason = refusal(verdict)
+        # RULE: a press the controller refused is said as refused
+        if reason is not None:
+            return self._refuse(
+                before, f"The controller refused the press: {reason}.", pending.action, pending.requester
             )
         # In test mode the relay stays open, so there is no travel to wait for.
         after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)

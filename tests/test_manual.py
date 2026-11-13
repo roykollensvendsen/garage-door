@@ -14,7 +14,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from garage_door.door import DeviceUnavailableError, DoorState
-from garage_door.manual import QUESTION, ManualPress, ManualQuestion, controller_report, status_sentence
+from garage_door.manual import (
+    QUESTION,
+    ManualPress,
+    ManualPressed,
+    ManualQuestion,
+    controller_report,
+    status_sentence,
+)
 from garage_door.service import Refused
 
 if TYPE_CHECKING:
@@ -33,6 +40,7 @@ class FakeDevice:
         self.reachable = True
         self.manual_presses = 0
         self.presses = 0
+        self.verdict = "manual: accepted"  # the firmware's own judgement of the press
 
     async def state(self) -> DoorState:
         self._answer()
@@ -54,7 +62,7 @@ class FakeDevice:
     async def manual_press(self) -> str:
         self._answer()
         self.manual_presses += 1
-        return "sent"
+        return self.verdict
 
     def _answer(self) -> None:
         if not self.reachable:
@@ -131,6 +139,41 @@ def test_a_confirmed_manual_press_presses_once_and_says_only_pressed(tmp_path):
     assert device.presses == 0  # never the ordinary press
 
 
+@pytest.mark.parametrize(
+    ("verdict", "reason"),
+    [
+        ("manual: refused: manual mode is off", "manual mode is off"),
+        ("manual: refused: too soon after the last press", "too soon after the last press"),
+        ("manual: refused: not armed", "not armed"),
+    ],
+)
+def test_a_manual_press_the_controller_refused_is_said_as_refused(tmp_path, verdict, reason):
+    # The firmware ends manual mode by itself after 10 minutes, and keeps its
+    # own timing: it can refuse after the laptop checked. "Pressed" would be false.
+    device = FakeDevice()
+    device.verdict = verdict
+    manual, _ = make(device, tmp_path)
+    answer = run(manual.request(requester="voice"))
+    outcome = run(manual.confirm(answer.token))
+    assert isinstance(outcome, Refused)
+    assert outcome.reason == f"The controller refused the press: {reason}."
+    last = log_lines(tmp_path)[-1]
+    assert (last["event"], last["reason"]) == ("refused", outcome.reason)
+
+
+def test_a_manual_press_without_a_verdict_does_not_say_pressed(tmp_path):
+    # No verdict came in time: it may or may not have pressed. Say so, and send Roy to look.
+    device = FakeDevice()
+    device.verdict = "sent"
+    manual, _ = make(device, tmp_path)
+    answer = run(manual.request(requester="voice"))
+    outcome = run(manual.confirm(answer.token))
+    assert isinstance(outcome, ManualPressed)
+    assert outcome.message == (
+        "I sent the press, but the controller did not say whether it took it: look at the door."
+    )
+
+
 def test_every_manual_question_and_press_is_logged_as_manual(tmp_path):
     manual, _ = make(FakeDevice(), tmp_path)
     answer = run(manual.request(requester="voice"))
@@ -138,7 +181,7 @@ def test_every_manual_question_and_press_is_logged_as_manual(tmp_path):
     events = log_lines(tmp_path)
     assert [e["event"] for e in events] == ["asked", "pressed"]
     assert all(e["manual"] == "True" for e in events)
-    assert events[1]["controller"] == "sent"
+    assert events[1]["controller"] == "manual: accepted"
 
 
 # --- The rules ------------------------------------------------------------------

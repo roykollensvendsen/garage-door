@@ -29,6 +29,16 @@ class Action(StrEnum):
         return DoorState.OPEN if self is Action.OPEN else DoorState.CLOSED
 
 
+def refusal(verdict: str) -> str | None:
+    """The firmware's reason when its verdict on a press is a refusal; None when it accepted or did not say.
+
+    The verdicts are door_logic.h's `to_string(PressResult)`, with "manual: "
+    in front for a manual press: "refused: too soon after the last press".
+    """
+    judged = verdict.removeprefix("manual: ")
+    return judged.removeprefix("refused: ") if judged.startswith("refused") else None
+
+
 class DeviceUnavailableError(Exception):
     """The controller did not answer, so nothing about the door is known."""
 
