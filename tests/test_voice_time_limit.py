@@ -20,7 +20,7 @@ import inspect
 
 import pytest
 
-from garage_door import service
+from garage_door import manual, service
 from garage_door.esphome_device import EsphomeDevice
 
 #: How long the Claude app waits for a tool, in seconds; the voice app waits about 30.
@@ -35,16 +35,23 @@ FIRST_STATE = inspect.signature(EsphomeDevice).parameters["first_state_wait"].de
 #: Connecting, or reconnecting after the connection dropped: given up on after this.
 CONNECT = inspect.signature(EsphomeDevice).parameters["connect_wait"].default
 
+#: The report every answer after an action carries: a reconnect for it is given up on.
+REPORT = manual.REPORT_SECONDS
+
 LONGEST = {
     "status, a controller slow to connect": CONNECT + FIRST_STATE,
-    "request a question, a controller slow to connect": CONNECT + FIRST_STATE,
-    "switch, a controller slow to connect": CONNECT + FIRST_STATE,
+    "request a question, a controller slow to connect": CONNECT + FIRST_STATE + REPORT,
+    "switch, a controller slow to connect": CONNECT + FIRST_STATE + REPORT,
+    "confirm a manual press, a controller slow to connect": CONNECT + FIRST_STATE + REPORT,
     "status, a controller off the network": CONNECT,
-    # The wait for the door counts from the yes, so connecting comes out of it.
+    # The wait for the door counts from the yes, so connecting comes out of it,
+    # and no read in it runs past the reply, so a reconnect there does not add.
     "confirm a press, the door never arriving": max(CONNECT + FIRST_STATE, service.REPLY_SECONDS)
-    + service.POLL_SECONDS,
+    + service.POLL_SECONDS
+    + REPORT,
     "a magic phrase, the door never arriving": max(CONNECT + FIRST_STATE, service.REPLY_SECONDS)
-    + service.POLL_SECONDS,
+    + service.POLL_SECONDS
+    + REPORT,
 }
 
 

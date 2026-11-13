@@ -209,6 +209,48 @@ def test_the_wait_for_the_door_counts_from_the_yes(tmp_path):
     assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
 
 
+class DropsNearTheEnd(SlowToReconnect):
+    """A controller whose link goes `hang_from` seconds after the yes: a read then waits on a reconnect."""
+
+    def __init__(self, clock: FakeClock, *args: DoorState) -> None:
+        super().__init__(clock, *args)
+        self.hang_from: float | None = None
+
+    async def state(self) -> DoorState:
+        if self.hang_from is not None and self.clock.now >= self.hang_from:
+            await asyncio.Event().wait()  # a reconnect, which can take connect_wait + first_state_wait
+        return await super().state()
+
+
+@pytest.mark.parametrize(
+    ("first_read", "drop_at"),
+    [
+        (0.95, REPLY_SECONDS - 0.1),  # the last read starts 50 ms before the reply is due
+        (0.0, REPLY_SECONDS),  # the link goes just as the reply is due
+    ],
+)
+def test_no_read_after_a_press_runs_past_the_reply(tmp_path, first_read, drop_at):
+    # A reconnect inside the wait added up to 8 s, and the voice cut the
+    # answer off at 15. The reply is due REPLY_SECONDS after the yes, so a
+    # read is bounded by the time left, and none starts after that.
+    clock = FakeClock()
+    device = DropsNearTheEnd(clock, DoorState.CLOSED, DoorState.MOVING)
+    service = GarageService(device, log_path=tmp_path / "presses.jsonl", clock=clock, sleep=clock.sleep)
+    question = run(service.request(Action.OPEN, requester="voice"))
+    started = clock.now
+    device.reconnect = first_read
+    device.hang_from = started + drop_at
+
+    async def go() -> Confirmed | Refused:
+        return await asyncio.wait_for(service.confirm(question.token), 1.0)  # real seconds
+
+    outcome = run(go())
+    assert isinstance(outcome, Confirmed)
+    assert device.presses == 1
+    assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
+    assert outcome.after in {DoorState.MOVING, DoorState.UNKNOWN}
+
+
 def test_the_wait_for_the_door_fits_in_the_voices_time():
     # 3 s for the first state, the wait, one more read, 2 s to spare: 15 s.
     assert REPLY_SECONDS == 9.0

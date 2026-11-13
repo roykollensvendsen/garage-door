@@ -76,6 +76,38 @@ def call(server, tool: str, arguments: dict[str, object]) -> dict[str, object]:
     return result.structured_content
 
 
+class GoesAfterThePress(FakeDevice):
+    """A controller whose link goes once the door has arrived: every later read waits on a reconnect."""
+
+    reads_after_press = 0
+
+    async def state(self) -> DoorState:
+        if self.presses:
+            self.reads_after_press += 1
+        if self.reads_after_press > 1:  # the first tells the service the door arrived
+            await asyncio.Event().wait()  # a reconnect, which can take connect_wait + first_state_wait
+        return await super().state()
+
+
+def test_the_report_after_a_press_is_given_up_on_rather_than_waited_for(tmp_path, monkeypatch):
+    # After the press, the answer is ready. Reconnecting for the report could
+    # add 8 s more and push the answer past the voice's limit; give it a moment.
+    device = GoesAfterThePress(DoorState.CLOSED, DoorState.OPEN)
+    log = tmp_path / "presses.jsonl"
+    service = GarageService(device, log_path=log, sleep=_no_wait)
+    monkeypatch.setattr("garage_door.manual.REPORT_SECONDS", 0.05)
+    manual = ManualPress(device, log_path=log)
+    server = build_server(service, manual, Switches(device, log_path=log))
+    question = call(server, "garage_request", {"action": "open"})
+
+    async def confirm() -> object:
+        return await asyncio.wait_for(server.call_tool("garage_confirm", {"token": question["token"]}), 2.0)
+
+    answer = asyncio.run(confirm()).structured_content
+    assert device.presses == 1
+    assert answer["controller"]["state"] == "unknown"
+
+
 def test_the_server_offers_exactly_status_request_confirm_the_manual_press_and_switching(tmp_path):
     server = server_for(FakeDevice(DoorState.CLOSED, DoorState.OPEN), tmp_path)
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
