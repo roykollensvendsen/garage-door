@@ -138,7 +138,7 @@ class EsphomeDevice:
         if self._armed_key is None:
             msg = f"the controller has no '{ARMED_SWITCH}' switch"
             raise DeviceUnavailableError(msg)
-        self._client.switch_command(self._armed_key, on)
+        self._switch(self._armed_key, on=on)
 
     async def set_manual(self, *, on: bool) -> None:
         """Switch manual mode on or off (decisions/ADR-GD-004). Presses nothing."""
@@ -146,7 +146,16 @@ class EsphomeDevice:
         if self._manual_key is None:
             msg = f"the controller has no '{MANUAL_SWITCH}' switch"
             raise DeviceUnavailableError(msg)
-        self._client.switch_command(self._manual_key, on)
+        self._switch(self._manual_key, on=on)
+
+    def _switch(self, key: int, *, on: bool) -> None:
+        """Send a switch command; a link that dropped since the last read fails closed, as unreachable."""
+        try:
+            self._client.switch_command(key, on)
+        except FAILURES as error:
+            self._connected = False
+            msg = f"the switch was not delivered: {error}"
+            raise DeviceUnavailableError(msg) from error
 
     @property
     def _client(self) -> Client:

@@ -44,6 +44,8 @@ class FakeClient:
         self.fail_connect = False
         self.hang = False  # a controller off the network: the connect never answers
         self.fail_execute = False
+        self.fail_switch = False  # the link dropped after connecting, as aioesphomeapi then raises
+        self.verdict: str | None = None  # what the firmware publishes after an action; None: nothing
         self._on_state: Callable[[object], None] | None = None
         self._on_stop: Callable[[bool], Awaitable[None]] | None = None
 
@@ -83,8 +85,14 @@ class FakeClient:
             msg = "lost"
             raise APIConnectionError(msg)
         self.executed.append(service.name)
+        if self.verdict is not None:
+            # The firmware's action publishes its verdict at once, as a fresh state.
+            asyncio.get_running_loop().call_soon(self.send, 12, self.verdict)
 
     def switch_command(self, key: int, state: bool) -> None:  # noqa: FBT001 - the library's own signature
+        if self.fail_switch:
+            msg = "Not connected"
+            raise APIConnectionError(msg)
         self.switched.append((key, state))
 
     async def disconnect(self) -> None:
@@ -277,6 +285,23 @@ def test_arming_fails_closed_on_a_controller_without_the_switch():
     client = FakeClient("closed")
     with pytest.raises(DeviceUnavailableError, match="Armed"):
         run(EsphomeDevice(lambda: client).set_armed(on=True))
+
+
+@pytest.mark.parametrize("switching", ["set_armed", "set_manual"])
+def test_switching_over_a_link_that_just_dropped_is_reported_and_reconnected_next_time(switching):
+    # aioesphomeapi raises from switch_command when the link went after the
+    # last read; the voice must hear "not reachable", not a bare tool failure.
+    client = _manual_client()
+    client.entities.append(SwitchInfo(name="Armed", key=14))
+    device = EsphomeDevice(lambda: client)
+    run(device.state())
+    client.fail_switch = True
+    with pytest.raises(DeviceUnavailableError, match="not delivered"):
+        run(getattr(device, switching)(on=True))
+    client.fail_switch = False
+    run(getattr(device, switching)(on=True))
+    assert client.connects == 2
+    assert client.executed == []
 
 
 def _manual_client() -> FakeClient:
