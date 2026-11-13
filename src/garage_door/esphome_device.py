@@ -12,10 +12,15 @@ import contextlib
 import math
 from typing import TYPE_CHECKING, Any, Protocol
 
-from aioesphomeapi.core import APIConnectionError
+from aioesphomeapi.core import (
+    APIConnectionError,
+    EncryptionPlaintextAPIError,
+    InvalidAuthAPIError,
+    InvalidEncryptionKeyAPIError,
+)
 from aioesphomeapi.model import SensorState, SwitchState, TextSensorState
 
-from garage_door.door import DeviceUnavailableError, DoorState
+from garage_door.door import DeviceUnavailableError, DoorState, WrongKeyError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
@@ -28,6 +33,8 @@ MANUAL_SWITCH = "Manual mode"
 PRESS_ACTION = "press"
 MANUAL_PRESS_ACTION = "manual_press"
 FAILURES = (APIConnectionError, TimeoutError, OSError)
+#: The controller answered, but not to this key: a setup fault, which no retry mends.
+KEY_FAILURES = (InvalidEncryptionKeyAPIError, EncryptionPlaintextAPIError, InvalidAuthAPIError)
 
 
 class Client(Protocol):
@@ -170,6 +177,10 @@ class EsphomeDevice:
             async with asyncio.timeout(self._connect_wait):
                 await self._client.connect(on_stop=self._stopped, login=True)
                 return await self._client.list_entities_services()
+        except KEY_FAILURES as error:
+            await self._give_up()
+            msg = f"the garage door controller refused the laptop's key: {error}"
+            raise WrongKeyError(msg) from error
         except FAILURES as error:
             await self._give_up()
             msg = f"the garage door controller is not reachable: {error}"

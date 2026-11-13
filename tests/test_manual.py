@@ -31,6 +31,7 @@ class FakeDevice:
         self.is_armed: bool | None = True
         self.is_manual: bool | None = True
         self.reachable = True
+        self.failure: type[DeviceUnavailableError] = DeviceUnavailableError  # WrongKeyError: refused the key
         self.manual_presses = 0
         self.presses = 0
 
@@ -58,7 +59,7 @@ class FakeDevice:
 
     def _answer(self) -> None:
         if not self.reachable:
-            raise DeviceUnavailableError(UNREACHABLE)
+            raise self.failure(UNREACHABLE)
 
 
 class FakeClock:

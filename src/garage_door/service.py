@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from garage_door.door import Action, Device, DeviceUnavailableError, DoorState
+from garage_door.door import WRONG_KEY, Action, Device, DeviceUnavailableError, DoorState, WrongKeyError
 
 if TYPE_CHECKING:
     import pathlib
@@ -139,10 +139,8 @@ class GarageService:
         self._pending = None  # a new request always replaces an older question
         try:
             state = await self._device.state()
-        except DeviceUnavailableError:
-            return self._refuse(
-                DoorState.UNKNOWN, "The garage door controller is not reachable.", action, requester
-            )
+        except DeviceUnavailableError as error:
+            return self._unanswered(error, action, requester)
         # RULE: a press is refused when the door state is not known
         if state not in KNOWN:
             return self._refuse(state, f"The garage door is {state}, so I won't press.", action, requester)
@@ -192,13 +190,8 @@ class GarageService:
                 )
             armed = await self.armed()
             verdict = await self._device.press()
-        except DeviceUnavailableError:
-            return self._refuse(
-                DoorState.UNKNOWN,
-                "The garage door controller is not reachable.",
-                pending.action,
-                pending.requester,
-            )
+        except DeviceUnavailableError as error:
+            return self._unanswered(error, pending.action, pending.requester)
         # In test mode the relay stays open, so there is no travel to wait for.
         after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)
         reached = after is pending.action.end_state
@@ -224,6 +217,14 @@ class GarageService:
             await self._sleep(POLL_SECONDS)
             state = await self.status()
         return state
+
+    def _unanswered(self, error: DeviceUnavailableError, action: Action, requester: str) -> Refused:
+        """Refuse because the controller did not answer, saying so when it refused the laptop's key."""
+        if isinstance(error, WrongKeyError):
+            return self._refuse(DoorState.UNKNOWN, WRONG_KEY, action, requester)
+        return self._refuse(
+            DoorState.UNKNOWN, "The garage door controller is not reachable.", action, requester
+        )
 
     def _refuse(self, state: DoorState, reason: str, action: Action | None, requester: str) -> Refused:
         self._log("refused", requester=requester, action=action, before=state, reason=reason)

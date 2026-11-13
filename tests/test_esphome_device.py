@@ -439,3 +439,19 @@ def test_connecting_reads_the_entities_and_actions_by_name():
     assert client.executed == ["press", "manual_press"]
     assert client.switched == [(14, True), (15, False)]
     assert client.connects == 1
+
+
+def test_a_controller_that_refuses_the_key_is_told_apart_from_one_off_the_network():
+    from aioesphomeapi import InvalidEncryptionKeyAPIError  # noqa: PLC0415
+
+    from garage_door.door import WrongKeyError  # noqa: PLC0415
+
+    client = FakeClient()
+
+    async def refuse(on_stop=None, *, login=False):  # noqa: ARG001 - the library's own signature
+        msg = "Invalid encryption key"
+        raise InvalidEncryptionKeyAPIError(msg, "garage-door")
+
+    client.connect = refuse
+    with pytest.raises(WrongKeyError, match="key"):
+        run(EsphomeDevice(lambda: client).state())
