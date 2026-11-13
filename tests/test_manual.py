@@ -143,8 +143,8 @@ def test_a_confirmed_manual_press_presses_once_and_says_only_pressed(tmp_path):
     ("verdict", "reason"),
     [
         ("manual: refused: manual mode is off", "manual mode is off"),
-        ("manual: refused: too soon after the last press", "too soon after the last press"),
-        ("manual: refused: not armed", "not armed"),
+        ("manual: refused: too soon after the last press", "too soon after the last one"),
+        ("manual: refused: not armed", "it is not armed"),
     ],
 )
 def test_a_manual_press_the_controller_refused_is_said_as_refused(tmp_path, verdict, reason):
@@ -156,7 +156,7 @@ def test_a_manual_press_the_controller_refused_is_said_as_refused(tmp_path, verd
     answer = run(manual.request(requester="voice"))
     outcome = run(manual.confirm(answer.token))
     assert isinstance(outcome, Refused)
-    assert outcome.reason == f"The controller refused the press: {reason}."
+    assert outcome.reason.startswith(f"The controller refused the manual press: {reason}")
     last = log_lines(tmp_path)[-1]
     assert (last["event"], last["reason"]) == ("refused", outcome.reason)
 
@@ -170,7 +170,8 @@ def test_a_manual_press_without_a_verdict_does_not_say_pressed(tmp_path):
     outcome = run(manual.confirm(answer.token))
     assert isinstance(outcome, ManualPressed)
     assert outcome.message == (
-        "I sent the press, but the controller did not say whether it took it: look at the door."
+        "I sent the press, but the controller did not say whether it took it. "
+        "Look at the door before you ask again."
     )
 
 
@@ -361,3 +362,17 @@ def test_the_status_sentence_says_when_the_light_was_last_reported_not_how_long_
 def test_the_manual_question_is_plainly_a_question_when_spoken():
     # A voice reads it aloud; flat intonation must not hide that it asks.
     assert "Do you want me to press the button?" in QUESTION
+
+
+def test_every_refusal_the_firmware_can_give_has_its_own_words():
+    # A reason missing here would fall back to the generic "Look at the door".
+    import pathlib  # noqa: PLC0415
+    import re  # noqa: PLC0415
+
+    from garage_door.manual import MANUAL_REFUSED  # noqa: PLC0415
+    from garage_door.service import CONTROLLER_REFUSED  # noqa: PLC0415
+
+    header = pathlib.Path(__file__).parent.parent / "firmware/door_logic/door_logic.h"
+    firmware = set(re.findall(r'"refused: ([^"]+)"', header.read_text()))
+    worded = (set(CONTROLLER_REFUSED) | set(MANUAL_REFUSED)) - {""}
+    assert firmware == worded
