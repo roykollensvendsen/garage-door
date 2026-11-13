@@ -234,12 +234,23 @@ class GarageService:
         return Confirmed(before, after, reached, armed, message)
 
     async def _wait_for(self, wanted: DoorState, due: float) -> DoorState:
-        """Read the door until it is `wanted` or the answer is `due`."""
-        state = await self.status()
+        """Read the door until it is `wanted` or the answer is `due`; no read runs past `due`."""
+        state = await self._read_by(due)
         while state is not wanted and self._clock() < due:
             await self._sleep(POLL_SECONDS)
-            state = await self.status()
+            state = await self._read_by(due, last=state)
         return state
+
+    async def _read_by(self, due: float, last: DoorState = DoorState.UNKNOWN) -> DoorState:
+        """The door, if it answers before `due`; a reconnect can take 8 s. `last` once `due` has passed."""
+        left = due - self._clock()
+        if left <= 0:
+            return last
+        try:
+            async with asyncio.timeout(left):
+                return await self.status()
+        except TimeoutError:
+            return DoorState.UNKNOWN
 
     def _refuse(self, state: DoorState, reason: str, action: Action | None, requester: str) -> Refused:
         self._log("refused", requester=requester, action=action, before=state, reason=reason)

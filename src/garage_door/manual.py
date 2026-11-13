@@ -15,6 +15,7 @@ import datetime as dt
 import json
 import secrets
 import time
+from asyncio import timeout
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -32,6 +33,8 @@ QUESTION = (
     "Manual mode is on. I don't know if the door is open or closed, and I can't tell which way "
     "it will go. Do you want me to press the button? Only say yes if you can see the door."
 )
+#: How long the report after an action may take: the answer is ready, and a reconnect could take 8 s.
+REPORT_SECONDS = 2.0
 PRESSED = "Pressed. I can't tell which way the door went: look at it."
 #: Said when no verdict came back in time: the press may or may not have gone through.
 UNCONFIRMED = (
@@ -102,7 +105,18 @@ async def controller_report(device: ManualDevice) -> Report:
         if isinstance(device, LightDevice):
             light, age = await device.light()
     except DeviceUnavailableError:
-        state, armed, manual = DoorState.UNKNOWN, None, None
+        return _unknown_report()
+    return _report(state, armed=armed, manual=manual, light=light, age=age)
+
+
+def _unknown_report() -> Report:
+    """The report when the controller does not answer: nothing known."""
+    return _report(DoorState.UNKNOWN, armed=None, manual=None, light=None, age=None)
+
+
+def _report(
+    state: DoorState, *, armed: bool | None, manual: bool | None, light: bool | None, age: float | None
+) -> Report:
     fresh = age is not None and age < LIGHT_FRESH_SECONDS
     return {
         "state": str(state),
@@ -150,6 +164,18 @@ class ManualPress:
     async def report(self) -> Report:
         """What the controller says now: state, whether it can be trusted, armed, manual mode."""
         return await controller_report(self._device)
+
+    async def report_after(self) -> Report:
+        """The report that follows an action: given up on as unknown after REPORT_SECONDS.
+
+        The answer is ready by then; reconnecting for the report could add 8 s
+        and push it past the voice's limit.
+        """
+        try:
+            async with timeout(REPORT_SECONDS):
+                return await controller_report(self._device)
+        except TimeoutError:
+            return _unknown_report()
 
     def owns(self, token: str) -> bool:
         """Whether `token` is this manual press's open question."""
