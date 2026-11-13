@@ -20,7 +20,15 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from garage_door.door import Action, Device, DeviceUnavailableError, DoorState, refusal
+from garage_door.door import (
+    WRONG_KEY,
+    Action,
+    Device,
+    DeviceUnavailableError,
+    DoorState,
+    WrongKeyError,
+    refusal,
+)
 
 if TYPE_CHECKING:
     import pathlib
@@ -40,13 +48,13 @@ CONTROLLER_REFUSED = {
     "Use the wall button or the remote to close it.",
     "": "The controller refused the press. Look at the door, then ask again.",
 }
+#: Said when the controller does not answer.
+UNREACHABLE = "The garage door controller is not reachable."
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
-#: How long a press waits for the door before it answers. Shorter than a full
-#: open or close, so the answer reaches the voice in time: about 15 s for a
-#: tool (claude-voice docs/plugin-standard.md, rule 3) = 3 s for the first
-#: state + this + one more read + 2 s to spare. Roy chose (2026-11-10) to hear
-#: in time that the door is not yet confirmed, rather than to hear nothing.
+#: How long a press waits for the door before it answers (decisions/ADR-GD-010): the voice
+#: gives a tool about 15 s (claude-voice docs/plugin-standard.md, rule 3) = 3 s for the first
+#: state + this + one more read + 2 s to spare; "not yet confirmed" in time beats nothing.
 REPLY_SECONDS = 9.0
 #: How often the door is read while waiting for it to arrive.
 POLL_SECONDS = 1.0
@@ -74,11 +82,7 @@ class Refused:
 
 @dataclass(frozen=True)
 class Confirmed:
-    """The button was pressed; where the door was before and is now.
-
-    `armed` is False when the controller was in test mode, so the relay did
-    not switch, and None when the controller did not say.
-    """
+    """The button was pressed; `armed` False is test mode (the relay did not switch), None not said."""
 
     before: DoorState
     after: DoorState
@@ -143,18 +147,12 @@ class GarageService:
     async def request(
         self, action: Action, *, requester: str, phrase: str | None = None
     ) -> Question | Confirmed | Refused:
-        """Check that `action` is safe now and return the question to ask, or why not.
-
-        With a `phrase` from the user's own list for `action` (decisions/ADR-GD-008),
-        it presses at once instead of asking: the phrase stands in for the yes.
-        """
+        """The question to ask for `action`, or why not; a matching `phrase` (ADR-GD-008) is the yes."""
         self._pending = None  # a new request always replaces an older question
         try:
             state = await self._device.state()
-        except DeviceUnavailableError:
-            return self._refuse(
-                DoorState.UNKNOWN, "The garage door controller is not reachable.", action, requester
-            )
+        except DeviceUnavailableError as error:
+            return self._unanswered(error, action, requester)
         # RULE: a press is refused when the door state is not known
         if state not in KNOWN:
             return self._refuse(state, f"The garage door is {state}, so I won't press.", action, requester)
@@ -204,13 +202,8 @@ class GarageService:
                 )
             armed = await self.armed()
             verdict = await self._device.press()
-        except DeviceUnavailableError:
-            return self._refuse(
-                DoorState.UNKNOWN,
-                "The garage door controller is not reachable.",
-                pending.action,
-                pending.requester,
-            )
+        except DeviceUnavailableError as error:
+            return self._unanswered(error, pending.action, pending.requester)
         reason = refusal(verdict, CONTROLLER_REFUSED)
         # RULE: a press the controller refused is said as refused
         if reason is not None:
@@ -251,6 +244,12 @@ class GarageService:
                 return await self.status()
         except TimeoutError:
             return DoorState.UNKNOWN
+
+    def _unanswered(self, error: DeviceUnavailableError, action: Action, requester: str) -> Refused:
+        """Refuse because the controller did not answer, saying so when it refused the laptop's key."""
+        if isinstance(error, WrongKeyError):
+            return self._refuse(DoorState.UNKNOWN, WRONG_KEY, action, requester)
+        return self._refuse(DoorState.UNKNOWN, UNREACHABLE, action, requester)
 
     def _refuse(self, state: DoorState, reason: str, action: Action | None, requester: str) -> Refused:
         self._log("refused", requester=requester, action=action, before=state, reason=reason)

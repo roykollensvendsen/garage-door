@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
-from garage_door.door import DeviceUnavailableError, DoorState
+from garage_door.door import WRONG_KEY, DeviceUnavailableError, DoorState, WrongKeyError
 from garage_door.service import TOKEN_SECONDS, Refused
 
 if TYPE_CHECKING:
@@ -116,8 +116,8 @@ class Switches:
             return await self._switch(switch, requester)
         try:
             on_now = await (self._device.armed() if switch is Switch.ARM else self._device.manual())
-        except DeviceUnavailableError:
-            return self._refuse(switch, UNREACHABLE, requester)
+        except DeviceUnavailableError as error:
+            return self._unanswered(switch, error, requester)
         if on_now is True:
             return self._refuse(switch, ALREADY[switch], requester)
         token = self._new_token()
@@ -148,6 +148,12 @@ class Switches:
             return self._refuse(switch, UNREACHABLE, requester)
         self._log("switched", switch=switch, requester=requester)
         return Switched(switch, DONE[switch])
+
+    def _unanswered(self, switch: Switch, error: DeviceUnavailableError, requester: str) -> Refused:
+        """Refuse because the controller did not answer, saying so when it refused the laptop's key."""
+        if isinstance(error, WrongKeyError):
+            return self._refuse(switch, WRONG_KEY, requester)
+        return self._refuse(switch, UNREACHABLE, requester)
 
     def _refuse(self, switch: Switch, reason: str, requester: str) -> Refused:
         self._log("refused", switch=switch, requester=requester, reason=reason)
