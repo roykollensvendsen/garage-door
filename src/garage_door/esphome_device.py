@@ -170,6 +170,11 @@ class EsphomeDevice:
             async with asyncio.timeout(self._connect_wait):
                 await self._client.connect(on_stop=self._stopped, login=True)
                 return await self._client.list_entities_services()
+        except asyncio.CancelledError:
+            # A caller's own time limit cut the connect short: drop the half-made
+            # client, so the next call starts afresh and frees the controller's slot.
+            await asyncio.shield(self._give_up())
+            raise
         except FAILURES as error:
             await self._give_up()
             msg = f"the garage door controller is not reachable: {error}"
