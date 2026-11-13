@@ -12,7 +12,7 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
-from garage_door.door import DeviceUnavailableError, DoorState
+from garage_door.door import WRONG_KEY, DeviceUnavailableError, DoorState, WrongKeyError
 from garage_door.service import Refused
 from garage_door.switches import Switch, Switched, Switches, SwitchQuestion
 
@@ -25,6 +25,7 @@ class FakeDevice:
         self.is_armed: bool | None = False
         self.is_manual: bool | None = False
         self.reachable = True
+        self.failure: type[DeviceUnavailableError] = DeviceUnavailableError  # WrongKeyError: refused the key
         self.sets: list[tuple[str, bool]] = []
 
     async def state(self) -> DoorState:
@@ -52,7 +53,7 @@ class FakeDevice:
     def _answer(self) -> None:
         if not self.reachable:
             msg = "no answer from 192.0.2.1"
-            raise DeviceUnavailableError(msg)
+            raise self.failure(msg)
 
 
 class FakeClock:
@@ -194,3 +195,13 @@ def test_switch_tokens_are_its_own(tmp_path):
     answer = run(switches.request(Switch.ARM, requester="voice"))
     assert switches.owns(answer.token)
     assert not switches.owns("manual-0")
+
+
+def test_switching_on_a_controller_that_refuses_the_key_says_so(tmp_path):
+    device = FakeDevice()
+    device.reachable = False
+    device.failure = WrongKeyError
+    switches, _ = make(device, tmp_path)
+    refused = run(switches.request(Switch.ARM, requester="voice"))
+    assert isinstance(refused, Refused)
+    assert refused.reason == WRONG_KEY

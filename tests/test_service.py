@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from garage_door.door import Action, DeviceUnavailableError, DoorState
+from garage_door.door import WRONG_KEY, Action, DeviceUnavailableError, DoorState, WrongKeyError
 from garage_door.phrases import Phrases
 from garage_door.service import POLL_SECONDS, REPLY_SECONDS, Confirmed, GarageService, Question, Refused
 
@@ -32,22 +32,23 @@ class FakeDevice:
         self.after_press = after_press
         self.presses = 0
         self.reachable = True
+        self.failure: type[DeviceUnavailableError] = DeviceUnavailableError  # WrongKeyError: refused the key
         self.is_armed: bool | None = True  # False: test mode, the relay stays open
         self.verdict = "accepted"  # the firmware's own judgement of the press
 
     async def state(self) -> DoorState:
         if not self.reachable:
-            raise DeviceUnavailableError(UNREACHABLE)
+            raise self.failure(UNREACHABLE)
         return self.current
 
     async def armed(self) -> bool | None:
         if not self.reachable:
-            raise DeviceUnavailableError(UNREACHABLE)
+            raise self.failure(UNREACHABLE)
         return self.is_armed
 
     async def press(self) -> str:
         if not self.reachable:
-            raise DeviceUnavailableError(UNREACHABLE)
+            raise self.failure(UNREACHABLE)
         self.presses += 1
         if not self.verdict.startswith("refused") and self.after_press is not None:
             self.current = self.after_press
@@ -614,3 +615,16 @@ def test_a_magic_phrase_cancels_an_open_question(tmp_path):
     device.current = DoorState.CLOSED
     assert isinstance(run(service.confirm(question.token)), Refused)
     assert device.presses == 1
+
+
+def test_a_controller_that_refuses_the_laptops_key_is_said_as_that_not_as_unreachable(tmp_path):
+    # A controller flashed with another key answers on the network but refuses
+    # the handshake. "Not reachable" would send Roy to check power and Wi-Fi.
+    device = FakeDevice(DoorState.CLOSED, DoorState.OPEN)
+    device.reachable = False
+    device.failure = WrongKeyError
+    service, _ = make(device, tmp_path)
+    refused = run(service.request(Action.OPEN, requester="voice"))
+    assert isinstance(refused, Refused)
+    assert refused.reason == WRONG_KEY
+    assert device.presses == 0
