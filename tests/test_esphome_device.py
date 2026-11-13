@@ -46,6 +46,9 @@ class FakeClient:
         self.fail_execute = False
         self.fail_switch = False  # the link dropped after connecting, as aioesphomeapi then raises
         self.verdict: str | None = "accepted"  # what the firmware publishes after an action; None: nothing
+        self.old_verdict: str | None = None  # the last verdict, which ESPHome resends on connecting
+        self.old_verdict_late = 0.0  # seconds after the door's state that it arrives
+        self.verdict_late = 0.0  # seconds after an action that its verdict arrives
         self._on_state: Callable[[object], None] | None = None
         self._on_stop: Callable[[bool], Awaitable[None]] | None = None
 
@@ -74,6 +77,9 @@ class FakeClient:
         if self.door is None:
             return
         first = TextSensorState(key=11, state=self.door)
+        # ESPHome sends every entity's state on connecting; one never set, as missing.
+        old = TextSensorState(key=12, state=self.old_verdict or "", missing_state=self.old_verdict is None)
+        asyncio.get_running_loop().call_later(self.late + self.old_verdict_late, on_state, old)
         if self.late:
             asyncio.get_running_loop().call_later(self.late, on_state, first)
         else:
@@ -87,7 +93,7 @@ class FakeClient:
         self.executed.append(service.name)
         if self.verdict is not None:
             # The firmware's action publishes its verdict at once, as a fresh state.
-            asyncio.get_running_loop().call_soon(self.send, 12, self.verdict)
+            asyncio.get_running_loop().call_later(self.verdict_late, self.send, 12, self.verdict)
 
     def switch_command(self, key: int, state: bool) -> None:  # noqa: FBT001 - the library's own signature
         if self.fail_switch:
@@ -202,6 +208,17 @@ def test_an_earlier_verdict_is_not_taken_for_this_press():
     client.send(12, "accepted")
     assert run(device.press()) == "sent"
     assert client.executed == ["press"]
+
+
+def test_the_last_verdict_resent_on_connecting_is_not_taken_for_this_press():
+    # On connecting, ESPHome sends every entity's state, so "Last press result"
+    # comes again with the previous press's verdict, a moment after the door's.
+    # Taken for this press, an old refusal stops the watch on a moving door.
+    client = FakeClient()
+    client.old_verdict = "refused: too soon after the last press"
+    client.old_verdict_late = 0.02  # after the door's state, so after a press sent at once
+    client.verdict_late = 0.05
+    assert run(EsphomeDevice(lambda: client).press()) == "accepted"
 
 
 def test_a_controller_that_never_answers_is_given_up_on_in_the_voices_time():
