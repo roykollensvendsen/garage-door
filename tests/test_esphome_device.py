@@ -562,3 +562,20 @@ def test_a_controller_that_refuses_the_key_is_told_apart_from_one_off_the_networ
     client.connect = refuse
     with pytest.raises(WrongKeyError, match="key"):
         run(EsphomeDevice(lambda: client).state())
+
+
+def test_a_controller_that_wants_a_key_the_laptop_does_not_send_is_a_key_fault():
+    """With no key set, the controller asks for one: a setup fault, said as one and not as "not reachable"."""
+    from aioesphomeapi import core  # noqa: PLC0415
+
+    from garage_door.door import WrongKeyError  # noqa: PLC0415
+
+    client = FakeClient()
+
+    async def want_a_key(on_stop=None, *, login=False):  # noqa: ARG001 - the library's own signature
+        msg = "The connection requires encryption"
+        raise core.RequiresEncryptionAPIError(msg)
+
+    client.connect = want_a_key
+    with pytest.raises(WrongKeyError, match="key"):
+        run(EsphomeDevice(lambda: client).state())
