@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The controller, reached over ESPHome's encrypted native API on the home network.
 
-The names used here, the "Door state" sensor and the "press" action, are the
-ones firmware/garage-door.yaml defines.
+The names used here, the "Door state" sensor and the "press" action, are firmware/garage-door.yaml's.
 """
 
 from __future__ import annotations
@@ -30,8 +29,13 @@ MANUAL_SWITCH = "Manual mode"
 PRESS_ACTION = "press"
 MANUAL_PRESS_ACTION = "manual_press"
 FAILURES = (core.APIConnectionError, TimeoutError, OSError)
-#: The controller answered, but not to this key: a setup fault, which no retry mends.
-KEY_FAILURES = (core.InvalidEncryptionKeyAPIError, core.EncryptionPlaintextAPIError, core.InvalidAuthAPIError)
+#: The controller answered, but not to this key (or to none): a setup fault, which no retry mends.
+KEY_FAILURES = (
+    core.InvalidEncryptionKeyAPIError,
+    core.EncryptionPlaintextAPIError,
+    core.InvalidAuthAPIError,
+    core.RequiresEncryptionAPIError,  # the laptop sent no key, and the controller wants one
+)
 
 
 class Client(Protocol):
@@ -143,21 +147,18 @@ class EsphomeDevice:
     async def set_armed(self, *, on: bool) -> None:
         """Switch test mode off (armed) or on. Presses nothing."""
         await self._ensure_connected()
-        if self._armed_key is None:
-            msg = f"the controller has no '{ARMED_SWITCH}' switch"
-            raise DeviceUnavailableError(msg)
-        self._switch(self._armed_key, on=on)
+        self._switch(self._armed_key, ARMED_SWITCH, on=on)
 
     async def set_manual(self, *, on: bool) -> None:
         """Switch manual mode on or off (decisions/ADR-GD-004). Presses nothing."""
         await self._ensure_connected()
-        if self._manual_key is None:
-            msg = f"the controller has no '{MANUAL_SWITCH}' switch"
-            raise DeviceUnavailableError(msg)
-        self._switch(self._manual_key, on=on)
+        self._switch(self._manual_key, MANUAL_SWITCH, on=on)
 
-    def _switch(self, key: int, *, on: bool) -> None:
+    def _switch(self, key: int | None, name: str, *, on: bool) -> None:
         """Send a switch command; a link that dropped since the last read fails closed, as unreachable."""
+        if key is None:
+            msg = f"the controller has no '{name}' switch"
+            raise DeviceUnavailableError(msg)
         try:
             self._client.switch_command(key, on)
         except FAILURES as error:
@@ -264,8 +265,7 @@ class EsphomeDevice:
 
     def _on_sensor(self, state: SensorState) -> None:
         if self._names.get(state.key) == STATUS_AGE_SENSOR:
-            age = state.state
-            self._status_age = None if state.missing_state or math.isnan(age) else age
+            self._status_age = None if state.missing_state or math.isnan(state.state) else state.state
 
 
 async def _until(done: Callable[[], bool], seconds: float) -> None:
