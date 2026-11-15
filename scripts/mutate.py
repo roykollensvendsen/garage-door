@@ -29,6 +29,7 @@ import os
 import pathlib
 import re
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -116,6 +117,19 @@ def sweep() -> None:
     # RULE: a killed run's temporary files are swept at the next start
     for left in MUTATE_TMP.iterdir() if MUTATE_TMP.is_dir() else []:
         _remove(left)
+
+
+def stop_cleanly() -> None:
+    """Turn a stop from outside (a cancelled CI job, a closed terminal) into the exit Ctrl-C gives."""
+
+    def stop(signum: int, _frame: object) -> None:
+        for each in (signal.SIGTERM, signal.SIGHUP):
+            signal.signal(each, signal.SIG_IGN)  # a second stop must not cut the cleanup short
+        raise SystemExit(128 + signum)
+
+    # RULE: a stopped run cleans up as an interrupted one does
+    for each in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(each, stop)
 
 
 def leave_no_folder() -> None:
@@ -287,7 +301,7 @@ def arguments() -> argparse.Namespace:
 def main() -> int:
     """Mutate every rule in turn, restore the tree, and report."""
     args = arguments()
-
+    stop_cleanly()
     repair()
     sweep()
     # RULE: no rows to check is a failure not a pass
@@ -337,6 +351,11 @@ def main() -> int:
         RECOVERY.unlink(missing_ok=True)
         leave_no_folder()
 
+    return summary(results, lost, args.write)
+
+
+def summary(results: list[tuple[str, int, str, bool]], lost: list[str], write: pathlib.Path | None) -> int:
+    """Say what the run proved, write the evidence page if asked, and give the exit code."""
     survived = [name for name, count, _, _ in results if count == 0]
     lucky = [name for name, count, _, own in results if count and not own]
     proven = len(results) - len(survived) - len(lucky)
@@ -348,8 +367,8 @@ def main() -> int:
     if lost:
         print("CHANGED WHILE MUTATED, so left as they are:", ", ".join(sorted(set(lost))))  # noqa: T201
         print("Edit the tree while this runs and the result is not about your code.")  # noqa: T201
-    if args.write:
-        args.write.write_text(report(results, survived, lucky))
+    if write:
+        write.write_text(report(results, survived, lucky))
     return 1 if survived or lucky or lost else 0
 
 
@@ -365,34 +384,8 @@ def report(results: list[tuple[str, int, str, bool]], survived: list[str], lucky
         + (" None survived." if not survived else f" Survived: {', '.join(survived)}.")
         + ("" if not lucky else f" Killed only by other tests: {', '.join(lucky)}.")
     )
-    return f"""# Every rule, turned off in turn
-
-*Run {dt.datetime.now(dt.UTC).date()} by `python scripts/mutate.py --write
-evidence/tests/rule-mutations.md`, which is how to repeat it. The script
-restores every file it touched before it exits.*
-
-Green on a first run proves nothing: a test that has never been red tests
-nothing. Where a rule is written before its test, the test is run red first.
-Where a rule already exists, this is the substitute. Each rule is disabled in
-turn, by replacing its one line with something that can never hold, and the
-suite is run. A rule whose removal breaks no test is a rule nothing protects.
-
-{verdict}
-
-| Rule turned off | Tests that went red | The test that names it | Did that one go red? |
-|---|---|---|---|
-{rows}
-
-## What this does not prove
-
-That the rules are the right rules, or that a rule catches every case of what
-it names. It proves each rule is load-bearing: switch it off and a named test
-says so. The last column is why that is worth more than a count: a mutation can
-break a test for an incidental reason, and a `NO` there fails this script even
-though something went red. A new rule follows the order in `CONTRIBUTING.md`
-instead, a failing test first, and is given a row under `scripts/mutations/`, which
-`tests/test_rules_have_evidence.py` requires.
-"""
+    template = pathlib.Path(__file__).with_name("mutation-report.md").read_text(encoding="utf-8")
+    return template.format(date=dt.datetime.now(dt.UTC).date(), verdict=verdict, rows=rows)
 
 
 if __name__ == "__main__":
