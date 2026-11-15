@@ -94,7 +94,14 @@ def _run(
         signal.signal(each, _stop)
     # Files, not pipes: a step waited for while nobody reads its pipe would block on a full one.
     with tempfile.TemporaryFile("w+") as out, tempfile.TemporaryFile("w+") as err:
-        step = subprocess.Popen(command, cwd=cwd, env=env, stdout=out, stderr=err, text=True)  # noqa: S603
+        # RULE: a Ctrl-C in the terminal reaches the step once
+        # A session of its own: a terminal's Ctrl-C then reaches the step once, through
+        # here, and not a second time straight from the terminal, which would cut the
+        # step's cleanup short. A step that hangs, or one left running after the ratchet
+        # itself was killed with -9, is stopped by hand: kill -9 -- -<the step's pid>.
+        step = subprocess.Popen(  # noqa: S603
+            command, cwd=cwd, env=env, stdout=out, stderr=err, text=True, start_new_session=True
+        )
         try:
             step.wait()
         except BaseException:
