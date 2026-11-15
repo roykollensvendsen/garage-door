@@ -1,0 +1,5 @@
+[[rule]]
+name = "a firmware mutation that does not build is not a kill"
+file = "scripts/mutate.py"
+find = 'if r\.returncode and not failed:'
+replace = 'if False:'

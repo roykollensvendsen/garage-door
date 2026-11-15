@@ -36,6 +36,7 @@ def _mutate():
 #: Where rules are marked, the comment that marks them, and the suite that tests them.
 MARKED_IN = (
     ("src", "*.py", MARKER, "python"),
+    ("scripts", "*.py", MARKER, "python"),  # the project's own tools, the mutation runner included
     ("firmware/door_logic", "*.h", re.compile(r"^[ \t]*//\s*RULE:\s*(.+?)\s*$"), "firmware"),
 )
 
@@ -44,7 +45,7 @@ def marked_suites() -> dict[str, str]:
     """Every rule the source marks, by its words, and the suite whose test must name it."""
     found = {}
     for folder, pattern, marker, suite in MARKED_IN:
-        for source in sorted((ROOT / folder).rglob(pattern)):
+        for source in sorted(p for p in (ROOT / folder).rglob(pattern) if p.is_file()):
             for line in source.read_text().splitlines():
                 match = marker.search(line)
                 if match:

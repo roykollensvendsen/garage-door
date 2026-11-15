@@ -288,7 +288,10 @@ def main() -> int:
     # emptied by mistake would leave every rule unproven and the run green.
     rules = selected(args.suite)
     if not rules:
-        print(f"nothing to switch off: no rows in {ROWS} for this run; add one per rule the code enforces")  # noqa: T201
+        print(  # noqa: T201
+            f"nothing to switch off: no rows in {ROWS} for this run. Restore scripts/mutations/ "
+            "from main (git checkout origin/main -- scripts/mutations), or add a row per rule."
+        )
         return 1
     results = []
     lost: list[str] = []

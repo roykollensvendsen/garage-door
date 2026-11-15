@@ -100,8 +100,8 @@ exclude code from coverage to get past the limit; that is an exemption, and
 section 4 applies.
 
 **A rule nobody proves.** `mutate.py` names each rule whose removal no test
-noticed. A rule is a line marked `# RULE:` in `src/` or `// RULE:` in
-`firmware/door_logic/`, with a row of its own under `scripts/mutations/` and a
+noticed. A rule is a line marked `# RULE:` in `src/` or `scripts/`, or `// RULE:`
+in `firmware/door_logic/`, with a row of its own under `scripts/mutations/` and a
 test named in the rule's words: snake case for Python, and for the firmware the
 words in CamelCase split between the GoogleTest suite and name, as
 `scripts/mutations/README.md` shows. Write that test, run the mutation, see that very test
