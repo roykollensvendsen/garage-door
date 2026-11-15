@@ -112,3 +112,38 @@ def test_a_ctrl_c_in_the_terminal_reaches_the_step_once(tmp_path):
         if (tmp_path / "step.pid").exists():
             with contextlib.suppress(ProcessLookupError):
                 os.kill(int((tmp_path / "step.pid").read_text()), signal.SIGKILL)
+
+
+WRAPPED_STEP = """
+import pathlib, signal, subprocess, sys
+tmp = pathlib.Path(sys.argv[1])
+signal.signal(signal.SIGINT, signal.SIG_IGN)  # a wrapper, like uv run, that passes nothing on
+inner = subprocess.Popen([sys.executable, "-c", sys.argv[2], str(tmp)])
+sys.exit(inner.wait())
+"""
+
+WRAPPING_RATCHET = RATCHET.replace("sys.argv[3], sys.argv[2])", "sys.argv[3], sys.argv[2], sys.argv[4])")
+
+
+def test_a_stop_reaches_the_script_under_a_wrapper_too(tmp_path):
+    """The ratchet starts mutate.py through `uv run`: a stop sent to uv alone may never reach it."""
+    ratchet = subprocess.Popen(
+        [sys.executable, "-c", WRAPPING_RATCHET, str(ROOT), str(tmp_path), WRAPPED_STEP, STEP],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    try:
+        deadline = time.monotonic() + 30
+        while not (tmp_path / "ready").exists() and ratchet.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert (tmp_path / "ready").exists(), "the step never started"
+        ratchet.send_signal(signal.SIGTERM)
+        out, _ = ratchet.communicate(timeout=60)
+        assert (tmp_path / "put-back").exists(), out
+    finally:
+        if ratchet.poll() is None:
+            ratchet.kill()
+        if (tmp_path / "step.pid").exists():
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(int((tmp_path / "step.pid").read_text()), signal.SIGKILL)

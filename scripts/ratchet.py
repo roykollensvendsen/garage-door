@@ -113,7 +113,8 @@ def _run(
             step.wait()
         except BaseException:
             # RULE: a stopped measurement lets its step put back what it changed
-            step.send_signal(signal.SIGINT)
+            # The whole of the step: it is started through `uv run`, which may pass nothing on.
+            os.killpg(step.pid, signal.SIGINT)
             step.wait()  # no time limit: these runs never have one
             raise
         out.seek(0)
