@@ -11,6 +11,8 @@ killed run left is swept away at the next start.
 import importlib.util
 import pathlib
 
+import pytest
+
 ROOT = pathlib.Path(__file__).parent.parent
 
 LEAVES_FILES = """
@@ -85,3 +87,40 @@ def test_a_passing_test_keeps_no_temporary_files():
     settings = (ROOT / "pyproject.toml").read_text()
     assert 'tmp_path_retention_policy = "failed"' in settings
     assert "tmp_path_retention_count = 1" in settings
+
+
+def _whole_run(tmp_path, monkeypatch):
+    """The runner set up for a whole run: one row on a one-line file of the tiny project."""
+    mutate = _mutate(tmp_path, monkeypatch)
+    (mutate.ROOT / "rule.py").write_text("x = 1\n")
+    rows = tmp_path / "mutations"
+    (rows / "rule.py").mkdir(parents=True)
+    (rows / "rule.py" / "a.toml").write_text(
+        "[[rule]]\nname = \"a\"\nfile = \"rule.py\"\nfind = '^x = 1$'\nreplace = 'x = 2'\n"
+    )
+    monkeypatch.setattr(mutate, "ROWS", rows)
+    monkeypatch.setattr(mutate, "RECOVERY", tmp_path / "recovery.json")
+    monkeypatch.setattr(mutate.sys, "argv", ["mutate.py"])
+    return mutate
+
+
+def test_a_finished_run_leaves_no_folder_of_its_own_behind(tmp_path, monkeypatch):
+    """Each run's files went, but the folder holding them stayed in /tmp for good."""
+    mutate = _whole_run(tmp_path, monkeypatch)
+    assert mutate.selected(None), "the run must have a row, or it checks nothing"
+    mutate.main()
+    assert not mutate.MUTATE_TMP.exists()
+
+
+def test_an_interrupted_run_leaves_no_folder_of_its_own_behind(tmp_path, monkeypatch):
+    mutate = _whole_run(tmp_path, monkeypatch)
+
+    def interrupted(_suite="python"):
+        mutate.MUTATE_TMP.mkdir(parents=True, exist_ok=True)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(mutate, "run_suite", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        mutate.main()
+    assert not mutate.MUTATE_TMP.exists()
+    assert (mutate.ROOT / "rule.py").read_text() == "x = 1\n"
