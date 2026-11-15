@@ -117,7 +117,8 @@ def own_place(place: Path) -> Path:
     The held folders live in a folder with a fixed name in the shared temporary area, where
     another user could have put a link or a folder of theirs first. It is opened without
     following a link and checked through what was opened, so it cannot be swapped in between.
-    A folder of this user's that others may read, from before this check, is closed to them.
+    A folder of this user's that others may only read, from before this check, is closed to
+    them; one they can write to is refused, as they may already have put something in it.
     """
     with contextlib.suppress(FileExistsError):
         place.mkdir(mode=0o700)
@@ -130,7 +131,11 @@ def own_place(place: Path) -> Path:
         # RULE: the shared folder the held folders live in is this user's alone
         if found.st_uid != os.getuid():
             raise SystemExit(_not_ours(place, f"it belongs to user {found.st_uid}"))
+        # RULE: a shared folder others can write to stops the run
+        if found.st_mode & 0o022:
+            raise SystemExit(_not_ours(place, "others can write to it, and may already have"))
         if found.st_mode & 0o077:
+            # RULE: a shared folder others may only read is closed to them
             os.fchmod(opened, 0o700)
     finally:
         os.close(opened)

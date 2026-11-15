@@ -137,7 +137,7 @@ def test_a_link_in_place_of_the_shared_folder_stops_the_run(tmp_path, held_folde
         held_folder.own_place(tmp_path / "garage-door-mutate-test")
 
 
-def test_the_shared_folder_is_made_and_kept_closed_to_others(tmp_path, held_folder):
+def test_a_shared_folder_others_may_only_read_is_closed_to_them(tmp_path, held_folder):
     made = held_folder.own_place(tmp_path / "new")
     assert made.stat().st_mode & 0o777 == 0o700
     older = tmp_path / "older"
@@ -145,3 +145,13 @@ def test_the_shared_folder_is_made_and_kept_closed_to_others(tmp_path, held_fold
     older.chmod(0o755)
     held_folder.own_place(older)
     assert older.stat().st_mode & 0o777 == 0o700
+
+
+def test_a_shared_folder_others_can_write_to_stops_the_run(tmp_path, held_folder):
+    """Others may already have put entries in it; closing it now would not take them out."""
+    for mode in (0o775, 0o757):
+        place = tmp_path / f"open-{mode:o}"
+        place.mkdir()
+        place.chmod(mode)
+        with pytest.raises(SystemExit, match="others can write to it"):
+            held_folder.own_place(place)
