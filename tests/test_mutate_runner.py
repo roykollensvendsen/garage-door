@@ -93,10 +93,11 @@ def sweep():
 
 
 def _inside_repair(text, rows, mutate):
-    """The rules marked, or switched off by a row, in `repair()` or any function of `text` it calls."""
+    """The rules marked, or switched off by a row, in `repair()` or any function it calls by name."""
     import ast  # noqa: PLC0415
 
-    functions = {f.name: f for f in ast.parse(text).body if isinstance(f, ast.FunctionDef)}
+    defs = (ast.FunctionDef, ast.AsyncFunctionDef)
+    functions = {f.name: f for f in ast.parse(text).body if isinstance(f, defs)}
     assert UNPROVABLE in functions, (
         f"no {UNPROVABLE}() in the runner; if it was renamed, rename UNPROVABLE too"
     )
@@ -155,3 +156,19 @@ def test_a_runner_with_no_repair_is_refused_by_name(mutate):
     """Renamed, repair() would leave the guard checking nothing; it says what it looked for."""
     with pytest.raises(AssertionError, match=r"no repair\(\) in"):
         _inside_repair("def mend():\n    pass\n", [], mutate)
+
+
+REPAIR_AWAITING_A_RULE = """
+async def write(kept):
+    # RULE: an awaited repair is written whole
+    path.write_text(kept)
+
+
+def repair():
+    run(write(kept))
+"""
+
+
+def test_a_rule_in_an_async_helper_repair_calls_is_found(mutate):
+    """An `async def` helper runs switched off too, once repair() calls it."""
+    assert _inside_repair(REPAIR_AWAITING_A_RULE, [], mutate) == ["an awaited repair is written whole"]
