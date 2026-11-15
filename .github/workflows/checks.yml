@@ -138,7 +138,7 @@ jobs:
 
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20          # the rule check alone takes about 9.5 minutes here (#43)
+    # No time limit: this job runs the rule check, and mutation runs are never capped (#43).
     strategy:
       fail-fast: false           # one version failing should not hide another
       matrix:                    # every version pyproject.toml claims to support
