@@ -65,15 +65,22 @@ DEFAULT_BUDGET = {"seconds": 30, "tolerance": 0.5}
 EXCEPTION = re.compile(r"^\s*ratchet-exception:\s*([a-z_]+)", re.IGNORECASE | re.MULTILINE)
 
 
-def _structure() -> Any:  # noqa: ANN401 - a module loaded by path
-    spec = importlib.util.spec_from_file_location("structure", ROOT / "scripts/structure.py")
+def _beside(name: str) -> Any:  # noqa: ANN401 - a module loaded by path
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(f"{name}.py"))
     if spec is None or spec.loader is None:
-        msg = "scripts/structure.py is missing"
+        msg = f"scripts/{name}.py is missing"
         raise SystemExit(msg)
     module = importlib.util.module_from_spec(spec)
-    sys.modules["structure"] = module
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _structure() -> Any:  # noqa: ANN401 - a module loaded by path
+    return _beside("structure")
+
+
+this_checkout = _beside("this_checkout")
 
 
 #: How a job is stopped from outside: Ctrl-C, a cancelled CI job, a closed terminal.
@@ -298,6 +305,7 @@ def _messages(ref: str) -> str:
 
 def main() -> int:
     """Run `check` or `measure`."""
+    this_checkout.refuse_other_code(ROOT)  # the tree measured: this one, or the base's copy
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("action", choices=("check", "measure"))
     parser.add_argument("--base", help="the git ref to compare with, usually main")

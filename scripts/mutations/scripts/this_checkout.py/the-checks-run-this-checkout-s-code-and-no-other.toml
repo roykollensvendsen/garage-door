@@ -1,0 +1,5 @@
+[[rule]]
+name = "the checks run this checkout's code and no other"
+file = "scripts/this_checkout.py"
+find = '^\s*if where is None or src not in where\.parents:$'
+replace = 'if False:'

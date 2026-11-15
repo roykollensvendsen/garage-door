@@ -1,0 +1,5 @@
+[[rule]]
+name = "a held folder with no lock is kept for its grace period"
+file = "scripts/held_folder.py"
+find = '^\s*return time\.time\(\) - found\.st_mtime > GRACE_SECONDS$'
+replace = 'return True'
