@@ -1,0 +1,5 @@
+[[rule]]
+name = "a phrase works only for its own action"
+file = "src/garage_door/phrases.py"
+find = 'return any\(_found_in\(heard, phrase\) for phrase in self\.by_action\.get\(action, \(\)\)\)'
+replace = 'return any(_found_in(heard, phrase) for listed in self.by_action.values() for phrase in listed)'

@@ -1,0 +1,6 @@
+[[rule]]
+name = "door state is a fault when both sensors see a magnet at once"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(at_closed && at_open\) \{'
+replace = 'if (false) {'

@@ -1,0 +1,6 @@
+[[rule]]
+name = "manual mode switches itself off after ten minutes"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'return manual_on_ && \(now - manual_since_\) < config_\.manual_ms;'
+replace = 'return manual_on_ || now == manual_since_;'

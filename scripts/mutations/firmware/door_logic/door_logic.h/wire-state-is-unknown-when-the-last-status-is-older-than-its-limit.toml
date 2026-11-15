@@ -1,0 +1,6 @@
+[[rule]]
+name = "wire state is unknown when the last status is older than its limit"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(age >= limit\) \{'
+replace = 'if (false && limit) {'

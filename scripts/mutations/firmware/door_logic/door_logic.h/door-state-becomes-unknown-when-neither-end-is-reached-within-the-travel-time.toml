@@ -1,0 +1,6 @@
+[[rule]]
+name = "door state becomes unknown when neither end is reached within the travel time"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'const bool within_travel = seen_at_end_ && \(now - last_at_end_\) < config_\.travel_ms;'
+replace = 'const bool within_travel = seen_at_end_;'

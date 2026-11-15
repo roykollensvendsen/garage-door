@@ -101,10 +101,10 @@ section 4 applies.
 
 **A rule nobody proves.** `mutate.py` names each rule whose removal no test
 noticed. A rule is a line marked `# RULE:` in `src/` or `// RULE:` in
-`firmware/door_logic/`, with a row in `scripts/mutations.toml` and a test named
-in the rule's words: snake case for Python, and for the firmware the words in
-CamelCase split between the GoogleTest suite and name, as the comment above
-the firmware rows shows. Write that test, run the mutation, see that very test
+`firmware/door_logic/`, with a row of its own under `scripts/mutations/` and a
+test named in the rule's words: snake case for Python, and for the firmware the
+words in CamelCase split between the GoogleTest suite and name, as
+`scripts/mutations/README.md` shows. Write that test, run the mutation, see that very test
 go red, and keep the row. Never loosen a row or point it at something easier;
 if a row has to change, the pull request says why. A rule about when, whether
 or how long the door is pressed needs a test that fails before any change to it.

@@ -1,0 +1,6 @@
+[[rule]]
+name = "wire state is unknown when a damaged packet came after the last status"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(damaged\) \{'
+replace = 'if (false && damaged) {'

@@ -1,0 +1,5 @@
+[[rule]]
+name = "a token works once"
+file = "src/garage_door/service.py"
+find = 'pending, self\._pending = self\._pending, None'
+replace = 'pending = self._pending'

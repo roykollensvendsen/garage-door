@@ -1,0 +1,6 @@
+[[rule]]
+name = "rolling code is saved before a code past the saved one is sent"
+suite = "firmware"
+file = "firmware/door_logic/rolling_code.h"
+find = 'bool save_due\(\) const \{ return .*'
+replace = 'bool save_due() const { return false; }'

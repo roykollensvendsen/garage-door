@@ -1,0 +1,6 @@
+[[rule]]
+name = "pulse is off at half a second"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'return pressed_ && \(now - press_start_\) < config_\.pulse_ms;'
+replace = 'return pressed_ && (now - press_start_) < config_.min_gap_ms;'

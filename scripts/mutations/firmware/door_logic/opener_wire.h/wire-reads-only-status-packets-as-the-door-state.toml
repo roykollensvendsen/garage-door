@@ -1,0 +1,6 @@
+[[rule]]
+name = "wire reads only status packets as the door state"
+suite = "firmware"
+file = "firmware/door_logic/opener_wire.h"
+find = 'if \(command != kStatus\) \{'
+replace = 'if (false) {'

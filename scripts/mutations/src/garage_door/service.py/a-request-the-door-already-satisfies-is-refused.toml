@@ -1,0 +1,5 @@
+[[rule]]
+name = "a request the door already satisfies is refused"
+file = "src/garage_door/service.py"
+find = 'if state is action\.end_state:'
+replace = 'if False:'

@@ -1,0 +1,5 @@
+[[rule]]
+name = "a manual press is refused unless manual mode is on"
+file = "src/garage_door/manual.py"
+find = 'if report\["manual"\] is not True:'
+replace = 'if False:'

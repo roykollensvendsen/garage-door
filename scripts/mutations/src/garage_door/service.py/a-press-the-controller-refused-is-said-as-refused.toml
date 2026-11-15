@@ -1,0 +1,5 @@
+[[rule]]
+name = "a press the controller refused is said as refused"
+file = "src/garage_door/service.py"
+find = 'if reason is not None:'
+replace = 'if False:'

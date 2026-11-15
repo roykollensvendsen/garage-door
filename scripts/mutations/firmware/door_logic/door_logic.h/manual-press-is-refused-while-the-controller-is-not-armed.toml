@@ -1,0 +1,6 @@
+[[rule]]
+name = "manual press is refused while the controller is not armed"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(!armed\(\)\) \{'
+replace = 'if (false) {'

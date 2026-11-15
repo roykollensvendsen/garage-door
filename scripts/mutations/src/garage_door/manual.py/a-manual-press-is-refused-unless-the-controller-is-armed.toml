@@ -1,0 +1,5 @@
+[[rule]]
+name = "a manual press is refused unless the controller is armed"
+file = "src/garage_door/manual.py"
+find = 'if report\["armed"\] is not True:'
+replace = 'if False:'
