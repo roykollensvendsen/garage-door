@@ -1,0 +1,6 @@
+[[rule]]
+name = "wire press opens a closed door and closes an open one"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'wire_action_ = state_ == DoorState::Closed \? WireAction::Open : WireAction::Close;'
+replace = 'wire_action_ = WireAction::Open;'

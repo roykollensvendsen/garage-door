@@ -1,0 +1,5 @@
+[[rule]]
+name = "without the right phrase the question is asked as before"
+file = "src/garage_door/service.py"
+find = 'if self\._phrases is not None and self\._phrases\.matches\(action, phrase\):'
+replace = 'if self._phrases is not None:'

@@ -1,0 +1,5 @@
+[[rule]]
+name = "a manual token works once"
+file = "src/garage_door/manual.py"
+find = 'if pending is None or not secrets\.compare_digest\(pending\[0\], token\):'
+replace = 'if pending is None:'

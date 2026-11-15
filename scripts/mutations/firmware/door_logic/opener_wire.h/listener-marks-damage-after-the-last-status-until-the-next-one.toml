@@ -1,0 +1,6 @@
+[[rule]]
+name = "listener marks damage after the last status until the next one"
+suite = "firmware"
+file = "firmware/door_logic/opener_wire.h"
+find = 'if \(framer_\.stray\(\) != stray_before\) \{'
+replace = 'if (false && stray_before) {'

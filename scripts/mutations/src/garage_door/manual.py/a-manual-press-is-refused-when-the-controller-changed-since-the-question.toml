@@ -1,0 +1,5 @@
+[[rule]]
+name = "a manual press is refused when the controller changed since the question"
+file = "src/garage_door/manual.py"
+find = 'if changed:'
+replace = 'if False:'

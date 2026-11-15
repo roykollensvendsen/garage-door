@@ -1,0 +1,5 @@
+[[rule]]
+name = "the whole phrase must be there in order"
+file = "src/garage_door/phrases.py"
+find = 'if sum\(_slips\(s, w\) for s, w in zip\(window, phrase, strict=True\)\) <= 1:'
+replace = 'if sum(_slips(s, w) for s, w in zip(window, phrase, strict=True)) <= 99:'

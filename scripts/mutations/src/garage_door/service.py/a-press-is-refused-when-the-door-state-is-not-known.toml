@@ -1,0 +1,5 @@
+[[rule]]
+name = "a press is refused when the door state is not known"
+file = "src/garage_door/service.py"
+find = 'if state not in KNOWN:'
+replace = 'if False:'

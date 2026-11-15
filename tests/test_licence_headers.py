@@ -43,7 +43,8 @@ def source_files() -> list[pathlib.Path]:
             found.update(
                 p
                 for p in (ROOT / folder).rglob(pattern)
-                if p.name not in GENERATED
+                if p.is_file()  # a row's folder under scripts/mutations/ is named after its source
+                and p.name not in GENERATED
                 and not any(
                     part.startswith("build") or part == VENDORED for part in p.relative_to(ROOT).parts
                 )

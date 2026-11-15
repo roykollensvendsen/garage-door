@@ -1,0 +1,5 @@
+[[rule]]
+name = "a press is refused when the door changed since the question"
+file = "src/garage_door/service.py"
+find = 'if before is not pending\.state:'
+replace = 'if False:'

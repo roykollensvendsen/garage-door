@@ -1,0 +1,6 @@
+[[rule]]
+name = "pulse a second press within two seconds is refused"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(pressed_ && \(now - press_start_\) < config_\.min_gap_ms\) \{'
+replace = 'if (false) {'

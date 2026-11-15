@@ -1,0 +1,6 @@
+[[rule]]
+name = "pulse cannot be restarted while it is on"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(pressed_ && \(now - press_start_\) < config_\.pulse_ms\) \{'
+replace = 'if (false) {'

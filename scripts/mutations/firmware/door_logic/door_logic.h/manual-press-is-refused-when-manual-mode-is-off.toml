@@ -1,0 +1,6 @@
+[[rule]]
+name = "manual press is refused when manual mode is off"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(!manual\(now\)\) \{'
+replace = 'if (false) {'

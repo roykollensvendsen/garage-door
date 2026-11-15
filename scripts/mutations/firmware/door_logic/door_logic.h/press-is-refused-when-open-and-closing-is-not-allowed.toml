@@ -1,0 +1,6 @@
+[[rule]]
+name = "press is refused when open and closing is not allowed"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(state_ == DoorState::Open && !config_\.allow_close\) \{'
+replace = 'if (false) {'

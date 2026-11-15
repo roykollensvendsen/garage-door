@@ -1,0 +1,6 @@
+[[rule]]
+name = "manual press is refused while the door is known to be moving"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(state_ == DoorState::Moving\) \{'
+replace = 'if (false) {'

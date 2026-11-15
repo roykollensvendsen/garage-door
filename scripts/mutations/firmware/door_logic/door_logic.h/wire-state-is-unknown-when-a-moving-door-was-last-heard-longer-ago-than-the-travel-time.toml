@@ -1,0 +1,6 @@
+[[rule]]
+name = "wire state is unknown when a moving door was last heard longer ago than the travel time"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(moving && age >= config_\.travel_ms\) \{'
+replace = 'if (false && moving) {'

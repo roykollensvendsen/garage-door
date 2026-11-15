@@ -1,0 +1,5 @@
+[[rule]]
+name = "a token expires after thirty seconds"
+file = "src/garage_door/service.py"
+find = 'if self\._clock\(\) - pending\.asked_at >= TOKEN_SECONDS:'
+replace = 'if False:'

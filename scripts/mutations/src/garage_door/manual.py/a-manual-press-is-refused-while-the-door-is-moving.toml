@@ -1,0 +1,5 @@
+[[rule]]
+name = "a manual press is refused while the door is moving"
+file = "src/garage_door/manual.py"
+find = 'if report\["state"\] == DoorState\.MOVING:'
+replace = 'if False:'

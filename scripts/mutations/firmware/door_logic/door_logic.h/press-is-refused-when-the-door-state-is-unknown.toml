@@ -1,0 +1,6 @@
+[[rule]]
+name = "press is refused when the door state is unknown"
+suite = "firmware"
+file = "firmware/door_logic/door_logic.h"
+find = 'if \(state_ != DoorState::Closed && state_ != DoorState::Open\) \{'
+replace = 'if (false) {'

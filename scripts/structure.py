@@ -52,7 +52,9 @@ def settings(root: Path = ROOT) -> dict[str, Any]:
 
 
 def _files(root: Path, folder: str) -> list[Path]:
-    return sorted(p for p in (root / folder).rglob("*") if p.suffix in CODE and "build" not in p.parts)
+    return sorted(
+        p for p in (root / folder).rglob("*") if p.is_file() and p.suffix in CODE and "build" not in p.parts
+    )
 
 
 # -- module size -------------------------------------------------------------
