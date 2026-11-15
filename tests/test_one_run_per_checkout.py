@@ -84,3 +84,10 @@ def test_both_runners_check_whose_code_they_run_before_anything_else(runner, mon
     monkeypatch.setattr(sys, "argv", [f"{runner}.py", "check"] if runner == "ratchet" else ["mutate.py"])
     with pytest.raises(pytest.fail.Exception, match="checked"):
         module.main()
+
+
+def test_a_firmware_only_run_needs_no_python_environment(mutate, monkeypatch):
+    """CI's firmware job runs the C++ tests with the system Python, where the package is not installed."""
+    monkeypatch.setattr(mutate.this_checkout, "refuse_other_code", lambda *_: pytest.fail("asked"))
+    monkeypatch.setattr(sys, "argv", ["mutate.py", "--suite", "firmware", "--repair-only"])
+    assert mutate.main() == 0

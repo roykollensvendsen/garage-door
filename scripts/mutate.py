@@ -289,7 +289,8 @@ def main() -> int:
     """Mutate every rule in turn, restore the tree, and report."""
     args = arguments()
     stop_cleanly()
-    this_checkout.refuse_other_code()
+    if args.suite != "firmware":  # the C++ suite imports nothing; CI runs it with no environment
+        this_checkout.refuse_other_code()
     # Held before the repair: a second run would put back the first one's live mutation.
     held = this_checkout.hold(ROOT)
     if held is None:
