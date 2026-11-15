@@ -228,12 +228,13 @@ def row_path(rule: dict[str, str]) -> pathlib.PurePosixPath:
 
 
 def _rows_in(path: pathlib.Path) -> list[dict[str, str]]:
-    rows: list[dict[str, str]] = tomllib.loads(path.read_text()).get("rule", [])
+    rows: list[dict[str, str]] = tomllib.loads(path.read_text(encoding="utf-8")).get("rule", [])
     return rows
 
 
-def all_rows(folder: pathlib.Path = ROWS) -> list[dict[str, str]]:
+def all_rows(folder: pathlib.Path | None = None) -> list[dict[str, str]]:
     """Every row, one file each, in path order; a rule with two rows stops the run, naming both."""
+    folder = ROWS if folder is None else folder  # read when called, not when defined
     found = []
     for path in sorted(folder.rglob("*.toml")) if folder.is_dir() else []:
         found += [(path.relative_to(folder).as_posix(), rule) for rule in _rows_in(path)]
@@ -249,8 +250,9 @@ def all_rows(folder: pathlib.Path = ROWS) -> list[dict[str, str]]:
     return [rule for _, rule in found]
 
 
-def misfiled(folder: pathlib.Path = ROWS) -> list[str]:
+def misfiled(folder: pathlib.Path | None = None) -> list[str]:
     """Row files that hold other than one row, or sit where their rule does not put them."""
+    folder = ROWS if folder is None else folder
     found = []
     for path in sorted(folder.rglob("*.toml")) if folder.is_dir() else []:
         here = pathlib.PurePosixPath(path.relative_to(folder).as_posix())
@@ -281,12 +283,13 @@ def main() -> int:
 
     repair()
     sweep()
-    # RULE: an empty rule table is not a crash
-    # A scaffolded repository starts with a table of comments and no rows.
+    # RULE: no rows to check is a failure not a pass
+    # A check that passes with nothing to check is fail-open: a folder moved or
+    # emptied by mistake would leave every rule unproven and the run green.
     rules = selected(args.suite)
     if not rules:
-        print(f"no rows in {ROWS.relative_to(ROOT)} yet; add one per rule the code enforces")  # noqa: T201
-        return 0
+        print(f"nothing to switch off: no rows in {ROWS} for this run; add one per rule the code enforces")  # noqa: T201
+        return 1
     results = []
     lost: list[str] = []
     standing: tuple[pathlib.Path, str, str] | None = None
