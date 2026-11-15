@@ -10,6 +10,10 @@ killed run left is swept away at the next start.
 
 import importlib.util
 import pathlib
+import signal
+import subprocess
+import sys
+import time
 
 import pytest
 
@@ -124,3 +128,49 @@ def test_an_interrupted_run_leaves_no_folder_of_its_own_behind(tmp_path, monkeyp
         mutate.main()
     assert not mutate.MUTATE_TMP.exists()
     assert (mutate.ROOT / "rule.py").read_text() == "x = 1\n"
+
+
+STOPPED_RUN = """
+import importlib.util, pathlib, sys, time
+root, tmp = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("mutate_stopped", root / "scripts/mutate.py")
+mutate = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mutate)
+mutate.ROOT, mutate.ROWS = tmp / "project", tmp / "mutations"
+mutate.RECOVERY, mutate.MUTATE_TMP = tmp / "recovery.json", tmp / "mutate-tmp"
+sys.argv = ["mutate.py"]
+assert [r["file"] for r in mutate.selected(None)] == ["rule.py"], "would mutate the real tree"
+
+def held(suite="python"):
+    mutate.MUTATE_TMP.mkdir(parents=True, exist_ok=True)
+    (tmp / "ready").write_text("")
+    time.sleep(60)
+
+mutate.run_suite = held
+sys.exit(mutate.main())
+"""
+
+
+@pytest.mark.parametrize("stop", [signal.SIGTERM, signal.SIGHUP], ids=["SIGTERM", "SIGHUP"])
+def test_a_stopped_run_cleans_up_as_an_interrupted_one_does(tmp_path, monkeypatch, stop):
+    """A cancelled CI job or a closed terminal stops the run by signal, and `finally` must still run."""
+    _whole_run(tmp_path, monkeypatch)
+    child = subprocess.Popen(
+        [sys.executable, "-c", STOPPED_RUN, str(ROOT), str(tmp_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    deadline = time.monotonic() + 30
+    while not (tmp_path / "ready").exists() and child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert (tmp_path / "ready").exists(), (
+        child.communicate()[0] if child.poll() is not None else "never ready"
+    )
+    assert (tmp_path / "project/rule.py").read_text() == "x = 2\n", "the rule was switched off"
+    child.send_signal(stop)
+    out, _ = child.communicate(timeout=30)
+    assert child.returncode == 128 + stop, out
+    assert (tmp_path / "project/rule.py").read_text() == "x = 1\n"
+    assert not (tmp_path / "recovery.json").exists()
+    assert not (tmp_path / "mutate-tmp").exists()
