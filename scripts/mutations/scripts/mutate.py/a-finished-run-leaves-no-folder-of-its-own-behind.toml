@@ -1,0 +1,5 @@
+[[rule]]
+name = "a finished run leaves no folder of its own behind"
+file = "scripts/mutate.py"
+find = '^\s*MUTATE_TMP\.rmdir\(\)$'
+replace = 'pass'

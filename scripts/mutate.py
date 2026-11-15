@@ -118,6 +118,13 @@ def sweep() -> None:
         _remove(left)
 
 
+def leave_no_folder() -> None:
+    """Each run's files are gone by now; the folder that held them would stay in /tmp."""
+    # RULE: a finished run leaves no folder of its own behind
+    with contextlib.suppress(OSError):  # rmdir takes it only when empty
+        MUTATE_TMP.rmdir()
+
+
 def repair() -> None:
     """Put back a file an earlier run was killed in the middle of mutating."""
     if not RECOVERY.is_file():
@@ -328,6 +335,7 @@ def main() -> int:
         if standing is not None:
             restore(*standing)
         RECOVERY.unlink(missing_ok=True)
+        leave_no_folder()
 
     survived = [name for name, count, _, _ in results if count == 0]
     lucky = [name for name, count, _, own in results if count and not own]
