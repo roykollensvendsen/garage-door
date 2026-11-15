@@ -174,3 +174,39 @@ def test_a_stopped_run_cleans_up_as_an_interrupted_one_does(tmp_path, monkeypatc
     assert (tmp_path / "project/rule.py").read_text() == "x = 1\n"
     assert not (tmp_path / "recovery.json").exists()
     assert not (tmp_path / "mutate-tmp").exists()
+
+
+SLOW_CLEANUP = """
+restore = mutate.restore
+
+def slow_restore(*args):
+    (tmp / "cleaning").write_text("")
+    time.sleep(2)
+    return restore(*args)
+
+mutate.restore = slow_restore
+"""
+
+
+def test_a_second_stop_does_not_cut_the_cleanup_short(tmp_path, monkeypatch):
+    """GitHub cancels with SIGINT, then SIGTERM: the second must not cut the first one's cleanup short."""
+    _whole_run(tmp_path, monkeypatch)
+    script = STOPPED_RUN.replace("mutate.run_suite = held\n", "mutate.run_suite = held\n" + SLOW_CLEANUP)
+    child = subprocess.Popen(
+        [sys.executable, "-c", script, str(ROOT), str(tmp_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    deadline = time.monotonic() + 30
+    while not (tmp_path / "ready").exists() and child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    child.send_signal(signal.SIGINT)
+    while not (tmp_path / "cleaning").exists() and child.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert (tmp_path / "cleaning").exists(), child.communicate()[0]
+    child.send_signal(signal.SIGTERM)
+    out, _ = child.communicate(timeout=30)
+    assert (tmp_path / "project/rule.py").read_text() == "x = 1\n", out
+    assert not (tmp_path / "recovery.json").exists()
+    assert not (tmp_path / "mutate-tmp").exists()
