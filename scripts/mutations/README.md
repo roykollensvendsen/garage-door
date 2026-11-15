@@ -26,6 +26,12 @@ just the part `find` matched: a partial line breaks the file, every test fails
 at import, and the rule reads "BY LUCK" instead of "KILLED". `occurrence = 2`
 picks the second matching line.
 
+A rule in `scripts/` is proven the same way, the mutation runner's own
+included: the runner has loaded its code before it switches a line off, and
+the suite it starts loads the switched-off file. A rule inside `repair()` could
+not be proven like this, since a killed run repairs with the switched-off code;
+keep rules out of it.
+
 A rule in `firmware/door_logic/` (`// RULE:`) has `suite = "firmware"`, which
 builds and runs the GoogleTest suite instead of pytest. The test that must go
 red is the rule's words in CamelCase, split between the TEST's suite and name:
