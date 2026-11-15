@@ -1,0 +1,5 @@
+[[rule]]
+name = "a shared folder others may only read is closed to them"
+file = "scripts/held_folder.py"
+find = '^\s*os\.fchmod\(opened, 0o700\)$'
+replace = 'pass'
