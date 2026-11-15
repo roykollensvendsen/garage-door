@@ -93,13 +93,25 @@ def sweep():
 
 
 def _inside_repair(text, rows, mutate):
-    """The rules marked, or switched off by a row, inside `repair()` in `text`."""
+    """The rules marked, or switched off by a row, in `repair()` or any function of `text` it calls."""
     import ast  # noqa: PLC0415
 
-    body = next(f for f in ast.parse(text).body if isinstance(f, ast.FunctionDef) and f.name == UNPROVABLE)
+    functions = {f.name: f for f in ast.parse(text).body if isinstance(f, ast.FunctionDef)}
+    assert UNPROVABLE in functions, (
+        f"no {UNPROVABLE}() in the runner; if it was renamed, rename UNPROVABLE too"
+    )
+    reached, waiting = set(), [UNPROVABLE]
+    while waiting:  # repair() and everything it calls, however deep, within this file
+        name = waiting.pop()
+        reached.add(name)
+        calls = [
+            c for c in ast.walk(functions[name]) if isinstance(c, ast.Call) and isinstance(c.func, ast.Name)
+        ]
+        called = {c.func.id for c in calls}
+        waiting += [c for c in called if c in functions and c not in reached]
     lines = text.splitlines()
-    inside = range(body.lineno - 1, body.end_lineno)
-    marked = [lines[i].split("# RULE:")[1].strip() for i in inside if "# RULE:" in lines[i]]
+    inside = {i for name in reached for i in range(functions[name].lineno - 1, functions[name].end_lineno)}
+    marked = [lines[i].split("# RULE:")[1].strip() for i in sorted(inside) if "# RULE:" in lines[i]]
     rowed = [
         r["name"] for r in rows if mutate.line_of(text, r["find"], int(r.get("occurrence", 1))) in inside
     ]
@@ -121,3 +133,25 @@ def test_no_rule_lives_inside_repair(mutate):
     rows = [r for r in mutate.all_rows() if r["file"] == "scripts/mutate.py"]
     assert rows, "the runner's own rows are missing"
     assert _inside_repair(text, rows, mutate) == []
+
+
+REPAIR_CALLING_A_RULE = """
+def write(kept):
+    # RULE: a repaired file is written whole
+    path.write_text(kept)
+
+
+def repair():
+    write(kept)
+"""
+
+
+def test_a_rule_in_what_repair_calls_is_found(mutate):
+    """A helper repair() calls runs switched off too, so its rule cannot be proven either."""
+    assert _inside_repair(REPAIR_CALLING_A_RULE, [], mutate) == ["a repaired file is written whole"]
+
+
+def test_a_runner_with_no_repair_is_refused_by_name(mutate):
+    """Renamed, repair() would leave the guard checking nothing; it says what it looked for."""
+    with pytest.raises(AssertionError, match=r"no repair\(\) in"):
+        _inside_repair("def mend():\n    pass\n", [], mutate)

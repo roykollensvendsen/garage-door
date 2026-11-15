@@ -28,9 +28,9 @@ picks the second matching line.
 
 A rule in `scripts/` is proven the same way, the mutation runner's own
 included: the runner has loaded its code before it switches a line off, and
-the suite it starts loads the switched-off file. A rule inside `repair()` could
-not be proven like this, since a killed run repairs with the switched-off code;
-`test_no_rule_lives_inside_repair` refuses one there.
+the suite it starts loads the switched-off file. A rule inside `repair()`, or in
+anything it calls, could not be proven like this, since a killed run repairs
+with the switched-off code; `test_no_rule_lives_inside_repair` refuses one there.
 
 A rule in `firmware/door_logic/` (`// RULE:`) has `suite = "firmware"`, which
 builds and runs the GoogleTest suite instead of pytest. The test that must go
