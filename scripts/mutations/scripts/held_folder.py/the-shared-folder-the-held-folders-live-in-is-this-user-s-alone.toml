@@ -1,0 +1,5 @@
+[[rule]]
+name = "the shared folder the held folders live in is this user's alone"
+file = "scripts/held_folder.py"
+find = '^\s*if found\.st_uid != os\.getuid\(\):$'
+replace = 'if False:'

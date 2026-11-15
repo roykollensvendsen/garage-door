@@ -24,23 +24,34 @@ import argparse
 import contextlib
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import os
 import pathlib
 import re
-import shutil
 import signal
-import stat
 import subprocess
 import sys
 import tempfile
 import tomllib
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _beside(name: str) -> Any:  # noqa: ANN401 - a module loaded by path
+    """A module from scripts/, loaded by its path: scripts/ is not a package."""
+    spec = importlib.util.spec_from_file_location(name, pathlib.Path(__file__).with_name(f"{name}.py"))
+    if spec is None or spec.loader is None:
+        msg = f"scripts/{name}.py is missing"
+        raise SystemExit(msg)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+held_folder = _beside("held_folder")
+this_checkout = _beside("this_checkout")
 ROWS = ROOT / "scripts/mutations"
 #: Where the one mutated file is recorded while it is mutated. A `finally` does
 #: not run when the process is killed, so without this a hard stop leaves a
@@ -81,42 +92,10 @@ def line_of(text: str, pattern: str, occurrence: int) -> int:
     raise SystemExit(msg)
 
 
-def _open_up(place: pathlib.Path) -> None:
-    """Give the owner back every right on one folder or file, adding to the rights it has.
-
-    A link is left alone: changing its rights would change whatever it points to,
-    which may be outside the run's folder.
-    """
-    if place.is_symlink():
-        return
-    with contextlib.suppress(OSError):
-        place.chmod(place.stat().st_mode | stat.S_IRWXU)
-
-
-def _writable_again(func: Callable[[str], object], path: str, _exc: object) -> None:
-    """Let a refused delete through: open up the path and its folder, then try again."""
-    for place in (pathlib.Path(path).parent, pathlib.Path(path)):
-        _open_up(place)
-    func(path)
-
-
-def _remove(folder: pathlib.Path) -> None:
-    """Delete a run's folder, even where a test took away the rights to read or delete it."""
-    if not folder.exists():
-        return
-    # A folder a test shut (mode 0) cannot even be listed, so open every folder first;
-    # the handler then covers anything that still refuses.
-    for place, folders, _ in os.walk(folder):
-        for name in folders:
-            _open_up(pathlib.Path(place) / name)
-    shutil.rmtree(folder, onexc=_writable_again)
-
-
 def sweep() -> None:
     """Remove what an earlier run, killed before it could clean up, left behind."""
     # RULE: a killed run's temporary files are swept at the next start
-    for left in MUTATE_TMP.iterdir() if MUTATE_TMP.is_dir() else []:
-        _remove(left)
+    held_folder.sweep(held_folder.own_place(MUTATE_TMP), "run-")
 
 
 def stop_cleanly() -> None:
@@ -205,8 +184,9 @@ def run_suite(suite: str = "python") -> tuple[int, list[str]]:
     # the wrong rule, so no bytecode is written at all.
     # RULE: two mutations never share a bytecode cache
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
-    MUTATE_TMP.mkdir(parents=True, exist_ok=True)
-    temporary = pathlib.Path(tempfile.mkdtemp(prefix="run-", dir=MUTATE_TMP))
+    # pytest empties the folder it is given, so it gets one beside the run's lock.
+    held = held_folder.HeldFolder("run-", held_folder.own_place(MUTATE_TMP))
+    temporary = held.path / "pytest"
     try:
         r = subprocess.run(  # noqa: S603 - this interpreter, and a folder made just above
             [
@@ -228,7 +208,7 @@ def run_suite(suite: str = "python") -> tuple[int, list[str]]:
         )
     finally:
         # RULE: a suite run leaves no temporary files behind
-        _remove(temporary)
+        held.remove()
     # --color=no covers the usual run; stripping covers a configuration that
     # turns colour back on, which would otherwise make every kill unattributable.
     # RULE: a coloured failure line is still attributed
@@ -299,6 +279,9 @@ def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", type=pathlib.Path, help="write the evidence table here")
     parser.add_argument("--suite", choices=["python", "firmware"], help="only the rules this suite tests")
+    parser.add_argument(
+        "--repair-only", action="store_true", help="put back a file a killed run left mutated, and stop"
+    )
     return parser.parse_args()
 
 
@@ -306,7 +289,25 @@ def main() -> int:
     """Mutate every rule in turn, restore the tree, and report."""
     args = arguments()
     stop_cleanly()
+    this_checkout.refuse_other_code()
+    # Held before the repair: a second run would put back the first one's live mutation.
+    held = this_checkout.hold(ROOT)
+    if held is None:
+        print(f"A mutation run is already running in {ROOT}; let it finish, or stop it, and try again.")  # noqa: T201
+        return 1
+    try:
+        return run(args)
+    finally:
+        os.close(held)
+        leave_no_folder()
+
+
+def run(args: argparse.Namespace) -> int:
+    """The run itself, while this checkout is held."""
     repair()
+    # RULE: a repair-only run puts back and does nothing else
+    if args.repair_only:
+        return 0
     sweep()
     # RULE: no rows to check is a failure not a pass
     # A check that passes with nothing to check is fail-open: a folder moved or
@@ -353,7 +354,6 @@ def main() -> int:
         if standing is not None:
             restore(*standing)
         RECOVERY.unlink(missing_ok=True)
-        leave_no_folder()
 
     return summary(results, lost, args.write)
 

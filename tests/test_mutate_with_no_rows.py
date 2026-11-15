@@ -24,6 +24,9 @@ def _mutate(monkeypatch, rows, *args):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     monkeypatch.setattr(module, "ROWS", rows)
+    # A project of its own: a mutation run holds the real checkout while this runs.
+    (rows.parent / "project").mkdir(exist_ok=True)
+    monkeypatch.setattr(module, "ROOT", rows.parent / "project")
     monkeypatch.setattr(module, "RECOVERY", rows.parent / "recovery.json")
     monkeypatch.setattr(module, "MUTATE_TMP", rows.parent / "mutate-tmp")
     monkeypatch.setattr(sys, "argv", ["mutate.py", *args])

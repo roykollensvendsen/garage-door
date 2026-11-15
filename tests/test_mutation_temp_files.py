@@ -9,6 +9,7 @@ killed run left is swept away at the next start.
 """
 
 import importlib.util
+import os
 import pathlib
 import signal
 import subprocess
@@ -72,9 +73,18 @@ def test_removing_a_run_s_files_never_changes_a_folder_it_links_to(tmp_path, mon
     assert (outside.stat().st_mode & 0o777, (outside / "kept.txt").exists()) == (0o755, True)
 
 
+def _killed_run(mutate):
+    """The folder a killed run leaves: still there, and its lock free."""
+    mutate.held_folder.own_place(mutate.MUTATE_TMP)
+    held = mutate.held_folder.HeldFolder("run-", mutate.MUTATE_TMP)
+    os.close(held._lock)  # noqa: SLF001 - standing in for the kill
+    held._lock = None  # noqa: SLF001
+    return held
+
+
 def test_a_killed_run_s_temporary_files_are_swept_at_the_next_start(tmp_path, monkeypatch):
     mutate = _mutate(tmp_path, monkeypatch)
-    left = mutate.MUTATE_TMP / "run-left-by-a-killed-run"
+    left = _killed_run(mutate).path
     (left / "shut").mkdir(parents=True)
     (left / "shut" / "inside.txt").write_text("x")
     (left / "shut").chmod(0)
@@ -210,3 +220,43 @@ def test_a_second_stop_does_not_cut_the_cleanup_short(tmp_path, monkeypatch):
     assert (tmp_path / "project/rule.py").read_text() == "x = 1\n", out
     assert not (tmp_path / "recovery.json").exists()
     assert not (tmp_path / "mutate-tmp").exists()
+
+
+def test_a_run_folder_another_run_still_holds_is_never_swept(tmp_path, monkeypatch):
+    """Two runs at once, in two checkouts' worth of time: the second must not take the first one's files."""
+    mutate = _mutate(tmp_path, monkeypatch)
+    mutate.held_folder.own_place(mutate.MUTATE_TMP)
+    running = mutate.held_folder.HeldFolder("run-", mutate.MUTATE_TMP)
+    hours_ago = time.time() - 2 * 60 * 60
+    os.utime(running.path, (hours_ago, hours_ago))
+    try:
+        mutate.sweep()
+        assert running.path.is_dir()
+    finally:
+        running.remove()
+
+
+def test_pytest_s_folder_sits_beside_the_run_s_lock(tmp_path, monkeypatch):
+    """Pytest empties the folder it is given, so the lock must not be in it."""
+    mutate = _mutate(tmp_path, monkeypatch)
+    seen = {}
+
+    def suite(args, **_kwargs):
+        basetemp = pathlib.Path(next(a for a in args if a.startswith("--basetemp=")).split("=", 1)[1])
+        seen["lock"] = (basetemp.parent / mutate.held_folder.LOCK).is_file()
+        seen["inside"] = (basetemp / mutate.held_folder.LOCK).exists()
+        return subprocess.CompletedProcess(args, 0, "1 passed\n", "")
+
+    monkeypatch.setattr(mutate.subprocess, "run", suite)
+    mutate.run_suite()
+    assert seen == {"lock": True, "inside": False}
+
+
+def test_a_run_stops_when_the_shared_folder_is_not_its_own(tmp_path, monkeypatch):
+    mutate = _whole_run(tmp_path, monkeypatch)
+    outside = tmp_path / "someone-else-s"
+    outside.mkdir()
+    mutate.MUTATE_TMP.symlink_to(outside)
+    with pytest.raises(SystemExit, match="is not a folder only you can use"):
+        mutate.main()
+    assert (mutate.ROOT / "rule.py").read_text() == "x = 1\n"
