@@ -73,3 +73,51 @@ def test_a_coloured_failure_line_is_still_attributed(monkeypatch, mutate):
     )
     _suite_says(monkeypatch, mutate, coloured)
     assert mutate.run_suite() == (1, ["test_a_token_works_once"])
+
+
+#: The function a killed run repairs with. A rule there would be switched off while it repairs.
+UNPROVABLE = "repair"
+
+REPAIR_WITH_A_RULE = '''
+def repair():
+    """Put back a file a killed run left mutated."""
+    # RULE: a repaired file is the original
+    if kept:
+        write(kept)
+
+
+def sweep():
+    # RULE: a swept folder is gone
+    remove()
+'''
+
+
+def _inside_repair(text, rows, mutate):
+    """The rules marked, or switched off by a row, inside `repair()` in `text`."""
+    import ast  # noqa: PLC0415
+
+    body = next(f for f in ast.parse(text).body if isinstance(f, ast.FunctionDef) and f.name == UNPROVABLE)
+    lines = text.splitlines()
+    inside = range(body.lineno - 1, body.end_lineno)
+    marked = [lines[i].split("# RULE:")[1].strip() for i in inside if "# RULE:" in lines[i]]
+    rowed = [
+        r["name"] for r in rows if mutate.line_of(text, r["find"], int(r.get("occurrence", 1))) in inside
+    ]
+    return sorted(set(marked + rowed))
+
+
+def test_a_rule_inside_repair_is_found(mutate):
+    """The guard below is only worth something if it sees a rule where one has been put."""
+    rows = [
+        {"name": "a swept folder is gone", "find": r"^\s*remove\(\)$"},
+        {"name": "kept", "find": r"if kept:"},
+    ]
+    assert _inside_repair(REPAIR_WITH_A_RULE, rows, mutate) == ["a repaired file is the original", "kept"]
+
+
+def test_no_rule_lives_inside_repair(mutate):
+    """A killed run repairs with the code it left switched off, so a rule in repair() cannot be proven."""
+    text = (ROOT / "scripts/mutate.py").read_text(encoding="utf-8")
+    rows = [r for r in mutate.all_rows() if r["file"] == "scripts/mutate.py"]
+    assert rows, "the runner's own rows are missing"
+    assert _inside_repair(text, rows, mutate) == []
