@@ -121,14 +121,18 @@ def sweep() -> None:
 
 def stop_cleanly() -> None:
     """Turn a stop from outside (a cancelled CI job, a closed terminal) into the exit Ctrl-C gives."""
+    stops = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
     def stop(signum: int, _frame: object) -> None:
-        for each in (signal.SIGTERM, signal.SIGHUP):
-            signal.signal(each, signal.SIG_IGN)  # a second stop must not cut the cleanup short
+        # RULE: a second stop does not cut the cleanup short
+        for each in stops:  # GitHub cancels with SIGINT, then SIGTERM
+            signal.signal(each, signal.SIG_IGN)
+        if signum == signal.SIGINT:
+            raise KeyboardInterrupt
         raise SystemExit(128 + signum)
 
     # RULE: a stopped run cleans up as an interrupted one does
-    for each in (signal.SIGTERM, signal.SIGHUP):
+    for each in stops:
         signal.signal(each, stop)
 
 
