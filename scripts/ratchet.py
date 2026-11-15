@@ -35,6 +35,7 @@ import importlib.util
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -75,10 +76,35 @@ def _structure() -> Any:  # noqa: ANN401 - a module loaded by path
     return module
 
 
+#: How a job is stopped from outside: Ctrl-C, a cancelled CI job, a closed terminal.
+STOPS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+
+
+def _stop(signum: int, _frame: object) -> None:
+    for each in STOPS:  # one stop is enough; a second must not cut the wait short
+        signal.signal(each, signal.SIG_IGN)
+    raise KeyboardInterrupt(signum)
+
+
 def _run(
     *command: str, cwd: Path = ROOT, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, cwd=cwd, env=env, capture_output=True, text=True, check=False)  # noqa: S603
+    """Run one step; a stop reaches it as Ctrl-C and is waited for, so it can put back what it changed."""
+    for each in STOPS:
+        signal.signal(each, _stop)
+    # Files, not pipes: a step waited for while nobody reads its pipe would block on a full one.
+    with tempfile.TemporaryFile("w+") as out, tempfile.TemporaryFile("w+") as err:
+        step = subprocess.Popen(command, cwd=cwd, env=env, stdout=out, stderr=err, text=True)  # noqa: S603
+        try:
+            step.wait()
+        except BaseException:
+            # RULE: a stopped measurement lets its step put back what it changed
+            step.send_signal(signal.SIGINT)
+            step.wait()  # no time limit: these runs never have one
+            raise
+        out.seek(0)
+        err.seek(0)
+        return subprocess.CompletedProcess(command, step.returncode, out.read(), err.read())
 
 
 # -- measuring ---------------------------------------------------------------
