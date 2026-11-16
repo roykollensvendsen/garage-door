@@ -81,6 +81,9 @@ def _structure() -> Any:  # noqa: ANN401 - a module loaded by path
 
 
 this_checkout = _beside("this_checkout")
+held_folder = _beside("held_folder")
+#: Every folder the ratchet works in starts so, in the temporary folder, and is held while in use.
+RUN_PREFIX = "garage-door-ratchet-"
 
 
 #: How a job is stopped from outside: Ctrl-C, a cancelled CI job, a closed terminal.
@@ -175,8 +178,9 @@ def _mutation() -> dict[str, int]:
 
 def measure(*, skip_mutation: bool = False) -> dict[str, Any]:
     """Every measure, from the tree as it is."""
-    with tempfile.TemporaryDirectory() as folder:
-        tmp = Path(folder)
+    with hold() as folder:
+        tmp = folder / "measure"
+        tmp.mkdir()
         python, firmware = _python(tmp), _firmware(tmp)
     lint = _run("uv", "run", "ruff", "check", ".", "--output-format", "json")
     types = _run("uv", "run", "mypy", "src")
@@ -280,28 +284,70 @@ def base_levels(kept: Path | None, measure_base: Callable[[], dict[str, Any]]) -
     return measure_base()
 
 
+def hold(place: Path | None = None) -> Any:  # noqa: ANN401 - a HeldFolder, loaded by path
+    """A folder of the ratchet's own, locked while it runs; a kill leaves it to the next sweep."""
+    return held_folder.HeldFolder(RUN_PREFIX, place or Path(tempfile.gettempdir()))
+
+
+def sweep(place: Path | None = None) -> None:
+    """Remove the folders a ratchet killed before it could clean up left behind."""
+    held_folder.sweep(place or Path(tempfile.gettempdir()), RUN_PREFIX)
+
+
+def copy_of(ref: str, copy: Path) -> None:
+    """Check `ref` out into `copy`, a repository of its own holding that one commit and no ref.
+
+    A worktree would share every branch of this clone, and git keeps a record of it that a
+    killed run leaves behind. Fetched by its id over protocol v2, with any commit allowed, so
+    a base that is no longer a branch tip can be measured too.
+    """
+    sha = _run("git", "rev-parse", "--verify", f"{ref}^{{commit}}", cwd=ROOT)
+    if sha.returncode:
+        msg = f"Cannot find {ref} to measure it:\n{sha.stderr}"
+        raise SystemExit(msg)
+    copy.mkdir(parents=True)
+    pack = "git -c uploadpack.allowAnySHA1InWant=true upload-pack"
+    # RULE: the base is measured where no other branch can be seen
+    steps = (
+        ("git", "init", "-q"),
+        (
+            "git",
+            "-c",
+            "protocol.version=2",
+            "fetch",
+            "-q",
+            "--depth",
+            "1",
+            "--upload-pack",
+            pack,
+            str(ROOT),
+            sha.stdout.strip(),
+        ),
+        ("git", "checkout", "-q", "--detach", "FETCH_HEAD"),
+    )
+    for step in steps:
+        done = _run(*step, cwd=copy)
+        if done.returncode:
+            msg = f"Cannot check out {ref} to measure it:\n{done.stderr}"
+            raise SystemExit(msg)
+
+
 def measure_at(ref: str, *, skip_mutation: bool) -> dict[str, Any]:
     """Measure `ref` in a copy of it, with this ratchet, so both sides are measured alike."""
-    with tempfile.TemporaryDirectory() as tmp:
-        copy, out = Path(tmp) / "base", Path(tmp) / "levels.json"
-        added = _run("git", "worktree", "add", "--detach", str(copy), ref)
-        if added.returncode:
-            msg = f"Cannot check out {ref} to measure it:\n{added.stderr}"
+    with hold() as folder:  # the copy is made inside it, so a stop at any point removes it too
+        copy, out = folder / "base", folder / "levels.json"
+        copy_of(ref, copy)
+        synced = _run("uv", "sync", "--locked", "--all-extras", cwd=copy)
+        if synced.returncode:
+            msg = f"Cannot install {ref} to measure it:\n{synced.stderr[-2000:]}"
             raise SystemExit(msg)
-        try:
-            synced = _run("uv", "sync", "--locked", "--all-extras", cwd=copy)
-            if synced.returncode:
-                msg = f"Cannot install {ref} to measure it:\n{synced.stderr[-2000:]}"
-                raise SystemExit(msg)
-            env = {**os.environ, "RATCHET_ROOT": str(copy)}
-            command = ["uv", "run", "python", str(Path(__file__).resolve()), "measure", "--out", str(out)]
-            measured = _run(*command, *(["--skip-mutation"] if skip_mutation else []), cwd=copy, env=env)
-            if measured.returncode:
-                msg = f"Measuring {ref} failed:\n{(measured.stdout + measured.stderr)[-2000:]}"
-                raise SystemExit(msg)
-            return dict(json.loads(out.read_text()))
-        finally:
-            _run("git", "worktree", "remove", "--force", str(copy))
+        env = {**os.environ, "RATCHET_ROOT": str(copy)}
+        command = ["uv", "run", "python", str(Path(__file__).resolve()), "measure", "--out", str(out)]
+        measured = _run(*command, *(["--skip-mutation"] if skip_mutation else []), cwd=copy, env=env)
+        if measured.returncode:
+            msg = f"Measuring {ref} failed:\n{(measured.stdout + measured.stderr)[-2000:]}"
+            raise SystemExit(msg)
+        return dict(json.loads(out.read_text()))
 
 
 def _messages(ref: str) -> str:
@@ -328,6 +374,8 @@ def main() -> int:
             write_levels(args.out, now)
         sys.stdout.write(json.dumps(now, indent=2, sort_keys=True) + "\n")
         return 0
+    # RULE: a killed ratchet's folders are swept at the next check
+    sweep()  # only in a check: a measure runs inside a check that has swept, and holds its folder
     if not args.base:
         sys.stderr.write("check needs --base, the ref to compare with (usually main).\n")
         return 1

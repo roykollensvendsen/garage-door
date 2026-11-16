@@ -1,0 +1,5 @@
+[[rule]]
+name = "a killed ratchet's folders are swept at the next check"
+file = "scripts/ratchet.py"
+find = '^\s*sweep\(\)  # only in a check'
+replace = 'pass'
