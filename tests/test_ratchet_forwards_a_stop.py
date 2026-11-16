@@ -11,6 +11,7 @@ the step as Ctrl-C and waits for it, with no time limit: these runs never have o
 import contextlib
 import os
 import pathlib
+import shutil
 import signal
 import subprocess
 import sys
@@ -115,12 +116,12 @@ def test_a_ctrl_c_in_the_terminal_reaches_the_step_once(tmp_path):
 
 
 UV_RATCHET = """
-import importlib.util, pathlib, shutil, sys
+import importlib.util, pathlib, sys
 path = pathlib.Path(sys.argv[1]) / "scripts/ratchet.py"
 spec = importlib.util.spec_from_file_location("ratchet_stopped", path)
 ratchet = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ratchet)
-ratchet._run(shutil.which("uv"), "run", "--no-project", "python", "-c", sys.argv[3], sys.argv[2])
+ratchet._run(sys.argv[4], "run", "--no-project", "python", "-c", sys.argv[3], sys.argv[2])
 """
 
 
@@ -130,8 +131,14 @@ def test_a_step_under_uv_run_is_told_to_stop_once(tmp_path):
     A stop sent to the step's whole group would reach that child twice, once directly and once
     through uv, and the second would cut the child's cleanup short.
     """
+    uv = shutil.which("uv")
+    if uv is None:
+        missing = "uv is not on PATH, so a stop through `uv run` cannot be shown to reach the step once"
+        if os.environ.get("CI"):
+            pytest.fail(f"{missing}; CI must have uv, or this proof drops out unseen.")
+        pytest.skip(missing)
     ratchet = subprocess.Popen(
-        [sys.executable, "-c", UV_RATCHET, str(ROOT), str(tmp_path), COUNTED_STEP],
+        [sys.executable, "-c", UV_RATCHET, str(ROOT), str(tmp_path), COUNTED_STEP, uv],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
