@@ -114,33 +114,37 @@ def test_a_ctrl_c_in_the_terminal_reaches_the_step_once(tmp_path):
                 os.kill(int((tmp_path / "step.pid").read_text()), signal.SIGKILL)
 
 
-WRAPPED_STEP = """
-import pathlib, signal, subprocess, sys
-tmp = pathlib.Path(sys.argv[1])
-signal.signal(signal.SIGINT, signal.SIG_IGN)  # a wrapper, like uv run, that passes nothing on
-inner = subprocess.Popen([sys.executable, "-c", sys.argv[2], str(tmp)])
-sys.exit(inner.wait())
+UV_RATCHET = """
+import importlib.util, pathlib, shutil, sys
+path = pathlib.Path(sys.argv[1]) / "scripts/ratchet.py"
+spec = importlib.util.spec_from_file_location("ratchet_stopped", path)
+ratchet = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ratchet)
+ratchet._run(shutil.which("uv"), "run", "--no-project", "python", "-c", sys.argv[3], sys.argv[2])
 """
 
-WRAPPING_RATCHET = RATCHET.replace("sys.argv[3], sys.argv[2])", "sys.argv[3], sys.argv[2], sys.argv[4])")
 
+def test_a_step_under_uv_run_is_told_to_stop_once(tmp_path):
+    """The ratchet starts its steps through `uv run`, and uv passes a Ctrl-C on to its child itself.
 
-def test_a_stop_reaches_the_script_under_a_wrapper_too(tmp_path):
-    """The ratchet starts mutate.py through `uv run`: a stop sent to uv alone may never reach it."""
+    A stop sent to the step's whole group would reach that child twice, once directly and once
+    through uv, and the second would cut the child's cleanup short.
+    """
     ratchet = subprocess.Popen(
-        [sys.executable, "-c", WRAPPING_RATCHET, str(ROOT), str(tmp_path), WRAPPED_STEP, STEP],
+        [sys.executable, "-c", UV_RATCHET, str(ROOT), str(tmp_path), COUNTED_STEP],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
     )
     try:
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + 60
         while not (tmp_path / "ready").exists() and ratchet.poll() is None and time.monotonic() < deadline:
             time.sleep(0.05)
         assert (tmp_path / "ready").exists(), "the step never started"
-        ratchet.send_signal(signal.SIGTERM)
+        ratchet.send_signal(signal.SIGTERM)  # as when its job is cancelled
         out, _ = ratchet.communicate(timeout=60)
         assert (tmp_path / "put-back").exists(), out
+        assert (tmp_path / "got-int").read_text() == "INT\n"
     finally:
         if ratchet.poll() is None:
             ratchet.kill()
