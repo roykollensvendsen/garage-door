@@ -113,9 +113,11 @@ def _run(
             step.wait()
         except BaseException:
             # RULE: a stopped measurement lets its step put back what it changed
-            # The whole of the step: it is started through `uv run`, which may pass nothing on.
+            # To the step alone: it is started through `uv run`, which passes the stop on to its
+            # child itself. Sent to the whole group, that child would be told twice, and the
+            # second would cut its cleanup short.
             try:
-                os.killpg(step.pid, signal.SIGINT)
+                os.kill(step.pid, signal.SIGINT)
             except ProcessLookupError:
                 if step.poll() is None:  # gone only if it ended; a live step must be told
                     raise
