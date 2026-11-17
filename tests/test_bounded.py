@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The bounds a test puts on a program it starts, and on a line it waits for.
+"""The bound a test puts on a program it starts.
 
 `subprocess.run(timeout=)` raises on time, but it kills only the child it started.
 A grandchild, under a shell or `uv run`, kept running after the test, holding
@@ -7,12 +7,11 @@ ports, files and CPU into the next tests of a mutation run.
 """
 
 import os
-import subprocess
 import sys
 import time
 
 import pytest
-from bounded import line_within, run_bounded
+from bounded import run_bounded
 
 
 def test_a_program_that_runs_out_its_bound_leaves_nothing_of_its_own_running(tmp_path):
@@ -32,21 +31,3 @@ def test_a_program_that_runs_out_its_bound_leaves_nothing_of_its_own_running(tmp
 def test_a_program_that_ends_in_time_gives_back_what_it_wrote():
     done = run_bounded([sys.executable, "-c", "print('ready')"], 30, capture_output=True, text=True)
     assert (done.returncode, done.stdout) == (0, "ready\n")
-
-
-def test_a_line_that_never_comes_fails_within_its_bound():
-    with subprocess.Popen(["sleep", "60"], stdout=subprocess.PIPE, text=True) as child:
-        try:
-            with pytest.raises(pytest.fail.Exception, match="no line within 1 s"):
-                line_within(child.stdout, 1)
-        finally:
-            child.kill()
-
-
-def test_two_lines_written_at_once_are_both_read():
-    command = [sys.executable, "-c", "print('one\\ntwo', flush=True); import time; time.sleep(60)"]
-    with subprocess.Popen(command, stdout=subprocess.PIPE, text=True) as child:
-        try:
-            assert [line_within(child.stdout, 30), line_within(child.stdout, 30)] == ["one\n", "two\n"]
-        finally:
-            child.kill()
