@@ -65,9 +65,7 @@ def test_a_stopped_measurement_lets_its_step_put_back_what_it_changed(tmp_path, 
     finally:
         if ratchet.poll() is None:
             ratchet.kill()
-        if (tmp_path / "step.pid").exists():
-            with contextlib.suppress(ProcessLookupError):
-                os.kill(int((tmp_path / "step.pid").read_text()), signal.SIGKILL)
+        _end_the_step(tmp_path)
 
 
 COUNTED_STEP = """
@@ -110,9 +108,7 @@ def test_a_ctrl_c_in_the_terminal_reaches_the_step_once(tmp_path):
     finally:
         if ratchet.poll() is None:
             ratchet.kill()
-        if (tmp_path / "step.pid").exists():
-            with contextlib.suppress(ProcessLookupError):
-                os.kill(int((tmp_path / "step.pid").read_text()), signal.SIGKILL)
+        _end_the_step(tmp_path)
 
 
 UV_RATCHET = """
@@ -155,6 +151,21 @@ def test_a_step_under_uv_run_is_told_to_stop_once(tmp_path):
     finally:
         if ratchet.poll() is None:
             ratchet.kill()
-        if (tmp_path / "step.pid").exists():
-            with contextlib.suppress(ProcessLookupError):
-                os.kill(int((tmp_path / "step.pid").read_text()), signal.SIGKILL)
+        _end_the_step(tmp_path)
+
+
+def _end_the_step(tmp_path):
+    """After a test, end the step's whole group: the ratchet starts it in a session of its own.
+
+    A step under `uv run` is uv's child, so killing the recorded pid alone could leave uv running.
+    """
+    if not (tmp_path / "step.pid").exists():
+        return
+    pid = int((tmp_path / "step.pid").read_text())
+    with contextlib.suppress(ProcessLookupError):
+        group = os.getpgid(pid)
+        # A mutant that drops the step's own session leaves it in this run's group: never end that.
+        if group == os.getpgrp():
+            os.kill(pid, signal.SIGKILL)
+        else:
+            os.killpg(group, signal.SIGKILL)
