@@ -16,16 +16,26 @@ from bounded import run_bounded
 
 def test_a_program_that_runs_out_its_bound_leaves_nothing_of_its_own_running(tmp_path):
     """A shell whose grandchild holds its output: the bound ends both, not the shell alone."""
-    said = tmp_path / "group"
-    command = ["sh", "-c", f"echo $$ > {said}; sleep 60 & wait"]
+    said = tmp_path / "sleep.pid"
+    command = ["sh", "-c", f"sleep 600 & echo $! > {said}; wait"]
     started = time.monotonic()
     with pytest.raises(pytest.fail.Exception, match="still running after 1 s"):
         run_bounded(command, 1, capture_output=True, text=True)
-    # Ending the shell alone leaves the sleep holding the output, and reading it waits a minute.
+    # Ending the shell alone leaves the sleep holding the output, and reading it waits ten minutes.
     assert time.monotonic() - started < 30
-    group = int(said.read_text())  # a new session's leader leads its own group, under its own pid
-    with pytest.raises(ProcessLookupError):
-        os.killpg(group, 0)
+    assert _gone(int(said.read_text())), "the grandchild is still running"
+
+
+def _gone(pid, within=10):
+    """Whether `pid` is gone: a killed orphan is a zombie until its new parent reaps it."""
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.05)
+    return False
 
 
 def test_a_program_that_ends_in_time_gives_back_what_it_wrote():
