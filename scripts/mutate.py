@@ -139,8 +139,7 @@ def repair() -> None:
 def restore(path: pathlib.Path, original: str, mutated: str) -> bool:
     """Put a file back, unless somebody else changed it while the suite ran."""
     if path.read_text() != mutated:
-        # Restoring now would overwrite an edit made while this was running,
-        # which is a silent way to lose somebody's work.
+        # Restoring now would overwrite an edit made while this ran: a silent way to lose somebody's work.
         # RULE: a file changed during the run is never restored over
         return False
     path.write_text(original)
@@ -173,8 +172,9 @@ def run_firmware() -> tuple[int, list[str]]:
     return len(failed), failed
 
 
-def run_suite(suite: str = "python") -> tuple[int, list[str]]:
-    """Run the tests and give back how many failed, and which ones."""
+# RULE: a real run waits on its suite with no limit
+def run_suite(suite: str = "python", timeout: float | None = None) -> tuple[int, list[str]]:
+    """Run the tests and give back how many failed, and which ones; only a test passes a bound."""
     if suite == "firmware":
         return run_firmware()
     # Two mutations that replace equal-length text leave files of identical
@@ -205,6 +205,7 @@ def run_suite(suite: str = "python") -> tuple[int, list[str]]:
             cwd=ROOT,
             check=False,
             env=env,
+            timeout=timeout,
         )
     finally:
         # RULE: a suite run leaves no temporary files behind
