@@ -1,16 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Bounds a test sets itself: on a program it starts, and on a line it waits for.
+"""The bound a test sets itself on a program it starts.
 
 Running out fails that one test with what the program said. Nothing here limits
 a test or a run as a whole: a mutation run is never capped (Roy's rule).
 """
 
 import os
-import queue
 import signal
 import subprocess
-import threading
-from typing import IO, Any
+from typing import Any
 
 import pytest
 
@@ -41,17 +39,3 @@ def run_bounded(
     if check and child.returncode:
         raise subprocess.CalledProcessError(child.returncode, command, out, err)
     return subprocess.CompletedProcess(command, child.returncode, out, err)
-
-
-def line_within(stream: IO[str], seconds: float = WITHIN) -> str:
-    """The next line from a program still running, or a failed test if none comes in time.
-
-    Not `select()`: it sees the pipe, not the text already in the stream's buffer. The
-    reading thread stays blocked until the test ends the program, which is harmless.
-    """
-    lines: queue.Queue[str] = queue.Queue()
-    threading.Thread(target=lambda: lines.put(stream.readline()), daemon=True).start()
-    try:
-        return lines.get(timeout=seconds)
-    except queue.Empty:
-        pytest.fail(f"no line within {seconds:g} s")
