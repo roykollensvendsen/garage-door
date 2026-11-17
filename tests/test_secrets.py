@@ -18,13 +18,16 @@ spec.loader.exec_module(scan)
 def test_git_ignores_the_secrets_and_everything_esphome_builds_from_them():
     paths = ["firmware/secrets.yaml", "firmware/.esphome/build/garage-door/src/main.cpp", "firmware/build/x"]
     result = subprocess.run(
-        ["git", "check-ignore", *paths], cwd=ROOT, capture_output=True, text=True, check=False
+        ["git", "check-ignore", *paths], cwd=ROOT, capture_output=True, text=True, check=False, timeout=60
     )
     assert result.stdout.split() == paths
 
 
 def test_no_tracked_file_holds_a_secret_value_or_a_real_key():
-    files = [ROOT / n for n in subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True).splitlines()]
+    files = [
+        ROOT / n
+        for n in subprocess.check_output(["git", "ls-files"], cwd=ROOT, text=True, timeout=60).splitlines()
+    ]
     assert scan.findings(files) == []
 
 

@@ -214,7 +214,9 @@ def test_a_second_stop_does_not_cut_the_cleanup_short(tmp_path, monkeypatch):
     child.send_signal(signal.SIGINT)
     while not (tmp_path / "cleaning").exists() and child.poll() is None and time.monotonic() < deadline:
         time.sleep(0.05)
-    assert (tmp_path / "cleaning").exists(), child.communicate()[0]
+    if not (tmp_path / "cleaning").exists():
+        child.kill()  # still waiting on it would hang the run; its output says why it never cleaned
+        pytest.fail(f"the run never started its cleanup: {child.communicate(timeout=30)[0]}")
     child.send_signal(signal.SIGTERM)
     out, _ = child.communicate(timeout=30)
     assert (tmp_path / "project/rule.py").read_text() == "x = 1\n", out

@@ -35,6 +35,7 @@ def _run(tmp_path, test, *, there_before):
         capture_output=True,
         text=True,
         check=False,
+        timeout=120,
     )
 
 
