@@ -1,0 +1,5 @@
+[[rule]]
+name = "a real run waits on its suite with no limit"
+file = "scripts/mutate.py"
+find = '^def run_suite\('
+replace = 'def run_suite(suite: str = "python", timeout: float | None = 300) -> tuple[int, list[str]]:'
