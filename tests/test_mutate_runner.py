@@ -172,3 +172,44 @@ def repair():
 def test_a_rule_in_an_async_helper_repair_calls_is_found(mutate):
     """An `async def` helper runs switched off too, once repair() calls it."""
     assert _inside_repair(REPAIR_AWAITING_A_RULE, [], mutate) == ["an awaited repair is written whole"]
+
+
+class _Pipe:
+    """Output that, like a pipe in CI, shows only what has been flushed."""
+
+    def __init__(self):
+        self.held, self.shown = "", ""
+
+    def write(self, text):
+        self.held += text
+        return len(text)
+
+    def flush(self):
+        self.shown, self.held = self.shown + self.held, ""
+
+
+def test_a_mutation_run_names_each_rule_before_it_tests_it(tmp_path, monkeypatch, mutate):
+    """The name must be out of the process, not in its buffer, by the time the suite starts.
+
+    In CI the output is a pipe, which Python holds back until it is full: a run that hung
+    on one rule would leave nothing in the log to say which, and its result line too.
+    """
+    project, rows = tmp_path / "project", tmp_path / "mutations"
+    project.mkdir()
+    (project / "rule.py").write_text("x = 1\n")
+    (rows / "rule.py").mkdir(parents=True)
+    (rows / "rule.py" / "a.toml").write_text(
+        "[[rule]]\nname = \"a rule\"\nfile = \"rule.py\"\nfind = '^x = 1$'\nreplace = 'x = 2'\n"
+    )
+    for name, value in [("ROOT", project), ("ROWS", rows), ("RECOVERY", tmp_path / "recovery.json")]:
+        monkeypatch.setattr(mutate, name, value)
+    monkeypatch.setattr(mutate.sys, "argv", ["mutate.py"])
+    pipe, seen = _Pipe(), []
+    monkeypatch.setattr(mutate.sys, "stdout", pipe)
+    monkeypatch.setattr(
+        mutate, "run_suite", lambda _suite="python": seen.append(pipe.shown) or (1, ["test_a_rule"])
+    )
+    mutate.main()
+    assert seen, "the run must reach the suite, or it proves nothing"
+    assert "testing  a rule" in seen[0]
+    assert "KILLED   a rule: 1" in pipe.shown
