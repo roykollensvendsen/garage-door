@@ -68,5 +68,6 @@ def test_a_row_is_read_as_utf_8_whatever_the_locale(tmp_path):
         text=True,
         env=env,
         check=False,
+        timeout=60,
     )
     assert out.stdout.strip() == ascii("døren er lukket"), out.stderr[-500:]

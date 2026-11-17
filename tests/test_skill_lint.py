@@ -106,6 +106,7 @@ def test_this_repositorys_skills_pass():
         capture_output=True,
         text=True,
         check=False,
+        timeout=60,
     )
     assert result.returncode == 0, result.stderr
 

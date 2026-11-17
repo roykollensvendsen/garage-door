@@ -28,6 +28,7 @@ def test_the_compatibility_pages_are_generated_from_the_current_opener_files():
         capture_output=True,
         text=True,
         check=False,
+        timeout=60,
     )
     assert result.returncode == 0, result.stderr
 

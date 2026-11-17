@@ -30,7 +30,13 @@ def _ignored(paths: set[pathlib.Path]) -> set[pathlib.Path]:
     """Of these, what git ignores: build output, secrets, ESPHome's toolchain."""
     names = "\n".join(str(p.relative_to(ROOT)) for p in paths)
     out = subprocess.run(
-        ["git", "check-ignore", "--stdin"], cwd=ROOT, input=names, capture_output=True, text=True, check=False
+        ["git", "check-ignore", "--stdin"],
+        cwd=ROOT,
+        input=names,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
     ).stdout
     return {ROOT / n for n in out.splitlines()}
 

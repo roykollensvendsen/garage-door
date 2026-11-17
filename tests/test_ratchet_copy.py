@@ -29,7 +29,7 @@ def ratchet():
 
 def _git(where, *args):
     return subprocess.run(
-        ["git", *args], cwd=where, capture_output=True, text=True, check=True
+        ["git", *args], cwd=where, capture_output=True, text=True, check=True, timeout=60
     ).stdout.strip()
 
 

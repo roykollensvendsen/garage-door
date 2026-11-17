@@ -41,5 +41,6 @@ def test_a_test_finds_the_signal_handlers_the_run_began_with(tmp_path):
         capture_output=True,
         text=True,
         check=False,
+        timeout=120,
     )
     assert done.returncode == 0, done.stdout
