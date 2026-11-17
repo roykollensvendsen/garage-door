@@ -15,6 +15,7 @@ import sys
 import time
 
 import pytest
+from bounded import WITHIN
 
 ROOT = pathlib.Path(__file__).parent.parent
 
@@ -29,7 +30,7 @@ def ratchet():
 
 def _git(where, *args):
     return subprocess.run(
-        ["git", *args], cwd=where, capture_output=True, text=True, check=True, timeout=60
+        ["git", *args], cwd=where, capture_output=True, text=True, check=True, timeout=WITHIN
     ).stdout.strip()
 
 

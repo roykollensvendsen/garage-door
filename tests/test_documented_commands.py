@@ -19,9 +19,9 @@ is run, so a verb cannot be added without a worked example.
 import pathlib
 import re
 import shutil
-import subprocess
 
 import pytest
+from bounded import run_bounded
 
 from garage_door.cli import COMMANDS
 
@@ -87,7 +87,7 @@ def test_the_documentation_shows_at_least_one_command():
 @pytest.mark.skipif(shutil.which("garage-door") is None, reason="the command is not installed")
 @pytest.mark.parametrize(("page", "command", "expected"), CASES, ids=[c[1][:40] for c in CASES])
 def test_a_documented_command_prints_what_the_page_says(page: str, command: str, expected: str):
-    r = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=ROOT, check=False, timeout=60)  # noqa: S602
+    r = run_bounded(command, shell=True, capture_output=True, text=True, cwd=ROOT)  # noqa: S604 - a command the docs show
     got = (r.stdout + r.stderr).strip()
     assert got == expected.strip(), f"{page} says this prints:\n{expected}\nit prints:\n{got}"
 

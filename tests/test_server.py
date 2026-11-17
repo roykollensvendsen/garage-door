@@ -7,6 +7,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
+from bounded import WITHIN
 from mcp.server.mcpserver.exceptions import ToolError
 
 from garage_door.door import DoorState
@@ -72,7 +73,7 @@ def server_for(device: FakeDevice, tmp_path: pathlib.Path):
 
 def call(server, tool: str, arguments: dict[str, object]) -> dict[str, object]:
     # Bounded here, so a call that never answers fails its test instead of hanging the run.
-    result = asyncio.run(asyncio.wait_for(server.call_tool(tool, arguments), 30))
+    result = asyncio.run(asyncio.wait_for(server.call_tool(tool, arguments), WITHIN))
     assert not result.is_error
     return result.structured_content
 

@@ -9,10 +9,10 @@ moved, renamed or emptied by mistake would leave every rule unproven while
 import importlib.util
 import os
 import pathlib
-import subprocess
 import sys
 
 import pytest
+from bounded import run_bounded
 
 ROOT = pathlib.Path(__file__).parent.parent
 ROW = "[[rule]]\nname = \"{name}\"\nfile = \"src/garage_door/service.py\"\nfind = 'x'\nreplace = 'y'\n"
@@ -62,12 +62,10 @@ def test_a_row_is_read_as_utf_8_whatever_the_locale(tmp_path):
         "print(ascii(m.all_rows(pathlib.Path(sys.argv[2]))[0]['name']))\n"
     )
     env = {**os.environ, "LC_ALL": "C", "LANG": "C", "PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0"}
-    out = subprocess.run(
+    out = run_bounded(
         [sys.executable, "-c", reader, str(ROOT / "scripts/mutate.py"), str(tmp_path / "mutations")],
         capture_output=True,
         text=True,
         env=env,
-        check=False,
-        timeout=60,
     )
     assert out.stdout.strip() == ascii("døren er lukket"), out.stderr[-500:]

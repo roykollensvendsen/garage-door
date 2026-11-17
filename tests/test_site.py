@@ -6,8 +6,9 @@ from __future__ import annotations
 import importlib.util
 import pathlib
 import re
-import subprocess
 import sys
+
+from bounded import run_bounded
 
 ROOT = pathlib.Path(__file__).parent.parent
 
@@ -23,12 +24,10 @@ def _script(name: str):
 
 
 def test_the_compatibility_pages_are_generated_from_the_current_opener_files():
-    result = subprocess.run(
+    result = run_bounded(
         [sys.executable, str(ROOT / "scripts/openers.py"), "--check"],
         capture_output=True,
         text=True,
-        check=False,
-        timeout=60,
     )
     assert result.returncode == 0, result.stderr
 

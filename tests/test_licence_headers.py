@@ -9,6 +9,8 @@ import pathlib
 import subprocess
 import tomllib
 
+from bounded import WITHIN
+
 ROOT = pathlib.Path(__file__).parent.parent
 SPDX = "GPL-3.0-or-later"
 HEADER = f"SPDX-License-Identifier: {SPDX}"
@@ -36,7 +38,7 @@ def _ignored(paths: set[pathlib.Path]) -> set[pathlib.Path]:
         capture_output=True,
         text=True,
         check=False,
-        timeout=60,
+        timeout=WITHIN,
     ).stdout
     return {ROOT / n for n in out.splitlines()}
 
