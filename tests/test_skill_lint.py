@@ -8,6 +8,7 @@ import pathlib
 import sys
 
 import pytest
+from bounded import run_bounded
 
 ROOT = pathlib.Path(__file__).parent.parent
 GOOD = (
@@ -98,15 +99,12 @@ def test_the_ratchet_accepts_a_skill_that_shrank_or_is_new(lint, tmp_path):
 
 
 def test_this_repositorys_skills_pass():
-    import subprocess  # noqa: PLC0415
 
-    result = subprocess.run(
+    result = run_bounded(
         [sys.executable, str(ROOT / "scripts/skill_lint.py"), "check"],
         cwd=ROOT,
         capture_output=True,
         text=True,
-        check=False,
-        timeout=60,
     )
     assert result.returncode == 0, result.stderr
 

@@ -17,6 +17,7 @@ import sys
 import time
 
 import pytest
+from bounded import WITHIN
 
 ROOT = pathlib.Path(__file__).parent.parent
 
@@ -54,7 +55,7 @@ def _mutate(tmp_path, monkeypatch):
 
 def test_a_suite_run_leaves_no_temporary_files_behind(tmp_path, monkeypatch):
     mutate = _mutate(tmp_path, monkeypatch)
-    failed, _ = mutate.run_suite()
+    failed, _ = mutate.run_suite(timeout=WITHIN)
     assert failed == 0
     assert list(mutate.MUTATE_TMP.iterdir()) == []
 
@@ -68,7 +69,7 @@ def test_removing_a_run_s_files_never_changes_a_folder_it_links_to(tmp_path, mon
     (mutate.ROOT / "tests" / "test_links_out.py").write_text(
         f"def test_it_links_out(tmp_path):\n    (tmp_path / 'link').symlink_to({str(outside)!r})\n"
     )
-    failed, _ = mutate.run_suite()
+    failed, _ = mutate.run_suite(timeout=WITHIN)
     assert failed == 0
     assert (outside.stat().st_mode & 0o777, (outside / "kept.txt").exists()) == (0o755, True)
 
@@ -216,7 +217,7 @@ def test_a_second_stop_does_not_cut_the_cleanup_short(tmp_path, monkeypatch):
         time.sleep(0.05)
     if not (tmp_path / "cleaning").exists():
         child.kill()  # still waiting on it would hang the run; its output says why it never cleaned
-        pytest.fail(f"the run never started its cleanup: {child.communicate(timeout=30)[0]}")
+        pytest.fail(f"the run never started its cleanup: {child.communicate(timeout=WITHIN)[0]}")
     child.send_signal(signal.SIGTERM)
     out, _ = child.communicate(timeout=30)
     assert (tmp_path / "project/rule.py").read_text() == "x = 1\n", out
@@ -250,7 +251,7 @@ def test_pytest_s_folder_sits_beside_the_run_s_lock(tmp_path, monkeypatch):
         return subprocess.CompletedProcess(args, 0, "1 passed\n", "")
 
     monkeypatch.setattr(mutate.subprocess, "run", suite)
-    mutate.run_suite()
+    mutate.run_suite(timeout=WITHIN)
     assert seen == {"lock": True, "inside": False}
 
 
