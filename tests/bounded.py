@@ -5,6 +5,7 @@ Running out fails that one test with what the program said. Nothing here limits
 a test or a run as a whole: a mutation run is never capped (Roy's rule).
 """
 
+import contextlib
 import os
 import signal
 import subprocess
@@ -33,7 +34,8 @@ def run_bounded(
         try:
             out, err = child.communicate(given, timeout=within)
         except subprocess.TimeoutExpired:
-            os.killpg(child.pid, signal.SIGKILL)
+            with contextlib.suppress(ProcessLookupError):  # the group may end just as time runs out
+                os.killpg(child.pid, signal.SIGKILL)
             out, err = child.communicate()
             pytest.fail(f"{command} still running after {within:g} s; it said: {out!r} {err!r}")
     if check and child.returncode:
