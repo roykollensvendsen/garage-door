@@ -12,6 +12,7 @@ asked to do, so a test here never mutates anything.
 
 import importlib.util
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -191,6 +192,8 @@ class _Pipe:
 def test_a_mutation_run_names_each_rule_before_it_tests_it(tmp_path, monkeypatch, mutate):
     """The name must be out of the process, not in its buffer, by the time the suite starts.
 
+    Its result line says how long the rule took, so a slow rule stands out in the log.
+
     In CI the output is a pipe, which Python holds back until it is full: a run that hung
     on one rule would leave nothing in the log to say which, and its result line too.
     """
@@ -212,7 +215,7 @@ def test_a_mutation_run_names_each_rule_before_it_tests_it(tmp_path, monkeypatch
     mutate.main()
     assert seen, "the run must reach the suite, or it proves nothing"
     assert "testing  a rule" in seen[0]
-    assert "KILLED   a rule: 1" in pipe.shown
+    assert re.search(r"^KILLED   a rule: 1 in \d+ s$", pipe.shown, re.MULTILINE), pipe.shown
 
 
 def test_a_real_run_waits_on_its_suite_with_no_limit(monkeypatch, mutate):

@@ -333,8 +333,7 @@ def run(args: argparse.Namespace) -> int:
             text = path.read_text()
             lines = text.splitlines()
             i = line_of(text, rule["find"], rule.get("occurrence", 1))
-            # Keep the line's own indentation: a replacement that carries its own
-            # would have to be kept in step with the source, and silently would not be.
+            # Keep the line's own indent: one carried in the replacement would drift from the source.
             indent = lines[i][: len(lines[i]) - len(lines[i].lstrip())]
             lines[i] = indent + rule["replace"].strip()
             mutated = "\n".join(lines) + "\n"
@@ -343,6 +342,7 @@ def run(args: argparse.Namespace) -> int:
             standing = (path, text, mutated)
             # RULE: a mutation run names each rule before it tests it
             print(f"testing  {rule['name']}", flush=True)  # noqa: T201
+            started = os.times().elapsed
             count, failed = run_suite(rule.get("suite", "python"))
             if not restore(path, text, mutated):
                 lost.append(rule["file"])
@@ -353,7 +353,7 @@ def run(args: argparse.Namespace) -> int:
             by_its_own = own in failed
             results.append((rule["name"], count, own, by_its_own))
             verdict = "KILLED  " if by_its_own else ("BY LUCK " if count else "SURVIVED")
-            print(f"{verdict} {rule['name']}: {count}", flush=True)  # noqa: T201
+            print(f"{verdict} {rule['name']}: {count} in {os.times().elapsed - started:.0f} s", flush=True)  # noqa: T201
     finally:
         if standing is not None:
             restore(*standing)
