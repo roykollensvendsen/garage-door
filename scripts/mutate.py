@@ -33,6 +33,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 from typing import Any
 
@@ -322,9 +323,8 @@ def run(args: argparse.Namespace) -> int:
     try:
         for rule in rules:
             path = ROOT / rule["file"]
-            # Read each file as it is now, not as it was when the run began: a
-            # bulk snapshot taken up front is restored over anything edited
-            # since, and losing an edit that way costs more than the run.
+            # Read the file as it is now: a snapshot taken when the run began would be restored
+            # over anything edited since, and losing an edit costs more than the run.
             text = path.read_text()
             lines = text.splitlines()
             i = line_of(text, rule["find"], rule.get("occurrence", 1))
@@ -337,7 +337,7 @@ def run(args: argparse.Namespace) -> int:
             standing = (path, text, mutated)
             # RULE: a mutation run names each rule before it tests it
             print(f"testing  {rule['name']}", flush=True)  # noqa: T201
-            started = os.times().elapsed
+            started = time.monotonic()
             count, failed = run_suite(rule.get("suite", "python"))
             if not restore(path, text, mutated):
                 lost.append(rule["file"])
@@ -348,7 +348,8 @@ def run(args: argparse.Namespace) -> int:
             by_its_own = own in failed
             results.append((rule["name"], count, own, by_its_own))
             verdict = "KILLED  " if by_its_own else ("BY LUCK " if count else "SURVIVED")
-            took = os.times().elapsed - started
+            # RULE: a mutation run says how long each rule took
+            took = time.monotonic() - started
             # A kill that can flip between runs has to say what flipped it.
             # RULE: a kill by another test names the tests that went red
             red = f", red: {', '.join(failed)}" if count and not by_its_own else ""
