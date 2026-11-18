@@ -6,7 +6,10 @@ A grandchild, under a shell or `uv run`, kept running after the test, holding
 ports, files and CPU into the next tests of a mutation run.
 """
 
+import contextlib
 import os
+import pathlib
+import signal
 import sys
 import time
 
@@ -17,13 +20,16 @@ from bounded import run_bounded
 def test_a_program_that_runs_out_its_bound_leaves_nothing_of_its_own_running(tmp_path):
     """A shell whose grandchild holds its output: the bound ends both, not the shell alone."""
     said = tmp_path / "sleep.pid"
-    command = ["sh", "-c", f"sleep 600 & echo $! > {said}; wait"]
+    command = ["sh", "-c", f"sleep 30 & echo $! > {said}; wait"]
     started = time.monotonic()
-    with pytest.raises(pytest.fail.Exception, match="still running after 1 s"):
-        run_bounded(command, 1, capture_output=True, text=True)
-    # Ending the shell alone leaves the sleep holding the output, and reading it waits ten minutes.
-    assert time.monotonic() - started < 30
-    assert _gone(int(said.read_text())), "the grandchild is still running"
+    try:
+        with pytest.raises(pytest.fail.Exception, match="still running after 1 s"):
+            run_bounded(command, 1, capture_output=True, text=True)
+        # Ending the shell alone leaves the sleep holding the output, and reading it waits it out.
+        assert time.monotonic() - started < 15, "the bound waited for the sleep to end by itself"
+        assert _gone(int(said.read_text())), "the grandchild is still running"
+    finally:
+        _end_if_still_the_sleep(said)
 
 
 def _gone(pid, within=10):
@@ -36,6 +42,21 @@ def _gone(pid, within=10):
             return True
         time.sleep(0.05)
     return False
+
+
+def _end_if_still_the_sleep(said):
+    """End the sleep by its own pid if a failure left it running, and only while it is that sleep.
+
+    A pid the system has since given to another program is left alone.
+    """
+    try:
+        pid = int(said.read_text())
+        command = pathlib.Path(f"/proc/{pid}/cmdline").read_bytes()
+    except (FileNotFoundError, ValueError, ProcessLookupError):
+        return
+    if command == b"sleep\x0030\x00":
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
 
 
 def test_a_program_that_ends_in_time_gives_back_what_it_wrote():
