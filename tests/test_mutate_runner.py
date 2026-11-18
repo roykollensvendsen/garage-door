@@ -225,3 +225,30 @@ def test_a_real_run_waits_on_its_suite_with_no_limit(monkeypatch, mutate):
     assert asked["timeout"] is None
     mutate.run_suite(timeout=300)
     assert asked["timeout"] == 300
+
+
+def test_a_test_that_errors_is_named_as_an_error(monkeypatch, mutate):
+    """A test whose setup broke went red without testing anything, and has to be told apart from a kill."""
+    _suite_says(monkeypatch, mutate, "ERROR tests/test_x.py::test_the_rule - OSError\n1 error\n")
+    assert mutate.run_suite() == (1, ["test_the_rule (error)"])
+
+
+def test_a_kill_by_another_test_names_the_tests_that_went_red(tmp_path, monkeypatch, capsys, mutate):
+    """A rule killed by a neighbour can flip between runs; the run has to say which test it was."""
+    project, rows = tmp_path / "project", tmp_path / "mutations"
+    project.mkdir()
+    (project / "rule.py").write_text("x = 1\n")
+    (rows / "rule.py").mkdir(parents=True)
+    (rows / "rule.py" / "a.toml").write_text(
+        "[[rule]]\nname = \"a rule\"\nfile = \"rule.py\"\nfind = '^x = 1$'\nreplace = 'x = 2'\n"
+    )
+    for name, value in [("ROOT", project), ("ROWS", rows), ("RECOVERY", tmp_path / "recovery.json")]:
+        monkeypatch.setattr(mutate, name, value)
+    monkeypatch.setattr(mutate.sys, "argv", ["mutate.py"])
+    red = ["test_a_neighbour", "test_a_rule (error)"]
+    monkeypatch.setattr(mutate, "run_suite", lambda _suite="python": (2, red))
+    mutate.main()
+    said = capsys.readouterr().out
+    assert re.search(
+        r"^BY LUCK  a rule: 2 in \d+ s, red: test_a_neighbour, test_a_rule \(error\)$", said, re.MULTILINE
+    )

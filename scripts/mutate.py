@@ -172,16 +172,17 @@ def run_firmware() -> tuple[int, list[str]]:
     return len(failed), failed
 
 
+#: A suite run prints little, and writes no pytest cache into the checkout.
+QUIET = ("-q", "-p", "no:cacheprovider")
+
+
 # RULE: a real run waits on its suite with no limit
 def run_suite(suite: str = "python", timeout: float | None = None) -> tuple[int, list[str]]:
     """Run the tests and give back how many failed, and which ones; only a test passes a bound."""
     if suite == "firmware":
         return run_firmware()
-    # Two mutations that replace equal-length text leave files of identical
-    # size, and CPython validates a cached .pyc from the source's modification
-    # time and size -- both at one-second resolution. Inside the same second
-    # the next run would import the previous mutation's bytecode and measure
-    # the wrong rule, so no bytecode is written at all.
+    # CPython trusts a cached .pyc by the source's size and mtime, to the second: two equal-length
+    # mutations in one second would import the last one's bytecode and measure the wrong rule.
     # RULE: two mutations never share a bytecode cache
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
     # pytest empties the folder it is given, so it gets one beside the run's lock.
@@ -189,17 +190,7 @@ def run_suite(suite: str = "python", timeout: float | None = None) -> tuple[int,
     temporary = held.path / "pytest"
     try:
         r = subprocess.run(  # noqa: S603 - this interpreter, and a folder made just above
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "-q",
-                "--tb=no",
-                "--color=no",
-                "-p",
-                "no:cacheprovider",
-                f"--basetemp={temporary}",
-            ],
+            [sys.executable, "-m", "pytest", "--tb=no", "--color=no", *QUIET, f"--basetemp={temporary}"],
             capture_output=True,
             text=True,
             cwd=ROOT,
@@ -215,8 +206,12 @@ def run_suite(suite: str = "python", timeout: float | None = None) -> tuple[int,
     # RULE: a coloured failure line is still attributed
     plain = ANSI.sub("", r.stdout)
     m = re.search(r"(\d+) (?:failed|error)", plain)
-    failed = re.findall(r"^FAILED (\S+)", plain, re.MULTILINE)
-    return int(m.group(1)) if m else 0, [f.split("::")[-1].split("[")[0] for f in failed]
+    failed = [f.split("::")[-1].split("[")[0] for f in re.findall(r"^FAILED (\S+)", plain, re.MULTILINE)]
+    # A test whose setup broke went red without testing anything; it is named, never counted as a kill.
+    # RULE: a test that errors is named as an error
+    errored = re.findall(r"^ERROR (\S+)", plain, re.MULTILINE)
+    failed += [f"{e.split('::')[-1].split('[')[0]} (error)" for e in errored]
+    return int(m.group(1)) if m else 0, failed
 
 
 def row_path(rule: dict[str, str]) -> pathlib.PurePosixPath:
@@ -353,7 +348,11 @@ def run(args: argparse.Namespace) -> int:
             by_its_own = own in failed
             results.append((rule["name"], count, own, by_its_own))
             verdict = "KILLED  " if by_its_own else ("BY LUCK " if count else "SURVIVED")
-            print(f"{verdict} {rule['name']}: {count} in {os.times().elapsed - started:.0f} s", flush=True)  # noqa: T201
+            took = os.times().elapsed - started
+            # A kill that can flip between runs has to say what flipped it.
+            # RULE: a kill by another test names the tests that went red
+            red = f", red: {', '.join(failed)}" if count and not by_its_own else ""
+            print(f"{verdict} {rule['name']}: {count} in {took:.0f} s{red}", flush=True)  # noqa: T201
     finally:
         if standing is not None:
             restore(*standing)
