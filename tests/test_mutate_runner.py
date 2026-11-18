@@ -14,6 +14,7 @@ import importlib.util
 import pathlib
 import re
 import subprocess
+import types
 
 import pytest
 
@@ -252,3 +253,22 @@ def test_a_kill_by_another_test_names_the_tests_that_went_red(tmp_path, monkeypa
     assert re.search(
         r"^BY LUCK  a rule: 2 in \d+ s, red: test_a_neighbour, test_a_rule \(error\)$", said, re.MULTILINE
     )
+
+
+def test_a_mutation_run_says_how_long_each_rule_took(tmp_path, monkeypatch, capsys, mutate):
+    """A slow rule has to stand out in the log, with the seconds its own suite run took."""
+    project, rows = tmp_path / "project", tmp_path / "mutations"
+    project.mkdir()
+    (project / "rule.py").write_text("x = 1\n")
+    (rows / "rule.py").mkdir(parents=True)
+    (rows / "rule.py" / "a.toml").write_text(
+        "[[rule]]\nname = \"a rule\"\nfile = \"rule.py\"\nfind = '^x = 1$'\nreplace = 'x = 2'\n"
+    )
+    for name, value in [("ROOT", project), ("ROWS", rows), ("RECOVERY", tmp_path / "recovery.json")]:
+        monkeypatch.setattr(mutate, name, value)
+    monkeypatch.setattr(mutate.sys, "argv", ["mutate.py"])
+    clock = iter([10.0, 52.4])  # before the suite, then after it
+    monkeypatch.setattr(mutate, "time", types.SimpleNamespace(monotonic=lambda: next(clock)))
+    monkeypatch.setattr(mutate, "run_suite", lambda _suite="python": (1, ["test_a_rule"]))
+    mutate.main()
+    assert "KILLED   a rule: 1 in 42 s\n" in capsys.readouterr().out
