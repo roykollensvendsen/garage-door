@@ -41,3 +41,16 @@ def _gone(pid, within=10):
 def test_a_program_that_ends_in_time_gives_back_what_it_wrote():
     done = run_bounded([sys.executable, "-c", "print('ready')"], 30, capture_output=True, text=True)
     assert (done.returncode, done.stdout) == (0, "ready\n")
+
+
+def test_a_group_gone_just_as_the_bound_runs_out_still_fails_cleanly(monkeypatch):
+    """The group can end between the bound running out and the kill; the test still fails by name."""
+    real_killpg = os.killpg
+
+    def gone_first(group, sig):
+        real_killpg(group, sig)
+        raise ProcessLookupError
+
+    monkeypatch.setattr("bounded.os.killpg", gone_first)
+    with pytest.raises(pytest.fail.Exception, match="still running after"):
+        run_bounded(["sleep", "30"], 0.2)
