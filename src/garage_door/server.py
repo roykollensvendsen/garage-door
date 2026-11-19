@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from garage_door.door import Action
+from garage_door.door import Action, DoorState
 from garage_door.manual import ManualPress, ManualPressed, ManualQuestion, status_sentence
 from garage_door.phrases import PhraseError, load_phrases
 from garage_door.service import Confirmed, GarageService, Question, Refused
@@ -103,6 +103,7 @@ def build_server(
     )
     async def garage_status() -> dict[str, Any]:
         report = await manual.report()
+        service.travel.seen(DoorState(str(report["state"])))  # timed after a press (ADR-GD-011)
         return {
             "state": report["state"],
             "armed": report["armed"],

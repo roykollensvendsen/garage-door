@@ -30,6 +30,7 @@ from garage_door.door import (
     WrongKeyError,
     refusal,
 )
+from garage_door.travel import Travel
 
 if TYPE_CHECKING:
     import pathlib
@@ -130,13 +131,16 @@ class GarageService:
         self._new_token = new_token
         self._wall_clock = wall_clock
         self._pending: _Pending | None = None
+        self.travel = Travel(log_path.with_name("travel.jsonl"), clock, wall_clock)  # ADR-GD-011 step 1
 
     async def status(self) -> DoorState:
-        """The door's state now; UNKNOWN when the controller does not answer."""
+        """The door's state now, timed after a press; UNKNOWN when the controller does not answer."""
         try:
-            return await self._device.state()
+            state = await self._device.state()
         except DeviceUnavailableError:
-            return DoorState.UNKNOWN
+            state = DoorState.UNKNOWN
+        self.travel.seen(state)
+        return state
 
     async def armed(self) -> bool | None:
         """Whether a press would switch the relay; None when the controller does not say."""
@@ -202,7 +206,9 @@ class GarageService:
         # RULE: a press the controller refused is said as refused
         if reason is not None:
             return self._refuse(before, CONTROLLER_REFUSED[reason], pending.action, pending.requester)
-        # In test mode the relay stays open, so there is no travel to wait for.
+        # In test mode the relay stays open, so there is no travel to wait for or to time.
+        if armed is not False:
+            self.travel.pressed(pending.action)
         after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)
         reached = after is pending.action.end_state
         self._log(
