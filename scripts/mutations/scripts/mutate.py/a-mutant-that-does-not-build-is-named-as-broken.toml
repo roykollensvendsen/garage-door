@@ -1,0 +1,5 @@
+[[rule]]
+name = "a mutant that does not build is named as broken"
+file = "scripts/mutate.py"
+find = '^ {12}broke = mutant_build\.fault\('
+replace = 'broke = None'
