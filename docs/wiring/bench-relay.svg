@@ -2,7 +2,7 @@
 <title>First door test: relay module</title>
 <style>.v{font-size:12px;text-anchor:middle}.l{font-size:13px}.s{font-size:11px;fill:#444}.h{font-size:16px;font-weight:bold}</style>
 <rect width="840" height="406" fill="#fff"/>
-<text x="20" y="28" class="h">First door test: Roy's relay module on GPIO25</text>
+<text x="20" y="28" class="h">First door test: the owner's relay module on GPIO25</text>
 <rect x="40" y="80" width="130" height="150" fill="#fff" stroke="#222" stroke-width="2"/>
 <text x="105" y="100" class="v">SparkFun</text><text x="105" y="116" class="v">ESP32 Thing</text>
 <rect x="300" y="80" width="260" height="150" fill="#fff" stroke="#222" stroke-width="2"/>

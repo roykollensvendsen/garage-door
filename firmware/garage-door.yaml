@@ -6,13 +6,13 @@
 # logs every packet on that wire over Wi-Fi. The decisions live in
 # door_logic/door_logic.h, which the laptop tests; this file only connects that
 # logic to pins and the network. door_logic.h can also take the state from two
-# reed contacts (DoorLogic::update); this build has none (Roy, 2026-11-06).
+# reed contacts (DoorLogic::update); this build has none (the owner, 2026-11-06).
 #
 # Check without hardware:  esphome config firmware/garage-door.yaml
 # Secrets come from firmware/secrets.yaml (git-ignored); see secrets.example.yaml.
 
 substitutions:
-  # Roy, 2026-11-04: closing by voice is allowed. The opener reverses on its
+  # The owner, 2026-11-04: closing by voice is allowed. The opener reverses on its
   # own force limit as with the remote; photocells are recommended, not required.
   allow_close: "true"
   # With the state from the wire, how long the opener's last status is
@@ -21,7 +21,7 @@ substitutions:
   # sender is fitted to ask the opener (ADR-GD-003).
   wire_trust: "last_status"
   # The press output's level. "false": a high pin closes the relay, as with the
-  # AQY212EH. Roy's first-test module (Songle SRD-03VDC-SL-C board) may trigger
+  # AQY212EH. The owner's first-test module (Songle SRD-03VDC-SL-C board) may trigger
   # on a low input: set "true" only after the bench check in the build guide
   # shows it. Either way "off" is relay open, at boot and between presses.
   relay_active_low: "false"
@@ -64,7 +64,7 @@ esp32:
       # Needs both ota and safe_mode below.
       enable_ota_rollback: true
     sdkconfig_options:
-      # Roy's board reports a 26 MHz main crystal (esptool, 2026-11-04);
+      # The owner's board reports a 26 MHz main crystal (esptool, 2026-11-04);
       # ESP-IDF assumes 40 MHz, which garbles the serial log and Wi-Fi.
       CONFIG_XTAL_FREQ_26: y
 
@@ -100,7 +100,7 @@ api:
         - lambda: |-
             const auto result = garage_door::door(${allow_close}, "${wire_trust}").request_press(millis());
             id(last_press_result).publish_state(garage::to_string(result));
-    # A press with no direction, while Roy watches the door (ADR-GD-004).
+    # A press with no direction, while the owner watches the door (ADR-GD-004).
     # Refused unless armed and in manual mode.
     - action: manual_press
       then:
@@ -117,7 +117,7 @@ ota:
 
 switch:
   # Test mode when off: presses are judged and reported, the relay stays open.
-  # Off after every boot and update; Roy turns it on.
+  # Off after every boot and update; the owner turns it on.
   - platform: template
     id: armed
     name: Armed
@@ -230,7 +230,7 @@ sensor:
 
 output:
   # The relay across terminals 1 and 2: the AQY212EH, or for the first test
-  # Roy's relay module. ESPHome drives it off during setup; before that, from
+  # The owner's relay module. ESPHome drives it off during setup; before that, from
   # reset, GPIO25 floats (not a strapping pin), which these inputs read as off.
   - platform: gpio
     id: press_output

@@ -30,7 +30,7 @@ report **stopped part-way** properly, and to tell moving from stopped at once,
 the design adds the optional third input on terminals 6+7 (an optocoupler,
 isolated like the relay). Its voltage, about 24 V while moving, comes from
 the FLA1-LED manual and a measurement on a related model. It has not been
-measured on Roy's opener: measure it before wiring. Sources:
+measured on the owner's opener: measure it before wiring. Sources:
 [plan, "Door state from the opener itself"](plan.md#door-state-from-the-opener-itself).
 
 Every state except closed and open still refuses a press. That rule does not
@@ -92,14 +92,14 @@ row per model:
 
 | Opener | Impulse | Stop | Separate open/close | Moving signal | Native state | Photocells | Warning light | Wicket contact | Verified by, date |
 |---|---|---|---|---|---|---|---|---|---|
-| LiftMaster LM80EVF | 1+2 | by impulse | no | 0+2 status (opening, closing) | yes, 0+2 status at 9600 baud | 2+3 | 6+7 | 4+5 (bridged) | Roy, 2026-11-05 |
+| LiftMaster LM80EVF | 1+2 | by impulse | no | 0+2 status (opening, closing) | yes, 0+2 status at 9600 baud | 2+3 | 6+7 | 4+5 (bridged) | the owner, 2026-11-05 |
 
 Each cell links to its manual citation. "Verified by" names who confirmed it
 on a real door, and when.
 
 ## Quality
 
-Built 2026-11-04 (step 5 below, done first at Roy's request). Main keeps
+Built 2026-11-04 (step 5 below, done first at the owner's request). Main keeps
 its measured levels with each run of its checks
 ([ADR-GD-009](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-009-main-keeps-the-quality-levels.md)).
 
@@ -123,7 +123,7 @@ its measured levels with each run of its checks
 ## Order, once approved
 
 1. The fourth state: firmware and service report **stopped part-way** when a
-   moving input exists, with tests first (simulator included). Needs Roy's
+   moving input exists, with tests first (simulator included). Needs the owner's
    approval, because it changes the safety state machine and the wiring.
 2. Profile schema with capabilities and quirks; the feature matrix page.
 3. Firmware hardware interfaces; the core reads the profile's quirks.

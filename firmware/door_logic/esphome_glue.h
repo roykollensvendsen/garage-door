@@ -22,7 +22,7 @@ inline garage::Door &door(bool allow_close, const char *wire_trust) {
     garage::Config c;
     c.allow_close = allow_close;
     c.trust_last_status = std::string(wire_trust) == "last_status";
-    c.armed = false;  // after every boot and update, until Roy arms it
+    c.armed = false;  // after every boot and update, until the owner arms it
     return c;
   }());
   return instance;

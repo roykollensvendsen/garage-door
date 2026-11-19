@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Roy asked for it by voice on 2026-11-05. This is the plan for him
+Proposed. The owner asked for it by voice on 2026-11-05. This is the plan for him
 to approve. Nothing is built, wired, flashed or sent on the opener's wire
 until he does.
 
@@ -24,7 +24,7 @@ What is known:
   when the light goes out by itself; that shows only in its next 5-minute
   repeat. Asking for status (0x080) right after a command gives the result
   at once.
-- **Measured on 2026-11-05 (Roy, by eye):** the door reached closed at
+- **Measured on 2026-11-05 (the owner, by eye):** the door reached closed at
   20:18:10 and the light went out at about 20:21, about 2 min 50 s later.
 - **Not known yet:** whether this opener (EU LM80EVF, 9600 baud on the wire)
   obeys a controller it has never seen, with its own client id and rolling
@@ -32,7 +32,7 @@ What is known:
 
 ## Options considered
 
-- **Do nothing; switch the light at the wall control.** Not taken: Roy asked
+- **Do nothing; switch the light at the wall control.** Not taken: the owner asked
   for it.
 - **A second relay across the wall control's light button.** Not taken: the
   wall control (78EV) sits on 0+2 itself and has a light button, so it is
@@ -49,7 +49,7 @@ What is known:
    isolated by an optocoupler, so the ESP32 never shares ground with the
    opener. The part must stand the bus's idle 10–12 V with margin; a
    6N136's output (15 V maximum) is too close, so the part is to be chosen
-   from what Roy has (a PC817-type optocoupler, or a 2N7000 behind one). The
+   from what the owner has (a PC817-type optocoupler, or a 2N7000 behind one). The
    drawing, the parts list and a pin in `hardware/pins.toml` come with the
    build, generated as the rest of the wiring is. **Off at boot:** the
    output's default holds the bus released.
@@ -58,12 +58,12 @@ What is known:
    door action. Never learn, pair, lock or any other command. The rolling
    code is saved before each send and jumps ahead at boot, as ADR-GD-003
    says. The sender waits for an idle line.
-3. **A bench test first, with Roy present, the light only:** a status
+3. **A bench test first, with the owner present, the light only:** a status
    request, then light on, light off. The door is never commanded over the
    bus in this step. If the opener ignores the commands, or the bus stops
    answering its own controls, the sender is unplugged and this stays
    undone.
-4. **A tool `garage_light(change: on | off | toggle)`.** **No spoken yes** (Roy:
+4. **A tool `garage_light(change: on | off | toggle)`.** **No spoken yes** (the owner:
    the light cannot hurt anyone), but it is refused unless the controller is
    armed. Unarmed (test mode), it is logged and nothing is sent. Every call
    is logged with the presses. It never moves the door, and a light token
@@ -83,7 +83,7 @@ What is known:
   code used twice, or an opener update, could make the opener ignore the
   controller.
 - A light switched by voice without a yes can be switched by mistake. The
-  cost is a light left on or off, and Roy accepted that.
+  cost is a light left on or off, and the owner accepted that.
 - It narrows ADR-GD-003's list of commands that are never sent: the light
   moves off it. Nothing else does.
 

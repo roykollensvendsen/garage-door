@@ -41,7 +41,7 @@ stopped door as unknown, which is what the project's logic does.
 - **Once connected, they are mandatory.** The opener will not work without
   them afterwards unless the logic board is fully reset (PDF p. 23,
   troubleshooting under section 26 D).
-- Roy's unit has none (photo, 2026-11-04).
+- The owner's unit has none (photo, 2026-11-04).
 
 ## Auto-close
 
@@ -59,7 +59,7 @@ It is not used here.
   (PDF p. 20, section 19).
 
 The project's voice control goes against these instructions when closing is
-asked for out of sight. Roy has accepted that knowingly
+asked for out of sight. The owner has accepted that knowingly
 ([ADR-GD-002](../../../../decisions/ADR-GD-002-close-without-photocells.md)).
 Anything that widens remote operation should say so again.
 

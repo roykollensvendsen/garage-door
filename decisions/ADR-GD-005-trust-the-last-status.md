@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted. Roy chose it on 2026-11-05: both ways selectable, the first one
+Accepted. The owner chose it on 2026-11-05: both ways selectable, the first one
 the default "for now".
 
 ## Context
@@ -15,7 +15,7 @@ also when the wall button or a remote moves the door, and once about every
 
 ADR-GD-003 trusts a status for 2 s only, and expects the controller to ask
 the opener for a fresh one (command 0x080) before a press. Asking means
-sending on the wire, which needs a sender that is not built and Roy's
+sending on the wire, which needs a sender that is not built and the owner's
 approval. Listening only, a 2 s limit makes the door unknown nearly all the
 time, so every press is refused.
 

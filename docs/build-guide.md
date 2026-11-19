@@ -107,7 +107,7 @@ from the laptop.
 | 1 | Capacitor 1 nF (102), ceramic | GPIO36 to ground; not 10 nF, which would round the bits off |
 | | Breadboard and jumper wires | |
 
-Roy first tried 22 kΩ + 10 kΩ over 10 kΩ. Node A then read only 2.4 V,
+The owner first tried 22 kΩ + 10 kΩ over 10 kΩ. Node A then read only 2.4 V,
 too close to the ESP32's threshold, so the top is 22 kΩ alone.
 
 ![Schematic of the bench divider](wiring/bench-divider-schematic.svg)
@@ -118,7 +118,7 @@ The diode runs from GPIO36 up to 3V3, band towards 3V3.
 
 ![Breadboard layout of the bench divider](wiring/bench-divider-breadboard.svg)
 
-**As built by Roy (2026-11-04)**, on a half-size breadboard: rows 1–30,
+**As built by the owner (2026-11-04)**, on a half-size breadboard: rows 1–30,
 holes a–e of each row joined, and the blue rail beside them as ground.
 
 | Part | Holes | Net |
@@ -139,7 +139,7 @@ holes a–e of each row joined, and the blue rail beside them as ground.
 | blue wire to ESP32 3V3 | a17 | not connected yet |
 | black wire to ESP32 GND | rail | not connected yet |
 
-Roy measured on the scope:
+The owner measured on the scope:
 - node A: 3.17 V mean;
 - row 13, with the 10 nF that was there then: about 2.7 V minimum while idle, with about 0.8 V
   peak to peak of 50 Hz ripple;
@@ -156,16 +156,16 @@ It runs from a USB power bank in the garage.
 3. **Measure 0 to 2** on DC volts: still about 11–12 V, as without the
    divider. A drop of more than about 0.1 V means the divider loads the
    line too much.
-4. **Measure node A to terminal 2:** about 3.2 V mean while idle (Roy
+4. **Measure node A to terminal 2:** about 3.2 V mean while idle (the owner
    measured 3.17 V). Run the door once from the remote. Node A must never be
    negative. Above about 11.5 V on the line the diode holds GPIO36 near 3.9 V.
 5. **Only then** add the 1 kΩ, the diode and the wire to GPIO36, and join the
    ESP32's GND to terminal 2. The controller logs every packet under the tag
    `wire` (`esphome logs firmware/garage-door.yaml`).
 
-## First door test: Roy's relay module
+## First door test: the owner's relay module
 
-For the first test on the door, Roy uses a relay module he already has
+For the first test on the door, the owner uses a relay module he already has
 instead of the AQY212EH. The PhotoMOS stays the part for the permanent build:
 it is isolated, silent and draws about 6 mA.
 
@@ -208,7 +208,7 @@ The board has its own driver transistor, flyback diode and LEDs.
 
 Only then wire COM and NO to opener terminals 1 and 2.
 
-**Roy's bench results (2026-11-04),** with the ESP32 Thing wired straight
+**The owner's bench results (2026-11-04),** with the ESP32 Thing wired straight
 to the module (VCC to 3V3, GND to GND, CTH to GPIO25) and nothing on its
 output:
 - CTH touched to 3V3 clicks the relay: the input triggers on high, as its
@@ -231,7 +231,7 @@ output:
 - With "closed" faked (GPIO34 to GND, GPIO35 through 10 kΩ to 3V3), the
   door read **closed**. Armed, two "open" requests by voice, each confirmed
   with a spoken yes, were accepted by the controller, and the relay
-  **clicked** (Roy, about 23:00). The service answered "pressed, but the
+  **clicked** (the owner, about 23:00). The service answered "pressed, but the
   door did not reach open: it is closed". That is right on the bench, with
   nothing on the relay's output and the reed inputs held by wires.
 - Found on the way: the first request after the laptop connected always
@@ -246,12 +246,12 @@ not connected to the opener and the controller unarmed:
   COM and NO.
 - Then wired to the opener: COM (middle) to terminal 1, NO (right) to
   terminal 2, with two blue wires.
-- **Boot check on the real opener:** Roy power-cycled the ESP32. The door
+- **Boot check on the real opener:** the owner power-cycled the ESP32. The door
   did not move and the relay did not click. `garage-door check` afterwards
   reported Armed off and Manual mode off.
 - **Bad jumper wires (2026-11-05, about 10:10).** Three manual presses
   (09:41, 09:47, 09:49) were accepted by the controller, but the door did
-  not move. Roy found several blue jumper wires with no continuity: bad
+  not move. The owner found several blue jumper wires with no continuity: bad
   crimps. He replaced the relay's output wires (COM to terminal 1, NO to
   terminal 2) with proper wire, continuity-checked every wire on the bus
   side (red 0 to a1, black 2 to the rail, yellow a13 to GPIO36, black rail
@@ -261,19 +261,19 @@ not connected to the opener and the controller unarmed:
   10:38:38).** Manual mode, armed, after a spoken yes: the door went from
   fully open to closed, as the wall button does. The opener sent a packet
   about a second later and another about 20 s later, at the end of travel.
-  (A press at 10:15 after the rewiring most likely moved it too; Roy did
+  (A press at 10:15 after the rewiring most likely moved it too; the owner did
   not say.)
 - **First "open" by name (11:11:51),** with the state from the opener's
   wire (ADR-GD-005) and no manual mode. The controller read "closed" from
   the opener's 5-minute status. The service asked "The garage door is
-  closed. Open it?", Roy said yes, and the opener reported opening at once
+  closed. Open it?", the owner said yes, and the opener reported opening at once
   and open about 18 s later. The service answered "Pressed. The garage door
   was closed and is now open."
 - **First open and close by voice (14:33 and 14:35),** from the Claude app,
   through the claude-voice bridge to this MCP server, against the real door.
-  For "open", the question came at 14:33:08 and Roy's spoken yes at 14:33:32.
+  For "open", the question came at 14:33:08 and the owner's spoken yes at 14:33:32.
   The opener reported opening at once and open at 14:33:50, and the answer
-  was "closed → open, reached". Roy confirmed it at the door. "Close"
+  was "closed → open, reached". The owner confirmed it at the door. "Close"
   followed: the question came at 14:35:21, the yes at 14:35:32, and the door
   was closed at 14:35:52. Each was one press, logged with requester "mcp".
 

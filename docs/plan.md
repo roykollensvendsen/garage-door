@@ -1,17 +1,17 @@
 # Plan: voice control of the garage door
 
-*Status: proposed, waiting for Roy's go-ahead. Nothing has been bought, wired or
+*Status: proposed, waiting for the owner's go-ahead. Nothing has been bought, wired or
 flashed. Written 2026-11-04.*
 
 ## What we are building
 
-Roy says "open the garage". The voice session asks back "The door is closed.
-Do you want me to open it?", Roy says yes, and only then does a small box next to the opener
+The owner says "open the garage". The voice session asks back "The door is closed.
+Do you want me to open it?", the owner says yes, and only then does a small box next to the opener
 press the opener's push-button input for half a second. The opener's own
 status messages on its data wire (terminals 0+2) tell the system whether the
 door is fully open, fully closed or moving, so the door's state is reported
 before and after every press, and nothing is pressed when the state is not
-known. There are no sensors on the door (Roy, 2026-11-06).
+known. There are no sensors on the door (the owner, 2026-11-06).
 
 ## 1. What the opener's terminals are for
 
@@ -27,7 +27,7 @@ document number on its back page identifies it as the manufacturer's own.
 | **1 + 2** | Wired push button (accessory 75EV). **This is the impulse input we use.** Each short = open / stop / close in turn, like the wall button. | Figure 19–20 (button drawn on 1+2); section 19 "Press to open or close the door. Press again to stop"; diagnostic code 5-up/1-down: "Terminal 1+2 for wall control is shortened longer than 4 seconds" |
 | 0 + 2 | Multi-function wall control 78EV (a data connection, not a plain contact). Not used. | Figure 19–20 |
 | 2 + 3 | Photocells (771EV, 772E, G770E, 771EVK). Terminal 2 is the common for 0, 1 and 3. | Figure 19–20, photocell wiring |
-| **4 + 5** | Door-in-door (wicket) contact. Ships with a wire bridge; the bridge is removed only when a wicket contact is fitted. **Leave Roy's bridge in place.** | Section 26 A: "Locate auxiliary quick connect terminals. Remove wire bridge. Insert bell wire into quick connect terminals 4 and 5"; figure 26 "4+5" |
+| **4 + 5** | Door-in-door (wicket) contact. Ships with a wire bridge; the bridge is removed only when a wicket contact is fitted. **Leave the owner's bridge in place.** | Section 26 A: "Locate auxiliary quick connect terminals. Remove wire bridge. Insert bell wire into quick connect terminals 4 and 5"; figure 26 "4+5" |
 | 6 + 7 | Flashing warning light FLA1-LED. | Section 26 B; figure 26 "6+7" |
 | 30 VDC + − | Power for external devices, 30 V DC, max 50 mA. For external receivers, the "under 1 watt standby" mode must be switched off. | Section 26 O |
 
@@ -38,13 +38,13 @@ What the manual does **not** say, so we measure it rather than guess:
 - whether 1–2 wants a plain contact or something special. The evidence says a
   plain contact: the 75EV is a simple push button, the listed key switches
   (100034, 100041) are plain contacts, and the 5-1 fault code only makes sense
-  for a short. A 0.5 s touch with an insulated wire is the bench test; Roy did it on 2026-11-04 and it worked (see "Measured on Roy's opener").
+  for a short. A 0.5 s touch with an insulated wire is the bench test; the owner did it on 2026-11-04 and it worked (see "Measured on the owner's opener").
 
 Also noted: the manual says "Always use LiftMaster accessories. External
 products can cause malfunctions." A contact that only closes like the 75EV
 button does is the lowest-risk way to add one.
 
-### Checked against Roy's photos (2026-11-04)
+### Checked against the owner's photos (2026-11-04)
 
 The photos are in `docs/photos/`, which git ignores.
 
@@ -59,7 +59,7 @@ The photos are in `docs/photos/`, which git ignores.
   bridge for the door-in-door contact. It stays.
 - **Nothing else is connected.** No wall button on 1+2, and **no photocells
   on 2+3**. Closing therefore relies on the opener's own force-based
-  reversal, exactly as it does with the remote. Roy decided on 2026-11-04
+  reversal, exactly as it does with the remote. The owner decided on 2026-11-04
   to allow closing by voice anyway; see section 4 and
   [`decisions/ADR-GD-002`](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-002-close-without-photocells.md).
 - **ESP32 Thing:** pins 25, 34, 35, 3V3, GND and VUSB are all labelled and
@@ -75,17 +75,17 @@ how sure it is.
 
 | Source of state | What it can tell us | How sure |
 |---|---|---|
-| Terminals 6+7, warning-light output (FLA1-LED) | **Moving**, not where. About 24 V while the door moves, with a short lead before and lag after. | The manual lists the FLA1-LED on 6+7 (PDF p. 269). The FLA1-LED manual describes it (<https://manuals.easygates.co.uk/PDF/misc/chamberlain-liftmaster-fla1-led-manual.pdf>). A measurement on the related LM100EVS: <https://www.cavelab.dev/posts/garage-door-flashing-light/>. Not measured on Roy's opener. |
-| 30 VDC output, max 50 mA | Nothing about the door. Switched off in standby: Roy measured about 1.1 V idle (2026-11-04). | Rating on the label and in the manual. Standby behaviour is an **inference** from a related model's manual (LM750EVGB, <https://manualmachine.com/chamberlain/lm750evgb/2593509-operation-manual>), not stated for the LM80EVF. |
+| Terminals 6+7, warning-light output (FLA1-LED) | **Moving**, not where. About 24 V while the door moves, with a short lead before and lag after. | The manual lists the FLA1-LED on 6+7 (PDF p. 269). The FLA1-LED manual describes it (<https://manuals.easygates.co.uk/PDF/misc/chamberlain-liftmaster-fla1-led-manual.pdf>). A measurement on the related LM100EVS: <https://www.cavelab.dev/posts/garage-door-flashing-light/>. Not measured on the owner's opener. |
+| 30 VDC output, max 50 mA | Nothing about the door. Switched off in standby: the owner measured about 1.1 V idle (2026-11-04). | Rating on the label and in the manual. Standby behaviour is an **inference** from a related model's manual (LM750EVGB, <https://manualmachine.com/chamberlain/lm750evgb/2593509-operation-manual>), not stated for the LM80EVF. |
 | Terminals 0+2, the opener's digital bus (Security+ 2.0) | Possibly open, closed and position, the way ratgdo boards read it. | **Community reports only**, on related EU models: <https://github.com/ratgdo/esphome-ratgdo/issues/179> and <https://github.com/konnected-io/konnected-esphome/issues/128>. State reporting dropped out for some users and was later fixed upstream (April 2026, per those threads). Nobody has reported an LM80EVF. Unofficial protocol: the maker could change it. |
 | 828EV internet gateway | Open/closed, through the maker's cloud. | Needs the myQ cloud, which has been closed to third parties since 2023 (<https://www.home-assistant.io/blog/2023/11/06/removal-of-myq-integration/>). **Excluded**: nothing may leave the LAN. Gateway manual: <https://cdn.shopify.com/s/files/1/0574/2601/8495/files/114-5696-000-828EV.pdf>. |
 | 829EV radio receiver | No state output. | Manual: <https://manuals.easygates.co.uk/PDF/liftmaster/829ev.pdf>. |
 
 **Decision (revised, proposed in [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md)):**
-the 0+2 bus works on this opener. Roy's captures decode as Security+ 2.0
+the 0+2 bus works on this opener. The owner's captures decode as Security+ 2.0
 status messages with the door state in them (see the measurements below).
 So the controller takes its state from the wire. Reed contacts were the
-first plan and were never fitted; Roy dropped them on 2026-11-06. The
+first plan and were never fitted; the owner dropped them on 2026-11-06. The
 controller's logic still supports them (`DoorLogic::update`, with its tests)
 for anyone whose opener has no such wire. It can press through the relay or
 by a command on the wire (`press_by: relay | wire`). How long a status is
@@ -165,7 +165,7 @@ waveform to USB (CSV) as well, so it can be decoded off the scope.
    message start, not as data. Try `0x55 0x01
    0x00` as the start, and decode with secplus.
 
-*First bench test: a resistor divider (Roy's choice, 2026-11-04; not the
+*First bench test: a resistor divider (the owner's choice, 2026-11-04; not the
 final build).* It loads the line least and needs no parts beyond resistors,
 but it is **not isolated**: it ties the ESP32's ground to terminal 2. Power the
 ESP32 from a USB power bank, not the laptop, and use the optocoupler below in
@@ -173,7 +173,7 @@ the build.
 - Terminal 0 → **22 kΩ** → node A → **10 kΩ** → terminal 2 (ESP32 GND).
   Node A → **1 kΩ** → GPIO36. A **1N4148** from GPIO36 to 3V3, cathode
   (black stripe) at 3V3. **1 nF** from GPIO36 to GND (`102`; see below).
-- **Why 22k alone on top** (Roy, scope, 2026-11-04). With 22 kΩ + 10 kΩ over
+- **Why 22k alone on top** (the owner, scope, 2026-11-04). With 22 kΩ + 10 kΩ over
   10 kΩ, node A read **2.4 V mean**, too close to the ESP32's input-high
   level of 2.48 V. With the second 10 kΩ jumpered out it read **3.17 V mean**,
   min about 2.1 V, about 2.0 V peak to peak. So the line's high level is
@@ -215,9 +215,9 @@ the build.
   is on. Keep the ADC off that pin and set `power_save_mode: none`.
 
 *Listen-only input for the permanent build: a 6N136 optocoupler (proposed,
-from parts Roy has, 2026-11-04).* The divider above is for the first test.
+from parts the owner has, 2026-11-04).* The divider above is for the first test.
 For the permanent build the input should be **galvanically isolated**, like
-the press output. Roy has 6N136s (a 1 Mbit/s photodiode-and-transistor
+the press output. The owner has 6N136s (a 1 Mbit/s photodiode-and-transistor
 optocoupler, DIP-8), which is far faster than this 4000 baud line needs.
 - **Bus side.** Terminal 0 → **10 kΩ** → pin 2 (LED anode). Pin 3 (LED
   cathode) → terminal 2. A **1N4148** across the LED, reversed (cathode on
@@ -264,9 +264,9 @@ reports about 30 cm in strong sunlight
 and daylight comes in through an open door. Shade it, and reject readings
 whose range status is not valid. Test it before trusting it.
 
-### Measured on Roy's opener (2026-11-04)
+### Measured on the owner's opener (2026-11-04)
 
-Roy measured his LM80EVF with a Fluke 87 V on DC volts, opener plugged in and
+The owner measured his LM80EVF with a Fluke 87 V on DC volts, opener plugged in and
 idle. Probe tips alone did not reach the contacts in the push-in terminals:
 **insert a wire through the orange lever** and measure on the wire.
 
@@ -280,7 +280,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 | 0+2 on an oscilloscope, triggered by the remote | Tektronix MSO2024, 10x probe, ground clip on 2, tip on 0, 5 V/div, 1 ms/div, falling edge at 6 V, Normal, Single. Idle **steady at about 10–12 V**. At the trigger the line drops **sharply to about 0 V and stays low for about 2–3 ms**. Then **a burst of short pulses**, pulled low and released, open-drain style | **A data line, not a plain button input.** A long low "break" and then bytes is what a Security+ 2.0-style one-wire serial bus looks like. Bits not resolved at 1 ms/div. **Bit rate and protocol not yet measured**; next capture below. |
 | 0+2, pulse widths (scope cursors in the zoom window) | Idle high about 12 V. Break low for **2.624 ms**. Then high **128.4 µs**, low **254 µs**, high **252.4 µs**. After that, a run of fairly regular pulses, then longer lows and some wider highs: **504.4 µs** and **754.4 µs**. The message lasts **more than about 10 ms** | The widths are 1, 2, 2, 4 and 6 bits: 1893.6 µs over 15 bits is **about 126.2 µs per bit, about 7920 baud**. The break is about 21 bit times, a little longer than two 8N1 frames (20 bits): a classic UART break marking the start of a message. Nominal is probably **7812.5 baud** (8 MHz / 1024, 128 µs) or **8000 baud** (125 µs). Both are within about 1.3 % of the measured rate, which a UART tolerates. Either way it is **not the 9600 baud** that ratgdo uses for Security+ 2.0. It could be a variant, or another encoding (Manchester at 128 µs per half-bit is also possible). **Not decoded yet.** |
 | 0+2, a saved capture decoded in software | MSO2024, CH1 saved as CSV, 20 ms at 0.16 µs per sample, triggered by the remote. Decoded with `scripts/decode_capture.py` (threshold 6 V). Runs after the break: a high of 128.6 µs, then every run a multiple of about **250 µs** (254, 1751, 2250, 1003 µs and so on) | The 126 µs "bit" was the **half-bit high right after the break**. The real bit is about **250 µs: about 4000 baud** (fitted 3973–3989). As **UART 8N1, idle high**, it decodes to `[break] 55 01 00 86 0E BD` and then the capture ends. **`55 01 00` is exactly the Security+ 2.0 sync that ratgdo's receiver looks for**, so this is Security+ 2.0 framing, at about 4000 baud instead of ratgdo's 9600. A Security+ 2.0 packet is 19 bytes (about 48 ms at 4000 baud), so this 20 ms capture holds only the first 6. **Next:** capture again at 10 ms/div (100 ms) to get a whole packet, and decode it with secplus. |
-| 0+2, four whole packets decoded with secplus | MSO2024 at 10 ms/div (100 ms), CH1 as CSV, four captures triggered by the remote. Event order for the last three is Roy's recollection: open, close, stop. Each holds one whole 19-byte packet starting `55 01 00`, at about 3970 baud (252 µs bit) | Decoded with argilo's secplus (`decode_wireline_command`): all four are **command 0x081, status**, from one device id `0x405d056056`, so **the opener sends its own status** on 0+2. The rolling code counts up (0x2ce51, 53, 55, 58). **Only the door state changes**: closing, opening, closing, stopped (secplus codes 5, 4, 5, 3); light on, not locked in all. The decode agrees with Roy's order. **So the ESP32 can read the door state by listening on 0+2**, without magnet sensors; that changes the parts list once Roy has seen it. |
+| 0+2, four whole packets decoded with secplus | MSO2024 at 10 ms/div (100 ms), CH1 as CSV, four captures triggered by the remote. Event order for the last three is the owner's recollection: open, close, stop. Each holds one whole 19-byte packet starting `55 01 00`, at about 3970 baud (252 µs bit) | Decoded with argilo's secplus (`decode_wireline_command`): all four are **command 0x081, status**, from one device id `0x405d056056`, so **the opener sends its own status** on 0+2. The rolling code counts up (0x2ce51, 53, 55, 58). **Only the door state changes**: closing, opening, closing, stopped (secplus codes 5, 4, 5, 3); light on, not locked in all. The decode agrees with the owner's order. **So the ESP32 can read the door state by listening on 0+2**, without magnet sensors; that changes the parts list once the owner has seen it. |
 | 6+7 (warning light) | not measured yet | Measure idle and while the door moves. |
 
 ## 2. Circuit
@@ -303,7 +303,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   60 V, 0.5 A, 5000 V isolation, AC/DC output so the polarity of 1–2 does not
   matter). Its LED is driven straight from GPIO25 through 330 Ω (≈6 mA; the
   part switches on at ≤3 mA). No coil, no click, no flyback diode, and full
-  galvanic isolation from the opener. **For the first door test**, Roy uses a
+  galvanic isolation from the opener. **For the first door test**, the owner uses a
   relay module he already has (Songle SRD-03VDC-SL-C, 3 V coil, about
   120 mA, onboard driver, 2026-11-04): VCC to 3V3, **CTH** (the input that
   triggers on high) to GPIO25, CTL empty, COM and NO across 1–2, NC empty.
@@ -320,7 +320,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   strapping pin (0, 2, 12, 15), so the board boots the same whether or not
   the opener is connected. 36 is input-only, so firmware cannot drive the
   opener's bus by mistake. GPIO34 and 35 are free. GPIO32 and GPIO33 are avoided because the Thing has a
-  32 kHz crystal fitted next to them (seen in Roy's photo), and 36–39 because
+  32 kHz crystal fitted next to them (seen in the owner's photo), and 36–39 because
   the board ties them to the ADC's capacitors. GPIO5 (the on-board LED) shows
   a pulse.
 - **Power:** a 5 V USB charger into the Thing's micro-USB socket, from the
@@ -345,7 +345,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
 |---|---|---|
 | Panasonic AQY212EH PhotoMOS relay (DIP-4) | 2 | one spare |
 | DIP-4 socket | 1 | so the relay can be swapped |
-| Relay module, Songle SRD-03VDC-SL-C on a red board (Roy has one) | 1 | first door test only; the AQY212EH is for keeps |
+| Relay module, Songle SRD-03VDC-SL-C on a red board (the owner has one) | 1 | first door test only; the AQY212EH is for keeps |
 | Resistor 330 Ω | | 1/4 W |
 | Perfboard, 2-pin 5 mm screw terminal, male pin headers for the Thing | | headers must be soldered on |
 | Enclosure, about 100×70×40 mm, with two cable glands | 1 | mount clear of the rail and chain |
@@ -373,10 +373,10 @@ password-protected. The key lives in the laptop's secret store, never in the
 repository.
 
 **Reach:** the ESP32 cannot join the tailnet, so the MCP module must be on the
-same LAN as the ESP32 to press anything. When Roy is away from home the tool
+same LAN as the ESP32 to press anything. When the owner is away from home the tool
 reports "not reachable" rather than trying another route. Making it work away
 from home (a tailnet subnet router or an always-on box at home running the
-module) is a later decision for Roy, listed in
+module) is a later decision for the owner, listed in
 [`decisions/deferred.md`](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/deferred.md).
 
 **Updates and logs.**
@@ -395,7 +395,7 @@ module) is a later decision for Roy, listed in
 - **Logs over the network.** The controller streams its log over the same
   encrypted API connection (`esphome logs`), and over USB serial when
   plugged in. No separate syslog server is needed. ESPHome's `syslog`
-  component can be added if Roy wants the logs kept centrally.
+  component can be added if the owner wants the logs kept centrally.
 - **USB stays the recovery path.** If neither slot boots, or the OTA
   password is lost, the board is reflashed over USB. So the micro-USB
   socket must stay reachable in the enclosure.
@@ -408,20 +408,20 @@ address from the internet entirely.
 
 | Rule | Enforced by |
 |---|---|
-| Never press without Roy's spoken yes | The MCP module has two tools: `garage_request(action)` returns the current state and a one-time token valid for 30 s together with the question to read aloud; `garage_confirm(token)` presses. No single call can press. The voice session must only call confirm after Roy says yes. |
+| Never press without the owner's spoken yes | The MCP module has two tools: `garage_request(action)` returns the current state and a one-time token valid for 30 s together with the question to read aloud; `garage_confirm(token)` presses. No single call can press. The voice session must only call confirm after the owner says yes. |
 | Door state from the opener's wire | ESP32: only status packets that decode count. Open and closed map to open and closed, opening and closing to moving, and everything else (stopped part way included) to unknown. How long a status is trusted is set in [ADR-GD-005](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-005-trust-the-last-status.md): 6 minutes, with safeguards. [ADR-GD-003](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-003-opener-data-wire.md). |
-| A press on the opener's wire | ESP32 (`press_by: wire`): the same refusals as the relay. Directional: open sends open and close sends close, never toggle. Only status and door-action commands are ever sent. The rolling code is saved before each send and jumps ahead at boot; the controller waits for an idle line. Off until a bench test with Roy watching. |
+| A press on the opener's wire | ESP32 (`press_by: wire`): the same refusals as the relay. Directional: open sends open and close sends close, never toggle. Only status and door-action commands are ever sent. The rolling code is saved before each send and jumps ahead at boot; the controller waits for an idle line. Off until a bench test with the owner watching. |
 | Refuse when the state is unknown | MCP module: refuses on unknown, moving, fault or controller offline. Also refuses "open" when already open and "close" when already closed, since one press would do the opposite. |
 | Log every press | MCP module appends one line per request and per press to a local log: time, who asked, state before, state after, result. Kept on the laptop. |
 | Report state before and after | `garage_confirm` waits for the door to arrive, at most 9 s so the answer fits the voice's time ([ADR-GD-010](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-010-a-press-answers-in-the-voices-time.md)), and returns before and after. Still moving: "not yet confirmed", ask again. Stopped short of the end: it says so. |
 | A press cannot stick | ESP32: the output turns itself off after 500 ms; boots with the output off; ignores a second press within 2 s. |
 | Nothing on the internet | ESPHome native API only, LAN only, encrypted and keyed; no web server. |
-| The opener's own safety stays | Nothing touches the photocell input (2+3), the 4–5 bridge, or the force and obstruction reversal. Before going live Roy runs the manual's monthly reversal test (section 24: 50 mm obstacle). |
-| Closing by voice, without photocells | Allowed (Roy, 2026-11-04). The controller presses the same input as the wall button and the remote, so the opener's force reversal works exactly as it does with them. Close is offered only from fully open, only after a spoken yes, and never repeated on its own. If the door stopped short of closed, the answer is "The garage door did NOT close, possibly reversed."; if it is still moving when the answer is due, "NOT yet confirmed closed" (ADR-GD-010). Every press is logged with the state before and after. Can be switched off on the laptop (`GARAGE_DOOR_ALLOW_CLOSE=no`) or on the controller (`allow_close: "false"`). Photocells (e.g. 771EV) are recommended as a later improvement, not required. |
+| The opener's own safety stays | Nothing touches the photocell input (2+3), the 4–5 bridge, or the force and obstruction reversal. Before going live the owner runs the manual's monthly reversal test (section 24: 50 mm obstacle). |
+| Closing by voice, without photocells | Allowed (the owner, 2026-11-04). The controller presses the same input as the wall button and the remote, so the opener's force reversal works exactly as it does with them. Close is offered only from fully open, only after a spoken yes, and never repeated on its own. If the door stopped short of closed, the answer is "The garage door did NOT close, possibly reversed."; if it is still moving when the answer is due, "NOT yet confirmed closed" (ADR-GD-010). Every press is logged with the state before and after. Can be switched off on the laptop (`GARAGE_DOOR_ALLOW_CLOSE=no`) or on the controller (`allow_close: "false"`). Photocells (e.g. 771EV) are recommended as a later improvement, not required. |
 
 ## Order of work, once approved
 
-1. Bench check at the opener (Roy, with a multimeter, door clear): voltage
+1. Bench check at the opener (the owner, with a multimeter, door clear): voltage
    across 1–2, current with 1–2 shorted, and a 0.5 s touch with an insulated
    wire to confirm the door starts.
 2. Order parts.
@@ -431,4 +431,4 @@ address from the internet entirely.
    for listening.
 5. Write the MCP module (walking skeleton: status only, then request and
    confirm), with tests for every refusal.
-6. Live test with Roy watching the door.
+6. Live test with the owner watching the door.
