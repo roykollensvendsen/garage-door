@@ -10,9 +10,10 @@ on:
   pull_request:
     types: [opened, synchronize]
 
-# A new push cancels the reminder still waiting for the one it superseded.
+# A newer push to a pull request stops that pull request's stale run. Every
+# other run, on main, a tag or by hand, is its own group and always runs to the end.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
