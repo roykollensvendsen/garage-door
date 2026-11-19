@@ -313,7 +313,7 @@ def test_a_firmware_mutant_that_does_not_build_is_named_by_the_compilers_own_err
     said = "FAILED: door_test.o\nc++ -Wall -Werror -c door_test.cpp\ndoor_logic.h:12:5: error: expected ';'\n"
 
     def run(args, **_kwargs):
-        return subprocess.CompletedProcess(args, 1 if "--build" in args else 0, said, "")
+        return subprocess.CompletedProcess(args, 1 if args[-1:] == ["--build-only"] else 0, said, "")
 
     monkeypatch.setattr(build.subprocess, "run", run)
     assert (

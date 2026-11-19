@@ -5,7 +5,7 @@
 A replacement that does not compile turns tests red without testing the rule: every
 test that imports the file fails, and the run would read that as a kill. So the
 mutated file is built on its own first. Python is compiled from the text as it now
-stands; firmware is the CMake build of the logic tests, without running them.
+stands; firmware is `scripts/firmware-tests.sh --build-only`: the logic tests built, not run.
 `scripts/mutate.py` loads this by path, since `scripts/` is not a package.
 """
 
@@ -21,17 +21,13 @@ if TYPE_CHECKING:
 def fault(path: pathlib.Path, suite: str, root: pathlib.Path) -> str | None:
     """None when the mutated file builds; otherwise the first line that says why not."""
     if suite == "firmware":
-        steps = (
-            ["cmake", "-S", "firmware", "-B", "firmware/build", "-G", "Ninja"],
-            ["cmake", "--build", "firmware/build"],
-        )
-        for step in steps:
-            r = subprocess.run(step, capture_output=True, text=True, cwd=root, check=False)  # noqa: S603
-            if r.returncode:
-                # "error:" as a compiler says it; ninja's echo of the command has -Werror in it.
-                said = [line for line in (r.stdout + r.stderr).splitlines() if "error:" in line]
-                return (said or [f"{' '.join(step)} exited {r.returncode}"])[0].strip()
-        return None
+        step = ["/bin/sh", "scripts/firmware-tests.sh", "--build-only"]  # the tests' own build, one copy
+        r = subprocess.run(step, capture_output=True, text=True, cwd=root, check=False)  # noqa: S603
+        if not r.returncode:
+            return None
+        # "error:" as a compiler says it; ninja's echo of the command has -Werror in it.
+        said = [line for line in (r.stdout + r.stderr).splitlines() if "error:" in line]
+        return (said or [f"{' '.join(step[1:])} exited {r.returncode}"])[0].strip()
     if path.suffix != ".py":
         return None
     try:
