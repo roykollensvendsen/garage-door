@@ -3,7 +3,7 @@
 
 ## Status
 
-Accepted 2026-11-10. Roy chose it by voice, relayed by the claude-voice
+Accepted 2026-11-10. The owner chose it by voice, relayed by the claude-voice
 session. Changes one sentence of [ADR-GD-002](ADR-GD-002-close-without-photocells.md):
 the warning about a close that did not finish now comes after the travel
 time only when the door has already stopped short.
@@ -43,7 +43,7 @@ a link that dropped during the wait could stretch the answer to about 25 s.
 ## Consequences
 
 - A full open or close usually takes longer than 9 s, so the usual answer
-  is "moving, not yet confirmed". Roy has to ask again to hear that it closed.
+  is "moving, not yet confirmed". The owner has to ask again to hear that it closed.
 - A close that reverses after the answer is not announced. It shows as
   open the next time anyone asks for the status.
 - The press itself is unchanged: when, whether and how long it presses.
