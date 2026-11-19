@@ -39,6 +39,7 @@ decision nobody writes down.
 | [ADR-GD-008](ADR-GD-008-magic-phrases.md) | A magic phrase stands in for the spoken yes | Accepted |
 | [ADR-GD-009](ADR-GD-009-main-keeps-the-quality-levels.md) | Main keeps the quality levels, so a pull request never records them | Accepted |
 | [ADR-GD-010](ADR-GD-010-a-press-answers-in-the-voices-time.md) | A press answers in the voice's time, even before the door arrives | Accepted |
+| [ADR-GD-011](ADR-GD-011-wait-for-the-door-to-arrive.md) | Follow the door until it arrives, a few seconds at a time | Proposed |
 
 What is deliberately left undone, and what would make each worth doing, is
 [`deferred.md`](deferred.md). A thing left undone with no trigger is a thing
