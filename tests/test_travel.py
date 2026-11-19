@@ -117,6 +117,33 @@ def test_a_new_press_starts_a_new_run(tmp_path):
     assert [line["action"] for line in arrivals] == ["open", "close"]
 
 
+def test_a_travel_log_that_cannot_be_written_leaves_every_answer_as_it_was(tmp_path):
+    (tmp_path / "travel.jsonl").mkdir()  # a folder where the file should be: every write fails
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
+    service, clock = make(device, tmp_path)
+    outcome = press(service, Action.OPEN)
+    assert outcome.message == (
+        "Pressed. The garage door is moving, and not yet confirmed open. "
+        "Ask me for its status in half a minute."
+    )
+    assert [line["event"] for line in log_lines(tmp_path)] == ["asked", "pressed"]
+    clock.now += 20
+    device.current = DoorState.OPEN
+    assert run(service.status()) is DoorState.OPEN
+    assert device.presses == 1
+
+
+def test_a_state_the_door_does_not_have_is_logged_as_it_is_and_never_arrives(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
+    service, _ = make(device, tmp_path)
+    press(service, Action.OPEN)
+    service.travel.seen("half-open")  # what a newer controller might one day report
+    last = timing(tmp_path)[-1]
+    assert (last["event"], last["state"]) == ("read", "half-open")
+    service.travel.seen(DoorState.OPEN)
+    assert timing(tmp_path)[-1]["event"] == "arrived"  # the run was still being followed
+
+
 def test_a_status_read_by_the_voice_after_a_press_is_timed(tmp_path):
     device = ServerDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
     clock = FakeClock()

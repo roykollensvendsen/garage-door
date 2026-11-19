@@ -11,6 +11,7 @@ device, and so can never press.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from garage_door.door import Action, DoorState
+
+_LOG = logging.getLogger(__name__)
 
 #: How long after a press its reads are still timed: twice the longest travel the
 #: controller allows (30 s), so a slow door is still caught when it arrives.
@@ -48,8 +51,8 @@ class Travel:
         """Start a new run for a press towards `action`'s end; it replaces any earlier one."""
         self._run = _Run(self._wall_clock(), action, self._clock())
 
-    def seen(self, state: DoorState) -> None:
-        """Time one read of the door, if a run is still being followed."""
+    def seen(self, state: DoorState | str) -> None:
+        """Time one read of the door, if a run is still being followed; any state string will do."""
         run = self._run
         if run is None:
             return
@@ -59,7 +62,7 @@ class Travel:
             return
         ms = round(seconds * 1000)
         self._write("read", run, ms, state=str(state))
-        if state is run.action.end_state:
+        if str(state) == str(run.action.end_state):
             self._write("arrived", run, ms)
             self._run = None
 
@@ -71,6 +74,11 @@ class Travel:
             "action": str(run.action),
             "ms": ms,
         }
-        self._log_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._log_path.open("a", encoding="utf-8") as log:
-            log.write(json.dumps(entry | fields) + "\n")
+        try:
+            self._log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._log_path.open("a", encoding="utf-8") as log:
+                log.write(json.dumps(entry | fields) + "\n")
+        except OSError as error:
+            # Timing is never worth an answer: a full disk drops this run, said once, and nothing else.
+            _LOG.warning("travel log %s not written, so this run is not timed: %s", self._log_path, error)
+            self._run = None
