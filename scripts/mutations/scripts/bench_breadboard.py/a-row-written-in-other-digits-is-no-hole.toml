@@ -1,0 +1,5 @@
+[[rule]]
+name = "a row written in other digits is no hole"
+file = "scripts/bench_breadboard.py"
+find = '^    if not \(digits\.isascii\(\) and digits\.isdigit\(\)'
+replace = 'if not (digits.isdigit() and 1 <= int(digits) <= ROWS and letter in LETTERS):'

@@ -44,6 +44,7 @@ def hole(name: str, near: str | None = None) -> tuple[float, float]:
         return hole(f"e{name}")
     # isdigit() alone takes '٣' or '²', which int() reads as 3 or refuses: neither is a printed row.
     digits, letter = name[1:], name[:1]
+    # RULE: a row written in other digits is no hole
     if not (digits.isascii() and digits.isdigit() and 1 <= int(digits) <= ROWS and letter in LETTERS):
         msg = f"no hole {name} on a half-size breadboard"
         raise ValueError(msg)
