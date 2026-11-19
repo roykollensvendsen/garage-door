@@ -7,10 +7,12 @@ on:
   push:
     branches: [main]
 
-# One run per ref: a new push cancels the run it superseded.
+# One run per ref. On a pull request a new push cancels the run it superseded, so
+# stale runs never hold the account's shared runners. On main every run finishes,
+# so each merged commit keeps its own result; a later one waits its turn.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Nothing here writes to the repository, its issues or its packages.
 permissions:
