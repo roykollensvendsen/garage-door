@@ -272,3 +272,51 @@ def test_a_mutation_run_says_how_long_each_rule_took(tmp_path, monkeypatch, caps
     monkeypatch.setattr(mutate, "run_suite", lambda _suite="python": (1, ["test_a_rule"]))
     mutate.main()
     assert "KILLED   a rule: 1 in 42 s\n" in capsys.readouterr().out
+
+
+def test_a_mutant_that_does_not_build_is_named_as_broken(tmp_path, monkeypatch, capsys, mutate):
+    """A replacement that does not compile turns every importing test red without testing the rule.
+
+    So it is built first: the suite never runs, the run fails, and the row is named as broken on
+    the console, in the written report and on GitHub's step summary, never counted as a kill.
+    """
+    project, rows = tmp_path / "project", tmp_path / "mutations"
+    project.mkdir()
+    (project / "rule.py").write_text("x = 1\n")
+    (rows / "rule.py").mkdir(parents=True)
+    (rows / "rule.py" / "a.toml").write_text(
+        "[[rule]]\nname = \"a rule\"\nfile = \"rule.py\"\nfind = '^x = 1$'\nreplace = 'x = = 2'\n"
+    )
+    for name, value in [("ROOT", project), ("ROWS", rows), ("RECOVERY", tmp_path / "recovery.json")]:
+        monkeypatch.setattr(mutate, name, value)
+    written, page = tmp_path / "report.md", tmp_path / "step-summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(page))
+    monkeypatch.setattr(mutate.sys, "argv", ["mutate.py", "--write", str(written)])
+    ran = []
+    # Every test that imports the file goes red, its own included: today that reads as a kill.
+    monkeypatch.setattr(mutate, "run_suite", lambda _suite="python": ran.append(1) or (3, ["test_a_rule"]))
+    assert mutate.main() == 1
+    said = capsys.readouterr().out
+    assert re.search(r"^BROKEN   a rule: rule\.py:1: invalid syntax", said, re.MULTILINE), said
+    assert not ran, "a mutant that does not build must never reach the suite"
+    assert "KILLED" not in said
+    assert (project / "rule.py").read_text() == "x = 1\n"
+    assert "Broken, so their tests were never run: a rule: rule.py:1" in written.read_text()
+    assert "**BROKEN** a rule: rule.py:1" in page.read_text()
+
+
+def test_a_firmware_mutant_that_does_not_build_is_named_by_the_compilers_own_error(monkeypatch, tmp_path):
+    """Ninja echoes the failed command, -Werror and all; the line to name is the compiler's own."""
+    spec = importlib.util.spec_from_file_location("mutant_build", ROOT / "scripts/mutant_build.py")
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    said = "FAILED: door_test.o\nc++ -Wall -Werror -c door_test.cpp\ndoor_logic.h:12:5: error: expected ';'\n"
+
+    def run(args, **_kwargs):
+        return subprocess.CompletedProcess(args, 1 if "--build" in args else 0, said, "")
+
+    monkeypatch.setattr(build.subprocess, "run", run)
+    assert (
+        build.fault(tmp_path / "door_logic.h", "firmware", tmp_path)
+        == "door_logic.h:12:5: error: expected ';'"
+    )

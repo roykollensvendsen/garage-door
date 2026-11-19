@@ -15,14 +15,14 @@ can break a test for an incidental reason — a documented example whose output
 happened to change — leaving a rule looking guarded when nothing guards it. So
 this also checks that the test named after the rule is one of the ones that went
 red, and fails the run when it is not. `tests/test_rules_have_evidence.py` is
-what requires that test to exist in the first place.
+what requires that test to exist in the first place. A mutant that does not build tests
+nothing either: it is built first (`scripts/mutant_build.py`), named BROKEN, and fails the run.
 """
 
 from __future__ import annotations
 
 import argparse
 import contextlib
-import datetime as dt
 import hashlib
 import importlib.util
 import json
@@ -53,6 +53,8 @@ def _beside(name: str) -> Any:  # noqa: ANN401 - a module loaded by path
 
 held_folder = _beside("held_folder")
 this_checkout = _beside("this_checkout")
+mutant_build = _beside("mutant_build")
+mutation_report = _beside("mutation_report")
 ROWS = ROOT / "scripts/mutations"
 #: Where the one mutated file is recorded while it is mutated. A `finally` does
 #: not run when the process is killed, so without this a hard stop leaves a
@@ -319,6 +321,7 @@ def run(args: argparse.Namespace) -> int:
         return 1
     results = []
     lost: list[str] = []
+    broken: list[str] = []
     standing: tuple[pathlib.Path, str, str] | None = None
     try:
         for rule in rules:
@@ -338,11 +341,18 @@ def run(args: argparse.Namespace) -> int:
             # RULE: a mutation run names each rule before it tests it
             print(f"testing  {rule['name']}", flush=True)  # noqa: T201
             started = time.monotonic()
-            count, failed = run_suite(rule.get("suite", "python"))
+            # A mutant that does not compile turns every test that imports it red, its own included.
+            # RULE: a mutant that does not build is named as broken
+            broke = mutant_build.fault(path, rule.get("suite", "python"), ROOT)
+            count, failed = (0, []) if broke else run_suite(rule.get("suite", "python"))
             if not restore(path, text, mutated):
                 lost.append(rule["file"])
             standing = None
             RECOVERY.unlink(missing_ok=True)
+            if broke:
+                broken.append(f"{rule['name']}: {broke}")
+                print(f"BROKEN   {broken[-1]}", flush=True)  # noqa: T201
+                continue
             # A kill by some other test is not evidence about this rule.
             own = test_name_for(rule["name"], rule.get("suite", "python"))
             by_its_own = own in failed
@@ -359,15 +369,17 @@ def run(args: argparse.Namespace) -> int:
             restore(*standing)
         RECOVERY.unlink(missing_ok=True)
 
-    return summary(results, lost, args.write)
+    return summary(results, lost, args.write, broken)
 
 
-def summary(results: list[tuple[str, int, str, bool]], lost: list[str], write: pathlib.Path | None) -> int:
+def summary(
+    results: list[tuple[str, int, str, bool]], lost: list[str], write: pathlib.Path | None, broken: list[str]
+) -> int:
     """Say what the run proved, write the evidence page if asked, and give the exit code."""
     survived = [name for name, count, _, _ in results if count == 0]
     lucky = [name for name, count, _, own in results if count and not own]
     proven = len(results) - len(survived) - len(lucky)
-    print(f"\n{proven}/{len(results)} rules turned off the test that names them")  # noqa: T201
+    print(f"\n{proven}/{len(results) + len(broken)} rules turned off the test that names them")  # noqa: T201
     if survived:
         print("SURVIVED, so nothing protects them:", ", ".join(survived))  # noqa: T201
     if lucky:
@@ -375,25 +387,12 @@ def summary(results: list[tuple[str, int, str, bool]], lost: list[str], write: p
     if lost:
         print("CHANGED WHILE MUTATED, so left as they are:", ", ".join(sorted(set(lost))))  # noqa: T201
         print("Edit the tree while this runs and the result is not about your code.")  # noqa: T201
+    if broken:
+        print("BROKEN, so their tests were never run:", "; ".join(broken))  # noqa: T201
+    mutation_report.step_summary(broken)
     if write:
-        write.write_text(report(results, survived, lucky))
-    return 1 if survived or lucky or lost else 0
-
-
-def report(results: list[tuple[str, int, str, bool]], survived: list[str], lucky: list[str]) -> str:
-    """Render the run as the evidence page."""
-    rows = "\n".join(
-        f"| {name} | {count} | `{own}` | {'yes' if by_own else 'NO'} |"
-        for name, count, own, by_own in results
-    )
-    proven = len(results) - len(survived) - len(lucky)
-    verdict = (
-        f"**Result: {proven} of {len(results)} rules turned off the test that names them.**"
-        + (" None survived." if not survived else f" Survived: {', '.join(survived)}.")
-        + ("" if not lucky else f" Killed only by other tests: {', '.join(lucky)}.")
-    )
-    template = pathlib.Path(__file__).with_name("mutation-report.md").read_text(encoding="utf-8")
-    return template.format(date=dt.datetime.now(dt.UTC).date(), verdict=verdict, rows=rows)
+        write.write_text(mutation_report.report(results, survived, lucky, broken))
+    return 1 if survived or lucky or lost or broken else 0
 
 
 if __name__ == "__main__":
