@@ -302,6 +302,7 @@ def test_a_mutant_that_does_not_build_is_named_as_broken(tmp_path, monkeypatch, 
     assert "KILLED" not in said
     assert (project / "rule.py").read_text() == "x = 1\n"
     assert "Broken, so their tests were never run: a rule: rule.py:1" in written.read_text()
+    assert "None survived" not in written.read_text(), "a broken row is not proof that none survived"
     assert "**BROKEN** a rule: rule.py:1" in page.read_text()
 
 

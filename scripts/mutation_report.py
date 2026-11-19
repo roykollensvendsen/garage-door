@@ -24,7 +24,8 @@ def report(
     proven = len(results) - len(survived) - len(lucky)
     verdict = (
         f"**Result: {proven} of {len(results) + len(broken)} rules turned off the test that names them.**"
-        + (" None survived." if not survived else f" Survived: {', '.join(survived)}.")
+        + ("" if not survived else f" Survived: {', '.join(survived)}.")
+        + (" None survived." if not survived and not broken else "")
         + ("" if not lucky else f" Killed only by other tests: {', '.join(lucky)}.")
         + ("" if not broken else f" Broken, so their tests were never run: {'; '.join(broken)}.")
     )
