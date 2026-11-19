@@ -268,7 +268,7 @@ def test_a_client_that_could_not_be_made_is_unavailable_and_made_afresh_next_tim
     with pytest.raises(DeviceUnavailableError, match="no route"):
         run(device.state())
     assert run(device.state()) is DoorState.OPEN
-    assert made[0].disconnects == 0
+    assert len(made) == 2  # one failed make, then one fresh client: no retry in between
 
 
 def test_a_connection_lost_during_a_press_is_reported_and_reconnected_next_time():
