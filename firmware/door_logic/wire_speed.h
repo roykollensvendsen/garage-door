@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The opener's speed on its data wire is not fixed. Roy's LM80EVF sent at
+// The opener's speed on its data wire is not fixed. The owner's LM80EVF sent at
 // about 4000 baud on 2026-11-04, at 9600 after a power cycle on 2026-11-05,
 // and changed again at 02:05 on 2026-11-06, with no one near it. Each time
 // every byte arrived and nothing decoded, so the door state stayed unknown.

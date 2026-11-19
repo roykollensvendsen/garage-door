@@ -245,7 +245,7 @@ def _legend(d: Divider) -> list[str]:
         (
             f"{d.filter} from GPIO36 to GND: {d.filter_tau * 1e6:.0f} us behind "
             f"{d.source_ohms / 1000:.1f} kOhm. "
-            "Roy's 10n (79 us) also reads, highs about 40 us short."
+            "The owner's 10n (79 us) also reads, highs about 40 us short."
         ),
         "Not isolated: ESP32 on a USB power bank, not the laptop.",
     ]

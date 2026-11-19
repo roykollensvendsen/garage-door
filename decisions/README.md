@@ -32,7 +32,7 @@ decision nobody writes down.
 | [ADR-GD-001](ADR-GD-001-esphome-native-api.md) | ESPHome on the controller, its encrypted native API to the laptop | Proposed |
 | [ADR-GD-002](ADR-GD-002-close-without-photocells.md) | Closing by voice is allowed without photocells | Accepted |
 | [ADR-GD-003](ADR-GD-003-opener-data-wire.md) | Read the door state from the opener's data wire (0+2), and offer it as a second way to press | Proposed |
-| [ADR-GD-004](ADR-GD-004-manual-press.md) | A manual press while Roy watches the door, before its state is known | Accepted |
+| [ADR-GD-004](ADR-GD-004-manual-press.md) | A manual press while the owner watches the door, before its state is known | Accepted |
 | [ADR-GD-005](ADR-GD-005-trust-the-last-status.md) | How long the opener's last status is trusted | Accepted |
 | [ADR-GD-006](ADR-GD-006-switch-by-voice.md) | Arm, disarm and switch manual mode by voice | Accepted |
 | [ADR-GD-007](ADR-GD-007-light-by-voice.md) | Switch the opener's light by voice, over the data wire | Proposed |

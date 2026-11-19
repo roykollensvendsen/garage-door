@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-# Measured on Roy's LM80EVF
+# Measured on the owner's LM80EVF
 
-Not from the manual: measured by Roy on 2026-11-04 with a Fluke 87 V, DC
+Not from the manual: measured by the owner on 2026-11-04 with a Fluke 87 V, DC
 volts, opener plugged in and idle. The plan has the same table with what each
-result means (`docs/plan.md`, "Measured on Roy's opener").
+result means (`docs/plan.md`, "Measured on the owner's opener").
 
 - **How to measure:** probe tips do not reach the contacts of the push-in
   terminals. Press the orange lever, insert a short wire, measure on the wire.
@@ -37,7 +37,7 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
 - **0+2, four full packets** (10 ms/div, 100 ms window; saved 14:21-14:24,
   each triggered by the remote). One complete 19-byte packet per capture,
   sync `55 01 00`, about 3970 baud (252 us bit), nothing else in 100 ms.
-  Events by file order are Roy's recollection: the last three were OPEN,
+  Events by file order are the owner's recollection: the last three were OPEN,
   CLOSE, STOP; the first one is unlabelled.
   - T0001 (?): `55 01 00 8A 28 2E BF 6C E4 D7 75 04 39 EB 87 B5 DF FE 7A`
   - T0002 open: `55 01 00 24 38 B3 DF FA F6 7B 9F 55 27 8E AE 4C 32 EB A8`
@@ -53,7 +53,7 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   | T0003 | 0x2ce55 | 0x081 status | closing (5) | light 1, lock 0 |
   | T0004 | 0x2ce58 | 0x081 status | stopped (3) | light 1, lock 0 |
 
-  T0005 (19:29, Roy, 2026-11-04): sent by the opener **on its own while the
+  T0005 (19:29, the owner, 2026-11-04): sent by the opener **on its own while the
   door stood still**, no remote pressed, about 2-5 min after the previous
   unprompted one. Measured at GPIO36, after 22k/10k, 1k, 1N4148 to 3V3 and
   10 nF to GND: 0 V to about 3.4 V, min -240 mV.
@@ -73,7 +73,7 @@ result means (`docs/plan.md`, "Measured on Roy's opener").
   messages, not the remote's command. Only the door-state field (top of the
   payload) changes; the rest (`0x6802`) stays the same. The rolling code
   counts up; the gaps are messages between captures. The decode agrees with
-  Roy's order for T0002-T0004. So listening on 0+2 gives the door state
+  the owner's order for T0002-T0004. So listening on 0+2 gives the door state
   without extra sensors. The 6-byte T0000 capture is too short to decode.
 - **6+7:** not measured yet. Measure idle and while moving.
 
@@ -97,7 +97,7 @@ framing errors: what a 9600 UART makes of a slower signal, most likely the
 nobody was at the opener. So the speed cannot be fixed in the build: the
 firmware finds it by itself (`firmware/door_logic/wire_speed.h`).
 
-**2026-11-05, measured by eye (Roy): the light goes out about 2 min 50 s
+**2026-11-05, measured by eye (the owner): the light goes out about 2 min 50 s
 after the door reaches its end.** Closed at 20:18:10 (from the wire), light
 out at about 20:21. The opener sends no status when the light goes out; it
 shows only in the next 5-minute repeat (about 296 s after the end, every

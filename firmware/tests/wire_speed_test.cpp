@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Finding the opener's speed. Roy's LM80EVF sent at about 4000 baud on
+// Finding the opener's speed. The owner's LM80EVF sent at about 4000 baud on
 // 2026-11-04, at 9600 after a power cycle on 2026-11-05 08:30, and again at
 // another speed from 02:05 on 2026-11-06. Each time, every byte arrived and
 // nothing decoded. The bytes below are from that night's log.

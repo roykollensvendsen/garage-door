@@ -2,31 +2,31 @@
 
 ## Status
 
-Accepted. Roy, 2026-11-06: he asked for it by voice, then confirmed it
+Accepted. The owner, 2026-11-06: he asked for it by voice, then confirmed it
 directly in this session: "Jeg vil ha magiske ord både for åpning og
 lukking". On the length limit he chose "Ingen grense" (no limit).
 
 ## Context
 
-Every press by name takes two steps: a question, then Roy's spoken yes
+Every press by name takes two steps: a question, then the owner's spoken yes
 (the plan, rule 1 of `AGENTS.md`). Over the voice that is slow, and the
-question is easy to miss. Roy is usually outside the car, looking at the
+question is easy to miss. The owner is usually outside the car, looking at the
 door. The opener reverses on force (manual; there are no photocells,
 [ADR-GD-002](ADR-GD-002-close-without-photocells.md)). The project is open
 source, so others will use it in their own languages.
 
 The words reach the server like this: the phone's speech recognition
 turns speech into text, the Claude app's model reads it and calls the
-tool, and this server checks what it is given. The server cannot hear Roy.
+tool, and this server checks what it is given. The server cannot hear the owner.
 
 ## Options considered
 
-- **Keep the yes for every press.** Not taken: Roy asked for this.
+- **Keep the yes for every press.** Not taken: the owner asked for this.
 - **Phrases for open only, the yes kept for close.** This was recommended,
-  because closing without photocells is the riskier direction. Roy chose
+  because closing without photocells is the riskier direction. The owner chose
   both.
 - **A minimum length (2 words, 10 letters) against everyday words.**
-  Proposed and not taken: Roy chose no limit, so choosing a phrase he does
+  Proposed and not taken: the owner chose no limit, so choosing a phrase he does
   not otherwise say is up to the user.
 - **The model decides whether the phrase was said.** Not taken: the list
   stays on the user's machine and the server matches it.
@@ -47,7 +47,7 @@ asks the usual question.
   and only in a word of five letters or more. The words must all be there,
   in order. Languages are not translated: each phrase the user says must
   be listed.
-- **One phrase may serve both open and close** (Roy, 2026-11-06). The
+- **One phrase may serve both open and close** (the owner, 2026-11-06). The
   door's state decides the direction, and a press the wrong way is refused
   as "already open" or "already closed".
 - **Open and close only.** Status, the light, the manual press, arming and
@@ -56,21 +56,21 @@ asks the usual question.
   there, closing allowed on this laptop, armed (otherwise test mode), the
   controller's own 2 s between presses and its refusals. The log records
   `by: phrase` or `by: yes`, never the phrase.
-- **The voice is told** to pass only words Roy said in this request, and
+- **The voice is told** to pass only words the owner said in this request, and
   never to make up, complete, repeat or read out a phrase.
 
 ## Consequences
 
 - One sentence opens or closes the door.
 - **Worse:** the yes was a second, deliberate act. Now the phrase is the
-  only one, and the server trusts the model to pass on only what Roy said.
+  only one, and the server trusts the model to pass on only what the owner said.
   A model that repeats the phrase from earlier in the conversation, or
   picks it up from something it reads, can press. The instructions forbid
   it, but the server cannot check it.
-- The phrases are a convenience setting, not a secret (Roy, 2026-11-06).
+- The phrases are a convenience setting, not a secret (the owner, 2026-11-06).
   Speech recognition and the voice model both see them as text. They are
   kept outside git by default because they belong to the user.
-- **Worse:** a short or everyday phrase can press by accident, and Roy
+- **Worse:** a short or everyday phrase can press by accident, and the owner
   chose not to limit that.
 - Closing by phrase relies on the opener's force reversal alone, as
   closing by yes already does.

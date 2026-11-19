@@ -39,7 +39,7 @@ target_include_directories(door_sim_test PRIVATE door_logic sim)
 target_compile_options(door_sim_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)
 target_link_libraries(door_sim_test PRIVATE GTest::gtest_main)
 
-# The opener's data wire (terminals 0+2), against Roy's own captures.
+# The opener's data wire (terminals 0+2), against the owner's own captures.
 add_executable(opener_wire_test tests/opener_wire_test.cpp)
 target_include_directories(opener_wire_test PRIVATE door_logic)
 target_compile_options(opener_wire_test PRIVATE -Wall -Wextra -Wpedantic -Werror -Wconversion)

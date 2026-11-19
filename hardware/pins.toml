@@ -12,7 +12,7 @@ name = "SparkFun ESP32 Thing (DEV-13907)"
 [gpio]
 # Drives the PhotoMOS relay's LED; the relay's output closes opener terminals 1+2.
 press = 25
-# No reed contacts (Roy, 2026-11-06): the door state comes from the opener's
+# No reed contacts (the owner, 2026-11-06): the door state comes from the opener's
 # own status on the data wire. GPIO34 and 35 are free for anyone who adds them.
 # The opener's data wire (terminal 0), listen-only through a resistor divider
 # for the first bench test (docs/plan.md). Input-only, not a strapping pin.
@@ -27,14 +27,14 @@ relay_led_resistor = "330"  # about 6 mA from 3.3 V
 # The first, listen-only bench test on the opener's data wire (docs/plan.md,
 # "First bench test"): terminal 0 -> top -> node A -> bottom -> terminal 2
 # (ESP32 GND), node A -> series -> wire_rx, clamp diode to 3V3. Not isolated.
-# Roy measured on the scope (2026-11-04): with 22k + 10k over 10k node A read
+# The owner measured on the scope (2026-11-04): with 22k + 10k over 10k node A read
 # 2.4 V mean, too close to the ESP32's input-high level, so the top is 22k
 # alone (the second 10k jumpered): 3.17 V mean. The line's mean is about 10.1 V.
 # Drawn by scripts/bench_divider.py; tests/test_bench_divider.py checks the levels.
-top = ["22k"]               # Roy jumpers the 10k that sat in series here
+top = ["22k"]               # the owner jumpers the 10k that sat in series here
 bottom = "10k"
 series = "1k"
-clamp = "1N4148"            # cathode at 3V3; what Roy has for the first test. A Schottky
+clamp = "1N4148"            # cathode at 3V3; what the owner has for the first test. A Schottky
                             # (1N5819, BAT85) clamps lower and is the one for a permanent build
 filter = "1n"               # GPIO36 to GND; with the ~7.9k feeding it, about 8 us
 line_idle_min = 10.1        # volts, mean high on 0+2 on the scope (with 50 Hz ripple)
@@ -42,14 +42,14 @@ line_max = 15.0             # volts, assumed worst case
 clamp_drop = 0.6            # 1N4148 at a fraction of a milliampere; a Schottky is about 0.3
 
 [bench_relay]
-# Roy's relay module for the first bench and door test (2026-11-04, from a
+# The owner's relay module for the first bench and door test (2026-11-04, from a
 # photo); the AQY212EH in [parts] stays the part for the permanent build.
 # Red board, Songle SRD-03VDC-SL-C, onboard driver transistor, flyback diode
 # and LEDs. Drawn by scripts/bench_relay.py.
 relay = "Songle SRD-03VDC-SL-C"
 coil = "3 V, about 120 mA"
 contacts = "10 A 250 VAC / 10 A 30 VDC"
-# input screw terminal, left to right -> where it goes (Roy, 2026-11-04).
+# input screw terminal, left to right -> where it goes (the owner, 2026-11-04).
 # CTH triggers on a high input, CTL on a low one. CTH is used: a low or
 # floating GPIO (boot, crash, reset) leaves the relay open.
 input = [
@@ -67,7 +67,7 @@ output = [
 active_low = false          # CTH: matches relay_active_low "false" in firmware/garage-door.yaml
 
 [bench_breadboard]
-# Roy's test board as built (2026-11-04): a half-size breadboard, rows 1-30,
+# The owner's test board as built (2026-11-04): a half-size breadboard, rows 1-30,
 # holes a-e of each row joined; "gnd" is the blue rail beside them. Each part
 # runs from one hole to another; a diode's "to" is its cathode (black stripe).
 # Drawn by scripts/bench_breadboard.py.
@@ -77,7 +77,7 @@ parts = [
   { what = "10k", from = "d9", to = "gnd" },
   { what = "1k", from = "e9", to = "e13" },
   { what = "1N4148", from = "c13", to = "c17" },
-  { what = "1n", from = "d13", to = "d15" },  # was 10n; Roy swapped it on 2026-11-05
+  { what = "1n", from = "d13", to = "d15" },  # was 10n; the owner swapped it on 2026-11-05
   { what = "jumper", from = "e15", to = "gnd", colour = "grey" },
 ]
 wires = [

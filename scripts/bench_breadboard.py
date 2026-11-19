@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # ruff: noqa: SLF001 - the drawing helpers are shared with bench_divider.py
-"""Draw Roy's bench-test breadboard as built, hole by hole, from hardware/pins.toml.
+"""Draw the owner's bench-test breadboard as built, hole by hole, from hardware/pins.toml.
 
 python3 scripts/bench_breadboard.py           # write docs/wiring/bench-divider-breadboard.svg
 python3 scripts/bench_breadboard.py --check   # exit 1 if the committed picture is stale

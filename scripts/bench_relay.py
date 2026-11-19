@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # ruff: noqa: SLF001 - the drawing helpers are shared with bench_divider.py
-"""Draw how Roy's relay module is wired for the first door test, from hardware/pins.toml.
+"""Draw how the owner's relay module is wired for the first door test, from hardware/pins.toml.
 
 python3 scripts/bench_relay.py           # write docs/wiring/bench-relay.svg
 python3 scripts/bench_relay.py --check   # exit 1 if the committed picture is stale
@@ -17,7 +17,7 @@ import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "docs/wiring/bench-relay.svg"
-INK = {"3V3": "#d22", "GND": "#222", "GPIO25": "#2a2"}  # Roy's wire colours
+INK = {"3V3": "#d22", "GND": "#222", "GPIO25": "#2a2"}  # the owner's wire colours
 
 
 def _bench():  # noqa: ANN202 - a module loaded by path
@@ -37,7 +37,7 @@ def drawing() -> str:
     r = tomllib.loads((ROOT / "hardware/pins.toml").read_text())["bench_relay"]
     mod_x, top = 300, 80
     body = [
-        '<text x="20" y="28" class="h">First door test: Roy\'s relay module on GPIO25</text>',
+        '<text x="20" y="28" class="h">First door test: the owner\'s relay module on GPIO25</text>',
         b._box(40, top, 130, 150),
         '<text x="105" y="100" class="v">SparkFun</text><text x="105" y="116" class="v">ESP32 Thing</text>',
         b._box(mod_x, top, 260, 150),

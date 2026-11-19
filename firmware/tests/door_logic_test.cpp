@@ -273,7 +273,7 @@ TEST(Glue, GivesTheSameWireListenerEveryTimeAndItStartsDeaf) {
   EXPECT_FALSE(garage_door::wire().heard());
 }
 
-// --- Manual press: Roy watches the door (decisions/ADR-GD-004) -----------------
+// --- Manual press: the owner watches the door (decisions/ADR-GD-004) -----------------
 
 namespace {
 

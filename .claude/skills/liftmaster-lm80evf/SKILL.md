@@ -1,6 +1,6 @@
 ---
 name: liftmaster-lm80evf
-description: Facts about Roy's LiftMaster LM80EVF garage door opener (EU EV series, LM60/80/100/130EVF), each traced to a page of the manufacturer's manual - terminal block 0-7 and the 30 VDC output, the 4-5 bridge, which input a controller may press, what one press does, force reversal and photocells, accessories, ratings and diagnostic codes. Use it before wiring anything to the opener, before changing how long or when the door is pressed, when the opener's arrows flash a code, when choosing a part to switch terminals 1 and 2, and whenever a claim about the opener needs a source, even if the request only says 'the garage door' or 'the motor'.
+description: Facts about the owner's LiftMaster LM80EVF garage door opener (EU EV series, LM60/80/100/130EVF), each traced to a page of the manufacturer's manual - terminal block 0-7 and the 30 VDC output, the 4-5 bridge, which input a controller may press, what one press does, force reversal and photocells, accessories, ratings and diagnostic codes. Use it before wiring anything to the opener, before changing how long or when the door is pressed, when the opener's arrows flash a code, when choosing a part to switch terminals 1 and 2, and whenever a claim about the opener needs a source, even if the request only says 'the garage door' or 'the motor'.
 ---
 
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
@@ -16,7 +16,7 @@ it and how to check it is the same file.
 
 **Cite as:** *Manual 114A4C095B, PDF p. N* (section S / figure F).
 
-Roy's unit, from the type plate (photo, 2026-11-04): LM80EVF, made 15-07-2021,
+The owner's unit, from the type plate (photo, 2026-11-04): LM80EVF, made 15-07-2021,
 220–240 V, 50/60 Hz, 210 W, Fmax 800 N, rated load 6 Nm, KB 4 min,
 −30 °C to 55 °C, Chamberlain GmbH. It is one of the four models the manual
 covers.
@@ -34,7 +34,7 @@ covers.
    predictable when the door is known to be at an end.
 4. **The manufacturer says to operate it only with the whole door area in
    view** (PDF p. 17, safety; PDF p. 21, section 22). Closing by voice from out
-   of sight goes against that instruction. Roy decided to allow it, relying on
+   of sight goes against that instruction. The owner decided to allow it, relying on
    force reversal ([ADR-GD-002](../../../decisions/ADR-GD-002-close-without-photocells.md)).
    Say so whenever that decision is revisited.
 5. **Disconnect mains before opening any cover.** The opener plugs into a
@@ -58,7 +58,7 @@ The manual does not give the voltage across 1–2, whether 6–7 and the 30 V
 output are switched, or any protocol on 0+2. Do not fill these gaps from
 memory. Measure, or cite a source and say how reliable it is. Findings from
 outside the manual go in a section marked as such, with their source.
-Measurements on Roy's own opener are in
+Measurements on the owner's own opener are in
 [references/measured.md](references/measured.md).
 
 ## Keeping this skill true

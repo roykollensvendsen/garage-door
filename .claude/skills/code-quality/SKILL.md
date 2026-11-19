@@ -158,7 +158,7 @@ hardware. Such a cell may be marked exempt, and only like this:
 
 - **A written reason**, saying why meeting the limit would make the code worse,
   not that it would take long.
-- **Roy's yes.** Ask through the manager session (claude-voice-work) with the
+- **the owner's yes.** Ask through the manager session (claude-voice-work) with the
   exact entry and your recommendation; never add one on your own judgement,
   and never count silence as a yes.
 - **In this repository's own `quality.toml`**, in a pull request of its own,
@@ -169,7 +169,7 @@ hardware. Such a cell may be marked exempt, and only like this:
 [[exempt]]
 measure = "complexity"
 reason = "the tool table is one long match on the tool's name"
-approved = "Roy, 2026-11-11, in pull request #212"
+approved = "The owner, 2026-11-11, in pull request #212"
 ```
 
 The bridge reads `quality.toml` from its clone of this repository and shows

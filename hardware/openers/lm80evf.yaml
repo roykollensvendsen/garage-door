@@ -29,34 +29,34 @@ notes: >-
   is not known, so the controller finds the speed by itself.
 reported_by: roykollensvendsen
 checks:
-  - by: Roy
+  - by: The owner
     date: 2026-11-04
     what: "1+2 measured at about 10 V DC idle; joining 1+2 by hand for 0.5 s opened, stopped, then closed the door"
-  - by: Roy
+  - by: The owner
     date: 2026-11-04
     what: "0+2 measured at about 10 V idle, 11.17 V after running; 0 Hz while moving; brief readings only at state changes: about 285 Hz around the start, 27.27 Hz at a stop part-way, 17.51 Hz stopped closed (status bursts, not yet decoded)"
-  - by: Roy
+  - by: The owner
     date: 2026-11-04
     what: "0+2 on an oscilloscope (MSO2024, 1 ms/div), triggered by the remote: idle about 10-12 V, a sharp drop to about 0 V held 2-3 ms, then a burst of short open-drain-style pulses. A data line, consistent with a Security+ 2.0-style serial bus; bit rate not measured yet"
-  - by: Roy
+  - by: The owner
     date: 2026-11-04
     what: "0+2 pulse widths with scope cursors: break low 2.624 ms (about 21 bit times, a UART break), then high 128.4 us, low 254 us, high 252.4 us, later highs of 504.4 and 754.4 us; 1, 2, 2, 4 and 6 bits give about 126 us per bit, about 7900 baud (7812.5 or 8000 nominal), not ratgdo's 9600; message longer than 10 ms; not decoded yet"
-  - by: Roy
+  - by: The owner
     date: 2026-11-04
     what: "0+2 capture saved from the scope and decoded with scripts/decode_capture.py: the bit is about 250 us (about 4000 baud, 8N1, idle high); the 126 us pulse was the half-bit after the break; the message reads [break] 55 01 00 86 0E BD (capture ends), and 55 01 00 is the Security+ 2.0 sync ratgdo looks for"
-  - by: Roy
+  - by: The owner
     date: 2026-11-04
-    what: "0+2, four whole 19-byte packets at 10 ms/div, triggered by the remote, decoded with argilo's secplus (decode_wireline_command): all four are command 0x081 (status) from the same device id 0x405d056056, the rolling code counts up (0x2ce51, 53, 55, 58), and only the door state changes: closing, opening, closing, stopped; light on, not locked. Event order open, close, stop for the last three is Roy's recollection, and the decode agrees"
-  - by: Roy
+    what: "0+2, four whole 19-byte packets at 10 ms/div, triggered by the remote, decoded with argilo's secplus (decode_wireline_command): all four are command 0x081 (status) from the same device id 0x405d056056, the rolling code counts up (0x2ce51, 53, 55, 58), and only the door state changes: closing, opening, closing, stopped; light on, not locked. Event order open, close, stop for the last three is the owner's recollection, and the decode agrees"
+  - by: The owner
     date: 2026-11-05
     what: "0+2 read by the controller at 9600 baud (after the opener was power cycled about 08:30; 4000 baud no longer decodes): every status decodes, with no rolling-code gap, open (1), closed (2), opening (4), closing (5), and the light; the idle repeat comes about every 296 s"
-  - by: Roy
+  - by: The owner
     date: 2026-11-05
     what: "The controller's relay on 1+2 (0.5 s, after a spoken yes) opened and closed the door, with the state from 0+2: first at 10:38 from the terminal, then by voice from the Claude app at 14:33 (closed to open) and 14:35 (open to closed), confirmed at the door"
-  - by: Roy
+  - by: The owner
     date: 2026-11-05
     what: "The light goes out about 2 min 50 s after the door reaches its end (by eye: closed 20:18:10, out about 20:21); the opener sends no status when it goes out"
-  - by: Roy
+  - by: The owner
     date: 2026-11-06
     what: "0+2 stopped decoding at 9600 baud from 02:05 (last status 02:00:16, closed): every 5-minute repeat and the remote's packets arrived as about 35 garbled bytes like 00 CE CE CE 00 00, no framing errors, the controller not restarted; the opener changed its speed again by itself"
 build: ""

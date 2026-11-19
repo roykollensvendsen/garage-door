@@ -1,8 +1,8 @@
-# ADR-GD-004: A manual press while Roy watches the door, before its state is known
+# ADR-GD-004: A manual press while the owner watches the door, before its state is known
 
 ## Status
 
-Accepted. Roy approved it in this session ("Godkjent", 2026-11-04), together
+Accepted. The owner approved it in this session ("Godkjent", 2026-11-04), together
 with an automatic switch-off after 10 minutes.
 
 ## Context
@@ -14,7 +14,7 @@ state is unknown, so refuse). That is right for a press nobody is watching.
 It also blocks the test that has to come first: does a press through the
 relay move the door?
 
-Roy's point: when he stands at the door, sees it and says yes to each
+The owner's point: when he stands at the door, sees it and says yes to each
 press, he is the safety check, just as he is at the wall button.
 
 ## Options considered
@@ -24,7 +24,7 @@ press, he is the safety check, just as he is at the wall button.
   true, and the open and close rules would act on it.
 - **Test with the wall button only.** That proves the opener, but not the
   relay, the controller and the voice path together.
-- **A separate manual press, only while Roy watches.** Taken.
+- **A separate manual press, only while the owner watches.** Taken.
 
 ## Decision
 

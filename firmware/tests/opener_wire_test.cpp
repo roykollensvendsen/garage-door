@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The opener's data wire (terminals 0+2, Security+ 2.0 wireline), run on the
-// laptop. The packets are Roy's own scope captures from his LM80EVF on
-// 2026-11-04 (docs/plan.md, "Measured on Roy's opener"), so the decoding is
+// laptop. The packets are the owner's own scope captures from his LM80EVF on
+// 2026-11-04 (docs/plan.md, "Measured on the owner's opener"), so the decoding is
 // checked against the real opener, not against itself.
 
 #include "opener_wire.h"
@@ -51,7 +51,7 @@ Door told(WireState state, Config c = open_and_close()) {
 
 }  // namespace
 
-// --- Reading Roy's packets ------------------------------------------------------
+// --- Reading the owner's packets ------------------------------------------------------
 
 TEST(Wire, ReadsRoysPacketsAsTheOpenersStatus) {
   Status s{};

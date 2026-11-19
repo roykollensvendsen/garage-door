@@ -187,7 +187,7 @@ class Door {
   void set_armed(bool armed) { config_.armed = armed; }
   bool armed() const { return config_.armed; }
 
-  // Manual mode (decisions/ADR-GD-004): Roy watches the door and is the check.
+  // Manual mode (decisions/ADR-GD-004): the owner watches the door and is the check.
   void set_manual(bool on, std::uint32_t now) {
     manual_on_ = on;
     manual_since_ = now;
@@ -197,7 +197,7 @@ class Door {
     return manual_on_ && (now - manual_since_) < config_.manual_ms;
   }
 
-  // A press with no direction, while Roy watches the door. It skips only the
+  // A press with no direction, while the owner watches the door. It skips only the
   // rule that the door's state must be known; never use it for open or close.
   PressResult request_manual_press(std::uint32_t now) {
     // RULE: manual press is refused when manual mode is off

@@ -4,7 +4,7 @@
 ## Status
 
 Accepted 2026-11-10, as rule 16 of the shared voice-plugin standard
-(claude-voice `docs/plugin-standard.md`). Roy agreed to the standard through
+(claude-voice `docs/plugin-standard.md`). The owner agreed to the standard through
 the claude-voice session, which relayed it here. The same decision as
 claude-voice's ADR-CV-009, which proved itself in that repository's CI first.
 

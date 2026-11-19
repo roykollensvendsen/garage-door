@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Roy asked for both, reading and sending (by voice, 2026-11-04).
+Proposed. The owner asked for both, reading and sending (by voice, 2026-11-04).
 The details below are a proposal for him to approve. Nothing is wired,
 flashed or sent on the opener's wire until he does.
 
@@ -11,13 +11,13 @@ flashed or sent on the opener's wire until he does.
 The plan kept reed contacts as the only source of door state, because the
 0+2 bus was unproven on this model ("Door state from the opener itself" in
 [`docs/plan.md`](../docs/plan.md)). It said to revisit that in a decision
-record if the bus turned out to work. On 2026-11-04 Roy captured four whole
+record if the bus turned out to work. On 2026-11-04 the owner captured four whole
 packets on 0+2 with an oscilloscope. Decoded with argilo's secplus
 (<https://github.com/argilo/secplus>, GPL-3.0-or-later), they are Security+
 2.0 wireline packets at about 4000 baud. Each is a status message (command
 0x081) from the opener itself: the door state (opening, closing, stopped)
 changes, and the rolling code counts up. The details are in the plan's
-"Measured on Roy's opener" table.
+"Measured on the owner's opener" table.
 
 How a controller talks back on this wire is known from ratgdo, the
 open-source board that does it on US openers
@@ -34,7 +34,7 @@ Not known yet:
 - what it sends when the door is fully open (1 in ratgdo's table; not
   captured yet).
 
-Learned since (Roy, 2026-11-04, capture T0005): while the door stands still
+Learned since (the owner, 2026-11-04, capture T0005): while the door stands still
 the opener repeats its status by itself, about every 5 minutes. Fully closed
 reads 2. That is too rare for the 2 s freshness rule, so listening alone
 still cannot allow a press; asking (0x080) is needed for that.
@@ -42,11 +42,11 @@ still cannot allow a press; asking (0x080) is needed for that.
 ## Options considered
 
 - **Keep the reed contacts only.** Not taken: the opener already says where
-  the door is, for free, and Roy wants to use it.
+  the door is, for free, and the owner wants to use it.
 - **Read the wire, press only with the relay.** The safest step, and the
   first one built. But it can't ask the opener for its state, and a status
   that is only sent at changes cannot prove it is still true.
-- **Read the wire and send on it, as well as the relay.** Taken, as Roy asked.
+- **Read the wire and send on it, as well as the relay.** Taken, as the owner asked.
   Each part can be switched on by itself.
 - **Send on the wire only, no relay.** Not taken: the relay works with any
   opener and needs nothing from the protocol.
@@ -84,7 +84,7 @@ The controller learns three things, each switched on in its configuration.
    for 1.3 ms of idle line before it sends.
 
 **The relay stays the way to press** (`press_by: relay`, the default) until
-pressing on the wire has passed a bench test with Roy watching (Roy,
+pressing on the wire has passed a bench test with the owner watching (the owner,
 2026-11-04). Until then, the wire is used only to read the state, and at
 most to ask for it.
 
@@ -99,7 +99,7 @@ ratgdo uses, and it is tested upstream.
 - **Sending on the wire puts a transistor on the opener's bus.** A fault
   there could hold the bus low, and the opener's own controls might stop
   answering. The circuit is a separate, open-drain stage, off by default.
-  It is tested on the bench with Roy watching before it is ever left on.
+  It is tested on the bench with the owner watching before it is ever left on.
 - **The listen-only tap shares ground with the opener** (a resistor divider
   for the first test, see the plan). The finished build isolates it.
 - **Worse:** an unofficial protocol. The maker can change it in a firmware
