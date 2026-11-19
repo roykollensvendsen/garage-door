@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from aioesphomeapi import (
     APIConnectionError,
+    BinarySensorState,
     SensorInfo,
     SensorState,
     SwitchInfo,
@@ -249,6 +250,25 @@ def test_no_connection_is_reported_as_unavailable():
     client.fail_connect = True
     with pytest.raises(DeviceUnavailableError):
         run(EsphomeDevice(lambda: client).state())
+
+
+def test_a_client_that_could_not_be_made_is_unavailable_and_made_afresh_next_time():
+    """Nothing was made to drop, so giving up must not fail; the next read tries again."""
+    made: list[FakeClient] = []
+
+    def make() -> FakeClient:
+        if not made:
+            made.append(FakeClient())
+            msg = "no route to the controller"
+            raise APIConnectionError(msg)
+        made.append(FakeClient("open"))
+        return made[-1]
+
+    device = EsphomeDevice(make)
+    with pytest.raises(DeviceUnavailableError, match="no route"):
+        run(device.state())
+    assert run(device.state()) is DoorState.OPEN
+    assert made[0].disconnects == 0
 
 
 def test_a_connection_lost_during_a_press_is_reported_and_reconnected_next_time():
@@ -490,6 +510,8 @@ def readings_of(device: EsphomeDevice) -> tuple[object, ...]:
         (SensorState(key=17, state=42.0, missing_state=True), (DoorState.CLOSED, None, None, (None, None))),
         (TextSensorState(key=17, state="42"), (DoorState.CLOSED, None, None, (None, None))),
         (SensorState(key=99, state=1.0), (DoorState.CLOSED, None, None, (None, None))),
+        # A type the laptop never reads, even on a number's own entity, changes nothing.
+        (BinarySensorState(key=17, state=True), (DoorState.CLOSED, None, None, (None, None))),
     ],
 )
 def test_each_reading_is_kept_only_for_its_own_entity_and_type(delivered, expected):
