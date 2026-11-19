@@ -40,13 +40,14 @@ def hole(name: str, near: str | None = None) -> tuple[float, float]:
     if name == "gnd":
         x, _ = hole(near or "a1")
         return x, RAIL
-    if name.isdigit():  # a row, hole not given: drawn at its last hole
+    if name.isascii() and name.isdigit():  # a row, hole not given: drawn at its last hole
         return hole(f"e{name}")
-    row, letter = int(name[1:]), name[0]
-    if not (1 <= row <= ROWS and letter in LETTERS):
+    # isdigit() alone takes '٣' or '²', which int() reads as 3 or refuses: neither is a printed row.
+    digits, letter = name[1:], name[:1]
+    if not (digits.isascii() and digits.isdigit() and 1 <= int(digits) <= ROWS and letter in LETTERS):
         msg = f"no hole {name} on a half-size breadboard"
         raise ValueError(msg)
-    return LEFT + row * PITCH, TOP + LETTERS.index(letter) * 18
+    return LEFT + int(digits) * PITCH, TOP + LETTERS.index(letter) * 18
 
 
 def _part(b, part: dict) -> list[str]:  # noqa: ANN001 - the bench_divider module
@@ -115,7 +116,7 @@ def breadboard() -> str:
         x, y = hole(wire["at"], "a2" if wire["at"] == "gnd" else None)
         if wire["at"] == "gnd":
             x += 8 * i
-        elif wire["at"].isdigit():
+        elif wire["at"].isascii() and wire["at"].isdigit():
             x += 12  # beside the row's other wires
         else:
             x += 6 * LETTERS.index(wire["at"][0])

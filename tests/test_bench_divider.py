@@ -8,6 +8,8 @@ import importlib.util
 import pathlib
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).parent.parent
 spec = importlib.util.spec_from_file_location("bench_divider", ROOT / "scripts/bench_divider.py")
 assert spec
@@ -130,3 +132,11 @@ def test_the_relay_module_leaves_nc_empty_so_a_dead_module_never_presses():
     out = {o["terminal"]: o["to"] for o in plan["output"]}
     assert out["NC"] == "not connected"
     assert {out["COM"], out["NO"]} == {"opener terminal 1", "opener terminal 2"}
+
+
+def test_a_row_written_in_other_digits_is_no_hole():
+    """'٣' is a digit to Python and 3 to int(), but no breadboard prints its rows that way."""
+    board = _board()
+    for name in ("٣", "c٣", "c²"):
+        with pytest.raises(ValueError, match="no hole"):
+            board.hole(name)
