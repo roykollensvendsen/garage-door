@@ -45,10 +45,11 @@ or flashed.
 A press always takes a spoken yes, and nothing is pressed while the door is
 moving, part-way or unknown. Closing by voice is allowed, but only from fully
 open. The opener reverses on its own if the door meets something, exactly as
-it does with the remote. The answer comes within about 12 seconds: if the
-door is still on its way, it says plainly that it is not yet confirmed closed,
-and if it has stopped short, "did NOT close, possibly reversed". Nothing is
-pressed again until someone has looked. Every press is logged with the
+it does with the remote. The answer comes within a few seconds. If the
+door is still on its way, the voice follows it a few seconds at a time and
+says when it is closed, that it went back up, or that it is still closing
+after 30 seconds. It never says closed before the door is seen closed.
+Nothing is pressed again until someone has looked. Every press is logged with the
 door's state before and after.
 
 **Recommended later: photocells** (LiftMaster 771EV or similar on terminals 2

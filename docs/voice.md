@@ -19,19 +19,30 @@ that first when the controller is not armed or is in manual mode.
 A conversation looks like this:
 
 > **You:** Close the garage.
-> **Claude** *(calls `garage_request`)*: The garage door is open. Do you want me to close it?
+> **Claude** *(calls `garage_request`)*: The garage door is open. Do you want me to close it? It takes about 20 seconds.
 > **You:** Yes.
-> **Claude** *(calls `garage_confirm`)*: Pressed. The garage door is moving, and NOT yet
-> confirmed closed. Ask me for its status in half a minute; if it is not closed then, it may have reversed.
+> **Claude** *(calls `garage_confirm`)*: Closing the garage door. It takes about 20 seconds; I'm following it.
+> **Claude** *(calls `garage_status` with `wait_for`, without asking)*: Still closing, 18 seconds so far.
+> **Claude** *(calls it once more)*: The garage door is closed now. It took 20 seconds.
 
-A full close takes longer than the voice waits for a tool, so the answer
-usually comes while the door is still moving. Ask again for the status to
-hear that it closed. A door that arrives in time is reported as arrived.
+A full close takes longer than the voice waits for one tool call, so the
+answer to the press comes while the door is still moving. That answer, and
+each one after it until the door arrives, carries `next`: one more
+`garage_status` call, which the voice makes at once. The server, not the
+voice, decides which way and for how long: it stops 30 seconds after the
+press ([ADR-GD-011](https://github.com/roykollensvendsen/garage-door/blob/main/decisions/ADR-GD-011-wait-for-the-door-to-arrive.md)).
+`next` never names any other tool, and following never presses.
 
 If the door meets something on the way down:
 
-> **Claude:** The garage door did NOT close, possibly reversed. Something may
-> be in the way: it is open. Please check it before trying again.
+> **Claude:** The garage door went back up instead of closing. Something may
+> be in the way. Look before trying again.
+
+A door that is still moving 30 seconds after the press is "Still closing
+after 30 seconds. Check it in a moment." A door still at its end 5 seconds
+after the press is "The garage door did NOT close: it is still open. Something
+may be in the way. Look before trying again." Each of these calls answers
+within about 8 seconds, so the voice never puts it in the background.
 
 If the controller is in test mode, as it always is after a restart, the
 press is sent but the relay does not switch, and Claude says so instead of
