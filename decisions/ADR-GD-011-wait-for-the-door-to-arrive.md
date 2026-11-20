@@ -3,9 +3,10 @@
 
 ## Status
 
-Proposed 2026-11-19. The owner asked for it by voice, relayed by the
-claude-voice session. The owner sees it before anything is built, and then
-tests it live. It builds on [ADR-GD-010](ADR-GD-010-a-press-answers-in-the-voices-time.md)
+Accepted 2026-11-20. Proposed on 19.11; the owner asked for it by voice,
+relayed by the claude-voice session, and on 20.11 measured the door and asked
+for these timeouts, "with margin". Step 1 (the timing log) shipped in #61;
+step 2 is the rest of this record. It builds on [ADR-GD-010](ADR-GD-010-a-press-answers-in-the-voices-time.md)
 and keeps its limit: one tool call still answers within the voice's time.
 
 ## Context
@@ -53,6 +54,14 @@ reports both as moving. A door that reverses while closing therefore shows
 as moving, then open. A door that has not left its end yet (soft start, or
 a press the opener ignored) still shows as the end it started from.
 
+**Measured on 20.11**, by the owner with a stopwatch from the relay's click,
+the controller confirming each end, with no reversal: **18.84 s to open,
+20.02 s to close.** Earlier stopwatch times from the spoken yes (21 s open,
+22–28 s close) included the time from the yes to the press. The travel log
+agrees: the door read moving 1–2 s after the press both ways, and each run's
+first read at an end came at or before what the stopwatch says, after the
+gap in which nobody asked.
+
 ## Options considered
 
 - **Do nothing.** Not taken: the owner hears "not yet confirmed" after every
@@ -80,9 +89,13 @@ rules, nor the refusals. Everything below only reads the door.
      It adds one more line when the door is first seen at an end. That PR
      changes nothing the owner hears.
    - The owner then opens and closes twice each, live. The measured longest
-     time each way sets `OPEN_SECONDS` and `CLOSE_SECONDS`. The answers
-     round them up to the next 5 s ("about 20 seconds"). The give-up time
-     is each one plus 50 %, never more than the controller's 30 s.
+     time each way sets `OPEN_SECONDS` and `CLOSE_SECONDS`: **20 s and 20 s**
+     (`src/garage_door/follow.py`). The answers round them up to the next 5 s
+     ("about 20 seconds"). The give-up time is each one plus 50 %, never more
+     than the controller's 30 s: **30 s both ways**.
+   - Each press also logs one line of its own in the timing log, with how
+     long it took from the call that asked for it to the relay
+     (`latency_ms`), so a slow confirm is not taken for a slow door.
    - The timing lines stay for every press after that. When an arrival
      differs from the number in use by more than 5 s, the run says so in
      the log, and the numbers are measured again.
@@ -99,9 +112,16 @@ rules, nor the refusals. Everything below only reads the door.
      a chain. A new press replaces it.
    - `garage_status` gets an optional `wait_for`. When there is a record
      whose give-up time has not passed, it reads the door every second, for
-     at most 9 s (the same budget and per-read cut-off as the confirm). It
-     answers as soon as the outcome is final (point 4), or when 9 s have
-     passed.
+     at most `FOLLOW_CALL_SECONDS` (5 s), with every read cut off at that
+     time. It answers as soon as the outcome is final (point 4), or when the
+     5 s have passed.
+   - **Calls stay short (20.11).** The owner found that the voice puts a
+     call of over about 10 s in the background, and garage_confirm took a
+     median of 9.3 s. So the press now watches the door for only
+     `REPLY_SECONDS` = 3 s: enough to see it leave its end, which it does
+     1–2 s after the press, and to hear a refusal. Then it answers with
+     `next`. A door that arrives within the 3 s, and a refusal, are said at
+     once. "I'm following it" is said only when the answer has `next`.
    - `wait_for` with no record, or after the give-up time, answers the
      present state at once, with no `next`. Its argument never starts or
      extends anything.
@@ -114,7 +134,7 @@ rules, nor the refusals. Everything below only reads the door.
    - The tool descriptions tell the voice to make the `next` call at once,
      without asking, until an answer has no `next`. The last `next` comes
      before the give-up time, so the chain ends on the server's clock even
-     if the voice keeps calling: about three calls for a 25 s door.
+     if the voice keeps calling: about four calls after the press for a 20 s door.
    - **Rule: `garage_status` never presses.** It gets a `# RULE:` with its
      mutation row and a test that runs a whole chain against the simulated
      door and counts the presses: one, from the confirm.
@@ -123,8 +143,11 @@ rules, nor the refusals. Everything below only reads the door.
      "closed now").
    - `moving`: "Still closing, 9 seconds so far." with `next`.
    - `never_moved`: the door has stayed at the end it started from, and was
-     never seen moving, for `START_SECONDS` (5 s, to be checked against the
-     measurement). The answer: "The garage door hasn't moved." This covers
+     never seen moving, for `START_SECONDS` (5 s; on 20.11 the door read
+     moving 1–2 s after each press). The answer for a close: "The garage door
+     did NOT close: it is still open. Something may be in the way. Look before
+     trying again."; for an open: "The garage door did not open: it is still
+     closed. Look at it before trying again." This covers
      a soft start that never got going and a press the opener ignored.
      Until that limit, the door that has not left yet is `moving` with
      `next`: a soft start is not a failure.
@@ -135,23 +158,29 @@ rules, nor the refusals. Everything below only reads the door.
      before trying again." For an open that ends closed, the same in the
      other direction. Open, open, open is never `reversed`, and tests keep
      both cases.
-   - `not_arrived`: still moving or unknown at the give-up time: "The
-     garage door has not reached closed after 30 seconds. It may have
-     stopped part-way. Look before trying again." Today the laptop cannot
-     tell "stopped part-way" from "still moving". A later firmware change
-     could pass the opener's own stop status through; that is not in this
-     record.
-   - `unknown`: the controller does not answer. This is said as it is today.
+   - `still_moving`: still moving at the give-up time, or unknown there
+     after it was seen moving (the controller stops calling a door moving
+     after its 30 s `travel_ms`): "Still closing after 30 seconds. Check it
+     in a moment." The owner chose this on 20.11 over calling it a failure:
+     at 20 s measured against 30 s, a door still on its way is most likely
+     just slow. Only a door seen back at its start, or that never left it,
+     is said as a failure. Today the laptop cannot tell "stopped part-way"
+     from "still moving"; a later firmware change could pass the opener's
+     own stop status through, and that is not in this record.
+   - `not_known`: the door is in any other state (unknown without having
+     moved, fault): it is said as it is, with `next` until the give-up time,
+     and "Look at it before trying again." there.
    Nothing is ever pressed again on its own, whatever the outcome.
 5. **Log and time limits.**
    - Every read is logged as in point 1.
    - The final outcome is logged as one more line with its seconds, beside
      the press line, which keeps its form.
-   - `tests/test_voice_time_limit.py` gets the new path, `garage_status`
-     with `wait_for`. Its longest path is 3 s for the first read, plus the
-     9 s wait, plus 2 s for the report: 14 s, inside the 15 s limit,
-     like the confirm.
-   - The bridge gives the garage 30 s per call, well above 14 s, so no
+   - `tests/test_voice_time_limit.py` holds the press and each follow call
+     to 8 s with the controller connected, leaving 2 s under the voice's
+     10 s for the app's own latency. A press is the 3 s watch, 1 s for the
+     last read and 2 s for the report: 6 s. A follow call is 5 + 1 + 2 = 8 s.
+     A reconnect on the way stays bounded by the 15 s limit, as before.
+   - The bridge gives the garage 30 s per call, well above these, so no
      config line changes.
    - The bridge gets a matching rule for following `next` in its own PR,
      which lands before this is used live.
@@ -166,7 +195,7 @@ rules, nor the refusals. Everything below only reads the door.
 - A close that reverses after the last call is still not announced, as in
   ADR-GD-010. The chain runs to the give-up time, so that window is small.
 - Something gets worse: a press now takes up to about 30 s of voice time
-  instead of 9 s before the owner can ask for anything else.
+  instead of 9 s before the owner can ask for anything else, in calls of at most 8 s.
 - The numbers in the answers come from one evening of measurement. The
   timing lines on every press show when they drift, and a drift of more
   than 5 s means measuring again.
