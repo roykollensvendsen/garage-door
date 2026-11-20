@@ -143,7 +143,7 @@ def test_a_close_that_does_not_finish_warns_that_the_door_may_have_reversed(tmp_
 
 def test_a_press_answers_in_the_voices_time_while_the_door_is_still_moving(tmp_path):
     # The voice gives a tool about 15 seconds (claude-voice docs/plugin-standard.md,
-    # rule 3); a full travel takes longer. Roy chose (2026-11-10) to hear in time
+    # rule 3); a full travel takes longer. The owner chose (2026-11-10) to hear in time
     # that the door is on its way and not yet confirmed, rather than nothing.
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
     service, clock = make(device, tmp_path)
@@ -295,7 +295,7 @@ def test_a_press_without_a_verdict_is_judged_by_the_door(tmp_path):
 
 def test_a_press_in_test_mode_says_the_relay_did_not_switch(tmp_path):
     # After every boot the controller is not armed: it judges and logs the
-    # press but leaves the relay open. Saying "pressed" then would send Roy
+    # press but leaves the relay open. Saying "pressed" then would send the owner
     # looking for a wiring fault that is not there.
     device = FakeDevice(DoorState.CLOSED)
     device.is_armed = False
@@ -620,7 +620,7 @@ def test_a_magic_phrase_cancels_an_open_question(tmp_path):
 
 def test_a_controller_that_refuses_the_laptops_key_is_said_as_that_not_as_unreachable(tmp_path):
     # A controller flashed with another key answers on the network but refuses
-    # the handshake. "Not reachable" would send Roy to check power and Wi-Fi.
+    # the handshake. "Not reachable" would send the owner to check power and Wi-Fi.
     device = FakeDevice(DoorState.CLOSED, DoorState.OPEN)
     device.reachable = False
     device.failure = WrongKeyError

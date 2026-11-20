@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The manual press: one press with no direction, while Roy watches the door (ADR-GD-004).
+"""The manual press: one press with no direction, while the owner watches the door (ADR-GD-004).
 
 It skips only the rule that the door's state must be known. It still needs a
 spoken yes, an armed controller in manual mode, a fresh token, and a log entry.
@@ -163,7 +163,7 @@ def test_a_manual_press_the_controller_refused_is_said_as_refused(tmp_path, verd
 
 
 def test_a_manual_press_without_a_verdict_does_not_say_pressed(tmp_path):
-    # No verdict came in time: it may or may not have pressed. Say so, and send Roy to look.
+    # No verdict came in time: it may or may not have pressed. Say so, and send the owner to look.
     device = FakeDevice()
     device.verdict = "sent"
     manual, _ = make(device, tmp_path)
@@ -248,7 +248,7 @@ def test_a_manual_press_is_refused_when_the_controller_changed_since_the_questio
     device = FakeDevice()
     manual, _ = make(device, tmp_path)
     answer = run(manual.request(requester="voice"))
-    device.is_manual = False  # switched off, or ran out its ten minutes, while Roy answered
+    device.is_manual = False  # switched off, or ran out its ten minutes, while the owner answered
     outcome = run(manual.confirm(answer.token))
     assert isinstance(outcome, Refused)
     assert device.manual_presses == 0
@@ -353,7 +353,7 @@ def test_the_controller_report_says_whether_the_opener_light_is_on_and_how_old_t
     ],
 )
 def test_the_status_sentence_says_when_the_light_was_last_reported_not_how_long_it_has_been(light, ago, said):
-    # Roy, 2026-11-10: "the light has been off for about three minutes" was
+    # The owner, 2026-11-10: "the light has been off for about three minutes" was
     # wrong; the age is of the opener's last report, which it repeats about
     # every 5 minutes, not of the light's last change.
     report = {"state": "closed", "light": light, "light_reported_s_ago": ago}

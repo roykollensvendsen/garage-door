@@ -5,7 +5,7 @@
     garage-door arm      # leave test mode: an accepted press switches the relay
     garage-door disarm   # back to test mode: presses are judged, the relay stays open
     garage-door manual on|off  # manual mode (ADR-GD-004): a press with no direction while
-                               # Roy watches the door; off by itself after 10 minutes
+                               # The owner watches the door; off by itself after 10 minutes
 
 Reads ``GARAGE_DOOR_HOST`` and ``GARAGE_DOOR_API_KEY``, like the MCP server.
 None of these presses the door; a press still needs the spoken yes.
@@ -66,7 +66,7 @@ def check(device: Readable) -> int:
         sys.stdout.write("Not armed (test mode): presses are judged and logged, the relay stays open.\n")
     if readings.get(MANUAL) == "on":
         sys.stdout.write(
-            "MANUAL MODE ON: a press needs no known door state; only while Roy watches the door.\n"
+            "MANUAL MODE ON: a press needs no known door state; only while the owner watches the door.\n"
         )
     if DOOR_STATE not in readings:
         sys.stderr.write("garage-door: the controller reports no door state\n")

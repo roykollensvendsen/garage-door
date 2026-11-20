@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The manual press: one press with no direction, while Roy watches the door.
+"""The manual press: one press with no direction, while the owner watches the door.
 
 decisions/ADR-GD-004. For the first tests on the real door, before the
 controller can tell where the door is. It skips only the rule that the
 door's state must be known; never use it to open or close. Like an ordinary
 press it takes two calls: ``request`` returns a question with a token, and
-``confirm`` presses, only after Roy says yes. The controller checks again
+``confirm`` presses, only after the owner says yes. The controller checks again
 (firmware/door_logic: armed, manual mode, not moving, the timing rules).
 """
 
@@ -142,7 +142,7 @@ def status_sentence(report: Mapping[str, Any]) -> str:
 
 
 class ManualPress:
-    """The rules between Roy's request for a manual press and the controller."""
+    """The rules between the owner's request for a manual press and the controller."""
 
     def __init__(
         self,

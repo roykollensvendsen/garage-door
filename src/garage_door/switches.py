@@ -3,7 +3,7 @@
 
 Switching on what lets the door be pressed (arm, manual mode) takes two
 calls, like a press: ``request`` returns a question with a token, and
-``confirm`` switches, only after Roy says yes. Switching off (disarm,
+``confirm`` switches, only after the owner says yes. Switching off (disarm,
 manual mode off) is the safe direction and happens at once. The
 controller still keeps its own rules: unarmed after every boot, manual mode
 off by itself after 10 minutes.
@@ -84,7 +84,7 @@ class Switched:
 
 
 class Switches:
-    """The rules between Roy's request to arm or switch manual mode and the controller."""
+    """The rules between the owner's request to arm or switch manual mode and the controller."""
 
     def __init__(
         self,

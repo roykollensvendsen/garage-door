@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Every refusal and failure tells Roy what is wrong and what to do next.
+"""Every refusal and failure tells the owner what is wrong and what to do next.
 
-Roy's rule for every plugin, since 2026-11-11: an answer that is not a
+The owner's rule for every plugin, since 2026-11-11: an answer that is not a
 success says what is wrong and what to do next, with the exact command where
-there is one. A bare "not reachable" leaves him with nothing to do, and a bare
+there is one. A bare "not reachable" leaves them with nothing to do, and a bare
 question ("Is it on?") is not a next step either.
 
 The refusals are read from the source, so a new one cannot slip past: every

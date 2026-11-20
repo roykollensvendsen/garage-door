@@ -2,7 +2,7 @@
 """The bound a test sets itself on a program it starts.
 
 Running out fails that one test with what the program said. Nothing here limits
-a test or a run as a whole: a mutation run is never capped (Roy's rule).
+a test or a run as a whole: a mutation run is never capped (the owner's rule).
 """
 
 import contextlib
