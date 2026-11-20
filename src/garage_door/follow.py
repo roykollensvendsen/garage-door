@@ -31,6 +31,13 @@ CLOSE_SECONDS = 20.0
 TRAVEL_LIMIT = 30.0
 #: A door still at the end it started from this long after the press, never seen moving, has not moved.
 START_SECONDS = 5.0
+#: How long after the give-up time a record still answers: one more call that came a little late.
+LATE_SECONDS = 10.0
+#: Said with a plain status when wait_for finds no record: the plugin restarted, or the record ended.
+NOT_FOLLOWING = (
+    "I'm not following a press now, so I can't say how the last one went. "
+    "If the door was closing, look at it."
+)
 
 REVERSED = {
     "close": "The garage door went back up instead of closing. Something may be in the way. "
@@ -133,7 +140,10 @@ class Chain:
         self._press = _Press(action, before, self._clock())
 
     def following(self) -> bool:
-        """Whether there is a press whose outcome is not yet final."""
+        """Whether a press's outcome is not yet final; a record ends soon after its give-up time."""
+        press = self._press
+        if press is not None and self._clock() - press.at > give_up_seconds(press.action) + LATE_SECONDS:
+            self._press = None
         return self._press is not None
 
     def due(self, by: float) -> float:
@@ -156,7 +166,7 @@ class Chain:
 
     def answer(self, state: DoorState) -> Followed | None:
         """How the door did, from `state` read now; a final answer ends the record. None with no record."""
-        press = self._press
+        press = self._press if self.following() else None
         if press is None:
             return None
         self.seen(state)
