@@ -125,6 +125,13 @@ rules, nor the refusals. Everything below only reads the door.
    - `wait_for` with no record, or after the give-up time, answers the
      present state at once, with no `next`. Its argument never starts or
      extends anything.
+   - The record lives only in the plugin's memory. It ends 10 s after its
+     give-up time (`LATE_SECONDS`), so a call made long after a press is
+     never told "It took 3600 seconds". A plugin restart mid-travel also
+     loses it. In both cases the plain answer to `wait_for` adds "I'm not
+     following a press now, so I can't say how the last one went. If the
+     door was closing, look at it.", so a close that went back up is still
+     looked at.
    - While the outcome is not final, the answer carries
      `"next": {"tool": "garage_status", "args": {"wait_for": "open"}}`.
      The direction comes from the press record, never from the argument

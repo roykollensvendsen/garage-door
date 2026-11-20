@@ -289,3 +289,29 @@ def test_with_no_press_there_is_nothing_to_follow():
     chain = Chain(Clock())
     assert chain.settled(DoorState.MOVING)
     assert chain.answer(DoorState.MOVING) is None
+
+
+def test_a_press_record_ends_soon_after_its_give_up_time():
+    # A press nobody followed: an hour later, wait_for must not say "It took 3600 seconds".
+    clock = Clock()
+    chain = Chain(clock)
+    chain.pressed(Action.CLOSE, DoorState.OPEN)
+    clock.now += give_up_seconds(Action.CLOSE) + 1  # a next call just after the give-up time
+    late = chain.answer(DoorState.MOVING)
+    assert late is not None
+    assert late.outcome == "still_moving"
+    chain.pressed(Action.CLOSE, DoorState.OPEN)
+    clock.now += 3600
+    assert not chain.following()
+    assert chain.answer(DoorState.CLOSED) is None
+
+
+def test_wait_for_with_no_press_record_says_it_is_not_following_one(tmp_path):
+    # The plugin restarted mid-travel, or the record ended: say so, so a reversed close is looked at.
+    server, _ = server_for(tmp_path)
+    answer = call(server, "garage_status", {"wait_for": "closed"})
+    assert answer["say"].endswith(
+        "I'm not following a press now, so I can't say how the last one went. "
+        "If the door was closing, look at it."
+    )
+    assert "following" not in call(server, "garage_status", {})["say"]

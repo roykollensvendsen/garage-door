@@ -34,6 +34,7 @@ from mcp.types import ToolAnnotations
 
 from garage_door import answers
 from garage_door.door import Action
+from garage_door.follow import NOT_FOLLOWING
 from garage_door.manual import ManualPress, ManualPressed, ManualQuestion, status_sentence
 from garage_door.phrases import PhraseError, load_phrases
 from garage_door.service import Confirmed, GarageService, Question, Refused
@@ -232,10 +233,11 @@ async def _status(service: GarageService, manual: ManualPress, *, following: boo
         return answers.followed(followed, await manual.report_after())
     report = await manual.report()
     service.travel.seen(str(report["state"]))  # timed after a press (ADR-GD-011)
+    said = status_sentence(report)
     return {
         "state": report["state"],
         "armed": report["armed"],
-        "say": status_sentence(report),
+        "say": f"{said} {NOT_FOLLOWING}" if following else said,
         "controller": report,
     }
 
