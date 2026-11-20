@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
+from garage_door import answers
 from garage_door.door import Action
 from garage_door.manual import ManualPress, ManualPressed, ManualQuestion, status_sentence
 from garage_door.phrases import PhraseError, load_phrases
@@ -64,7 +65,9 @@ INSTRUCTIONS = (
     "only for when Roy says he is at the door watching it; it never opens or closes by name. "
     + PHRASE_RULE
     + " garage_switch arms or disarms the controller and switches manual mode: switching on returns a "
-    "question to read aloud, confirmed with garage_confirm only on Roy's yes; switching off is at once."
+    "question to read aloud, confirmed with garage_confirm only on Roy's yes; switching off is at once. "
+    "When an answer has 'next', make that call at once, without asking, and read its 'say'; stop when "
+    "an answer has no 'next'."
 )
 
 SIMULATED = "SIMULATED: this is a simulated garage door, not a real one. Say so when you report on it. "
@@ -98,18 +101,12 @@ def build_server(
             "Read whether the garage door is open, closed, moving, unknown or faulty, and whether "
             "the controller is armed (false: test mode, a press switches nothing; null: not known). "
             "'say' gives the opener's light as last reported; light_reported_s_ago is the age of that "
-            "report, not how long the light has been on or off."
+            "report, not how long the light has been on or off. With 'wait_for', only as an answer's "
+            "'next' gives it: follows the door after a press for a few seconds."
         ),
     )
-    async def garage_status() -> dict[str, Any]:
-        report = await manual.report()
-        service.travel.seen(str(report["state"]))  # timed after a press (ADR-GD-011)
-        return {
-            "state": report["state"],
-            "armed": report["armed"],
-            "say": status_sentence(report),
-            "controller": report,
-        }
+    async def garage_status(wait_for: Literal["open", "closed"] | None = None) -> dict[str, Any]:
+        return await _status(service, manual, following=wait_for is not None)
 
     @_tool(
         server,
@@ -123,7 +120,7 @@ def build_server(
     async def garage_request(action: Literal["open", "close"], phrase: str | None = None) -> dict[str, Any]:
         answer = await service.request(Action(action), requester="mcp", phrase=phrase)
         if isinstance(answer, Confirmed):
-            return _pressed(answer, await manual.report_after())
+            return answers.pressed(answer, await manual.report_after())
         if isinstance(answer, Question):
             return {
                 "outcome": "question",
@@ -177,7 +174,7 @@ def build_server(
             return other
         outcome = await service.confirm(token)
         if isinstance(outcome, Confirmed):
-            return _pressed(outcome, await manual.report_after())
+            return answers.pressed(outcome, await manual.report_after())
         return {
             "outcome": "refused",
             "state": str(outcome.state),
@@ -228,22 +225,25 @@ async def _confirm_switch_or_manual(
     return None
 
 
+async def _status(service: GarageService, manual: ManualPress, *, following: bool) -> dict[str, Any]:
+    # The press record, not wait_for, says which way and for how long (ADR-GD-011).
+    followed = await service.follow() if following else None
+    if followed is not None:
+        return answers.followed(followed, await manual.report_after())
+    report = await manual.report()
+    service.travel.seen(str(report["state"]))  # timed after a press (ADR-GD-011)
+    return {
+        "state": report["state"],
+        "armed": report["armed"],
+        "say": status_sentence(report),
+        "controller": report,
+    }
+
+
 def _manual_answer(pressed: ManualPressed | Refused, controller: dict[str, Any]) -> dict[str, Any]:
     if isinstance(pressed, ManualPressed):
         return {"outcome": "pressed", "say": pressed.message, "controller": controller}
     return {"outcome": "refused", "say": pressed.reason, "controller": controller}
-
-
-def _pressed(outcome: Confirmed, controller: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "outcome": "pressed",
-        "before": str(outcome.before),
-        "after": str(outcome.after),
-        "reached": outcome.reached,
-        "armed": outcome.armed,
-        "say": outcome.message,
-        "controller": controller,
-    }
 
 
 def _switch_answer(answer: SwitchQuestion | Switched | Refused, controller: dict[str, Any]) -> dict[str, Any]:

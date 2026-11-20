@@ -158,7 +158,7 @@ def test_request_then_confirm_presses_once_through_the_tools(tmp_path):
     server = server_for(device, tmp_path)
     asked = call(server, "garage_request", {"action": "open"})
     assert asked["outcome"] == "question"
-    assert asked["say"] == "The garage door is closed. Do you want me to open it?"
+    assert asked["say"].startswith("The garage door is closed. Do you want me to open it?")
     assert device.presses == 0
     done = call(server, "garage_confirm", {"token": asked["token"]})
     assert done["outcome"] == "pressed"

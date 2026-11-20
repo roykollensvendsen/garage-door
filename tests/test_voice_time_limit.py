@@ -60,3 +60,29 @@ LONGEST = {
 @pytest.mark.parametrize("seconds", LONGEST.values(), ids=LONGEST.keys())
 def test_a_tools_longest_wait_fits_in_the_voices_time(seconds):
     assert seconds + MARGIN <= VOICE_LIMIT
+
+
+#: The voice pushes a call of over about 10 s to the background (the owner, 20.11), and the
+#: app adds its own latency: the press and each call that follows the door stay within this.
+BACKGROUND_LIMIT = 8.0
+
+#: With the controller connected, as it is for a press and for the calls just after it
+#: (ADR-GD-011). A reconnect on the way is bounded by the table above instead.
+CONNECTED = {
+    # The press's own wait counts from the yes, so the verdict comes out of it.
+    "confirm a press, the door never reported moving": max(VERDICT, service.REPLY_SECONDS)
+    + service.POLL_SECONDS
+    + REPORT,
+    "a magic phrase, the door never reported moving": max(VERDICT, service.REPLY_SECONDS)
+    + service.POLL_SECONDS
+    + REPORT,
+    # Every read stops when the call is due, a reconnect included.
+    "status following the door, the door never arriving": service.FOLLOW_CALL_SECONDS
+    + service.POLL_SECONDS
+    + REPORT,
+}
+
+
+@pytest.mark.parametrize("seconds", CONNECTED.values(), ids=CONNECTED.keys())
+def test_a_press_and_each_call_after_it_stay_out_of_the_background(seconds):
+    assert seconds <= BACKGROUND_LIMIT
