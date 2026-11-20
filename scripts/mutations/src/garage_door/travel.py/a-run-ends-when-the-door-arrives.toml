@@ -1,0 +1,6 @@
+[[rule]]
+name = "a run ends when the door arrives"
+file = "src/garage_door/travel.py"
+find = 'self\._run = None'
+replace = 'pass'
+occurrence = 2

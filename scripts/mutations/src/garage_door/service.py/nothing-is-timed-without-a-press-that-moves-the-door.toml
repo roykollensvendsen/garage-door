@@ -1,0 +1,5 @@
+[[rule]]
+name = "nothing is timed without a press that moves the door"
+file = "src/garage_door/service.py"
+find = 'if armed is not False:'
+replace = 'if True:'

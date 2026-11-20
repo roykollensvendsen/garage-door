@@ -1,0 +1,5 @@
+[[rule]]
+name = "a press replaces a run that has not arrived"
+file = "src/garage_door/travel.py"
+find = 'self\._run = _Run\(self\._wall_clock\(\), action, self\._clock\(\)\)'
+replace = 'self._run = self._run or _Run(self._wall_clock(), action, self._clock())'
