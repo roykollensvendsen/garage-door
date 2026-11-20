@@ -49,6 +49,7 @@ class Travel:
 
     def pressed(self, action: Action) -> None:
         """Start a new run for a press towards `action`'s end; it replaces any earlier one."""
+        # RULE: a press replaces a run that has not arrived
         self._run = _Run(self._wall_clock(), action, self._clock())
 
     def seen(self, state: DoorState | str) -> None:
@@ -57,6 +58,7 @@ class Travel:
         if run is None:
             return
         seconds = self._clock() - run.at
+        # RULE: reads stop being timed a minute after the press
         if seconds > FOLLOW_SECONDS:
             self._run = None
             return
@@ -64,6 +66,7 @@ class Travel:
         self._write("read", run, ms, state=str(state))
         if str(state) == str(run.action.end_state):
             self._write("arrived", run, ms)
+            # RULE: a run ends when the door arrives
             self._run = None
 
     def _write(self, event: str, run: _Run, ms: int, **fields: str) -> None:

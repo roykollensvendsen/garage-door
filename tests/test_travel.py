@@ -57,9 +57,15 @@ def test_each_read_after_a_press_is_timed_until_the_door_arrives(tmp_path):
     assert (arrived["event"], arrived["ms"]) == ("arrived", 21500)
     assert {line["run"] for line in timing(tmp_path)} == {"2026-11-04T12:00:00+00:00"}
 
+
+def test_a_run_ends_when_the_door_arrives(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
+    service, _ = make(device, tmp_path)
+    press(service, Action.OPEN)
     lines = len(timing(tmp_path))
     run(service.status())
-    assert len(timing(tmp_path)) == lines  # once arrived, the run is done
+    run(service.status())
+    assert len(timing(tmp_path)) == lines
 
 
 def test_the_timing_changes_nothing_that_is_said_or_logged_about_the_press(tmp_path):
@@ -115,6 +121,18 @@ def test_a_new_press_starts_a_new_run(tmp_path):
     press(service, Action.CLOSE)
     arrivals = [line for line in timing(tmp_path) if line["event"] == "arrived"]
     assert [line["action"] for line in arrivals] == ["open", "close"]
+
+
+def test_a_press_replaces_a_run_that_has_not_arrived(tmp_path):
+    # The door went back down before it was seen open; the next press is timed from itself.
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
+    service, clock = make(device, tmp_path)
+    press(service, Action.OPEN)
+    clock.now += 10
+    device.current, device.after_press = DoorState.CLOSED, DoorState.OPEN
+    press(service, Action.OPEN)
+    arrivals = [line for line in timing(tmp_path) if line["event"] == "arrived"]
+    assert [line["ms"] for line in arrivals] == [0]
 
 
 def test_a_travel_log_that_cannot_be_written_leaves_every_answer_as_it_was(tmp_path):

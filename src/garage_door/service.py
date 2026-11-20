@@ -206,7 +206,8 @@ class GarageService:
         # RULE: a press the controller refused is said as refused
         if reason is not None:
             return self._refuse(before, CONTROLLER_REFUSED[reason], pending.action, pending.requester)
-        # In test mode the relay stays open, so there is no travel to wait for or to time.
+        # RULE: nothing is timed without a press that moves the door
+        # (in test mode the relay stays open, so there is no travel to time)
         if armed is not False:
             self.travel.pressed(pending.action)
         after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)

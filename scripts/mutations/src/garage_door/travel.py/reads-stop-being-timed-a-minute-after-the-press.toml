@@ -1,0 +1,5 @@
+[[rule]]
+name = "reads stop being timed a minute after the press"
+file = "src/garage_door/travel.py"
+find = 'if seconds > FOLLOW_SECONDS:'
+replace = 'if False:'
