@@ -135,8 +135,8 @@ def test_the_relay_module_leaves_nc_empty_so_a_dead_module_never_presses():
 
 
 def test_a_row_written_in_other_digits_is_no_hole():
-    """'٣' is a digit to Python and 3 to int(), but no breadboard prints its rows that way."""
+    """'٣' is a digit to Python and 3 to int(), but no breadboard prints its rows that way; nor is ''."""
     board = _board()
-    for name in ("٣", "c٣", "c²"):
+    for name in ("٣", "c٣", "c²", ""):
         with pytest.raises(ValueError, match="no hole"):
             board.hole(name)
