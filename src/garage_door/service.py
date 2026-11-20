@@ -30,6 +30,7 @@ from garage_door.door import (
     WrongKeyError,
     refusal,
 )
+from garage_door.follow import Chain, Followed, press_answer, said_seconds
 from garage_door.travel import Travel
 
 if TYPE_CHECKING:
@@ -54,10 +55,13 @@ NO_QUESTION = "There is no open question to confirm. Ask again."
 EXPIRED = "That question expired. Ask again."
 #: How long a question stays answerable.
 TOKEN_SECONDS = 30.0
-#: How long a press waits for the door before it answers (decisions/ADR-GD-010): the voice
-#: gives a tool about 15 s (claude-voice docs/plugin-standard.md, rule 3) = 3 s for the first
-#: state + this + one more read + 2 s to spare; "not yet confirmed" in time beats nothing.
-REPLY_SECONDS = 9.0
+#: How long a press waits for the door before it answers (decisions/ADR-GD-010, ADR-GD-011):
+#: long enough to see it leave its end (1-2 s after the press, measured 20.11), short enough
+#: that the voice does not push a call of over about 10 s to the background. garage_status
+#: follows it from there.
+REPLY_SECONDS = 3.0
+#: How long one garage_status call follows the door (ADR-GD-011), for the same reason.
+FOLLOW_CALL_SECONDS = 5.0
 #: How often the door is read while waiting for it to arrive.
 POLL_SECONDS = 1.0
 #: The states a press may start from.
@@ -91,6 +95,7 @@ class Confirmed:
     reached: bool
     armed: bool | None
     message: str
+    wait_for: DoorState | None = None  # while moving: the end garage_status follows it to (ADR-GD-011)
 
 
 @dataclass(frozen=True)
@@ -132,6 +137,7 @@ class GarageService:
         self._wall_clock = wall_clock
         self._pending: _Pending | None = None
         self.travel = Travel(log_path.with_name("travel.jsonl"), clock, wall_clock)  # ADR-GD-011 step 1
+        self.chain = Chain(clock)  # ADR-GD-011 step 2
 
     async def status(self) -> DoorState:
         """The door's state now, timed after a press; UNKNOWN when the controller does not answer."""
@@ -140,6 +146,7 @@ class GarageService:
         except DeviceUnavailableError:
             state = DoorState.UNKNOWN
         self.travel.seen(state)
+        self.chain.seen(state)
         return state
 
     async def armed(self) -> bool | None:
@@ -176,6 +183,7 @@ class GarageService:
         verb = "open" if action is Action.OPEN else "close"
         # Read aloud by a voice: worded so that it is plainly a question.
         question = f"The garage door is {state}. Do you want me to {verb} it?"
+        question += f" It takes about {said_seconds(action)} seconds."  # ADR-GD-011
         return Question(token, state, action, question)
 
     async def confirm(self, token: str) -> Confirmed | Refused:
@@ -209,8 +217,10 @@ class GarageService:
         # RULE: nothing is timed without a press that moves the door
         # (in test mode the relay stays open, so there is no travel to time)
         if armed is not False:
-            self.travel.pressed(pending.action)
+            self.travel.pressed(pending.action, latency=self._clock() - (due - REPLY_SECONDS))
+            self.chain.pressed(pending.action, before)
         after = await self.status() if armed is False else await self._wait_for(pending.action.end_state, due)
+        followed = self.chain.answer(after) if armed is not False else None
         reached = after is pending.action.end_state
         self._log(
             "pressed",
@@ -224,8 +234,29 @@ class GarageService:
         )
         # A press is never repeated here: if the door stopped or reversed, a
         # person has to look before anything moves it again.
-        message = _press_answer(pending.action, before, after, armed=armed)
-        return Confirmed(before, after, reached, armed, message)
+        message = press_answer(pending.action, before, after, armed=armed, followed=followed)
+        return Confirmed(before, after, reached, armed, message, followed.wait_for if followed else None)
+
+    async def follow(self) -> Followed | None:
+        """Follow the door after a press until the outcome is final, for one call; None: no press."""
+        if not self.chain.following():
+            return None
+        due = self.chain.due(self._clock() + FOLLOW_CALL_SECONDS)
+        # RULE: garage status never presses
+        seen = await self._read_by(due)
+        while not self.chain.settled(seen) and self._clock() < due:
+            await self._sleep(POLL_SECONDS)
+            seen = await self._read_by(due, last=seen)
+        answer = self.chain.answer(seen)
+        if answer is not None and answer.wait_for is None:  # final: one line beside the press's
+            self._log(
+                "followed",
+                action=answer.action,
+                after=answer.state,
+                outcome=answer.outcome,
+                seconds=answer.seconds,
+            )
+        return answer
 
     async def _wait_for(self, wanted: DoorState, due: float) -> DoorState:
         """Read the door until it is `wanted` or the answer is `due`; no read runs past `due`."""
@@ -263,38 +294,3 @@ class GarageService:
         self._log_path.parent.mkdir(parents=True, exist_ok=True)
         with self._log_path.open("a", encoding="utf-8") as log:
             log.write(json.dumps(entry) + "\n")
-
-
-def _press_answer(action: Action, before: DoorState, after: DoorState, *, armed: bool | None) -> str:
-    """What to say after a press: arrived, still moving and not yet confirmed, or stopped short."""
-    reached = after is action.end_state
-    if armed is False:
-        message = (
-            "Test mode: the controller is not armed, so the relay did not switch "
-            f"and the door did not move. It is {after}. "
-            "Arm it on the laptop to make a press move the door; the README shows how."
-        )
-    elif reached:
-        message = f"Pressed. The garage door was {before} and is now {after}."
-    elif after is DoorState.MOVING and action is Action.CLOSE:
-        message = (
-            "Pressed. The garage door is moving, and NOT yet confirmed closed. Ask me for its status "
-            "in half a minute; if it is not closed then, it may have reversed."
-        )
-    elif after is DoorState.MOVING:
-        message = (
-            f"Pressed. The garage door is moving, and not yet confirmed {action.end_state}. "
-            "Ask me for its status in half a minute."
-        )
-    elif action is Action.CLOSE:
-        message = (
-            "The garage door did NOT close, possibly reversed. "
-            f"Something may be in the way: it is {after}. Please check it before trying again."
-        )
-    else:
-        message = (
-            f"Pressed, but the garage door did not reach {action.end_state}: it is {after}. Please check it."
-        )
-    if armed is None and not reached:
-        message += " I could not tell whether the controller is armed."
-    return message

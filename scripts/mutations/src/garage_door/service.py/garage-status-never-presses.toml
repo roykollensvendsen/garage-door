@@ -1,0 +1,5 @@
+[[rule]]
+name = "garage status never presses"
+file = "src/garage_door/service.py"
+find = 'seen = await self\._read_by\(due\)$'
+replace = 'seen = await self._read_by(due) if await self._device.press() else DoorState.UNKNOWN'

@@ -180,9 +180,10 @@ def test_a_command_named_in_a_refusal_is_one_that_runs_as_written():
 
 
 def _test_mode_answer():
-    from garage_door.service import Action, DoorState, _press_answer  # noqa: PLC0415
+    from garage_door.follow import press_answer  # noqa: PLC0415
+    from garage_door.service import Action, DoorState  # noqa: PLC0415
 
-    return _press_answer(Action.OPEN, DoorState.CLOSED, DoorState.CLOSED, armed=False)
+    return press_answer(Action.OPEN, DoorState.CLOSED, DoorState.CLOSED, armed=False, followed=None)
 
 
 def test_a_press_in_test_mode_says_how_to_arm_on_the_laptop():

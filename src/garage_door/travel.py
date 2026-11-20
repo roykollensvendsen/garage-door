@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """How long the door takes after a press, timed for the log (decisions/ADR-GD-011, step 1).
 
-After a press, every read of the door is written to a log of its own, with the
-milliseconds since the press, until the door is first seen at the end it was
+After a press, the press itself is written to a log of its own, with how long
+it took from the call that asked for it to the relay. Then every read of the
+door is written there, with the milliseconds since the press, until the door is first seen at the end it was
 pressed towards, or a minute has passed. That log is what sets the travel
 times the answers will use later. It only writes: it says nothing, holds no
 device, and so can never press.
@@ -47,10 +48,14 @@ class Travel:
         self._wall_clock = wall_clock
         self._run: _Run | None = None
 
-    def pressed(self, action: Action) -> None:
-        """Start a new run for a press towards `action`'s end; it replaces any earlier one."""
+    def pressed(self, action: Action, *, latency: float) -> None:
+        """Start a new run for a press towards `action`'s end, `latency` s after it was asked for.
+
+        It replaces any earlier run.
+        """
         # RULE: a press replaces a run that has not arrived
         self._run = _Run(self._wall_clock(), action, self._clock())
+        self._write("pressed", self._run, 0, latency_ms=round(latency * 1000))
 
     def seen(self, state: DoorState | str) -> None:
         """Time one read of the door, if a run is still being followed; any state string will do."""
@@ -69,7 +74,7 @@ class Travel:
             # RULE: a run ends when the door arrives
             self._run = None
 
-    def _write(self, event: str, run: _Run, ms: int, **fields: str) -> None:
+    def _write(self, event: str, run: _Run, ms: int, **fields: str | int) -> None:
         entry = {
             "time": self._wall_clock(),
             "event": event,

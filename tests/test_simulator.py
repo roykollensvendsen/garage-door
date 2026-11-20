@@ -38,7 +38,7 @@ class Clock:
 
 
 def garage(
-    tmp_path: pathlib.Path, start: Start, *, allow_close: bool = True, travel_seconds: float = 8.0
+    tmp_path: pathlib.Path, start: Start, *, allow_close: bool = True, travel_seconds: float = 2.0
 ) -> tuple[GarageService, SimulatedController, Clock]:
     # A door that arrives before the answer is due (REPLY_SECONDS), unless a test says otherwise.
     clock = Clock()
@@ -79,12 +79,13 @@ def test_closing_an_open_door_ends_closed(tmp_path):
     assert controller.door.presses == 1
 
 
-def test_a_door_slower_than_the_answer_is_reported_as_not_yet_closed(tmp_path):
+def test_a_door_slower_than_the_answer_is_followed_until_closed(tmp_path):
     service, controller, clock = garage(tmp_path, Start.OPEN, travel_seconds=12.0)
     outcome = ask_and_confirm(service, Action.CLOSE)
     assert isinstance(outcome, Confirmed)
     assert (outcome.after, outcome.reached) == (DoorState.MOVING, False)
-    assert "NOT yet confirmed closed" in outcome.message
+    assert outcome.message.startswith("Closing the garage door.")
+    assert outcome.wait_for is DoorState.CLOSED
     clock.now += 12.0
     assert asyncio.run(service.status()) is DoorState.CLOSED  # asking again finds it closed
     assert controller.door.presses == 1
@@ -96,7 +97,9 @@ def test_a_door_that_meets_an_obstacle_is_reported_as_not_closed_and_not_pressed
     outcome = ask_and_confirm(service, Action.CLOSE)
     assert isinstance(outcome, Confirmed)
     assert not outcome.reached
-    assert outcome.message.startswith("The garage door did NOT close, possibly reversed.")
+    followed = asyncio.run(service.follow())  # the press answers before a soft start is over
+    assert followed is not None
+    assert followed.say.startswith("The garage door did NOT close: it is still open.")
     assert controller.door.presses == 1
 
 

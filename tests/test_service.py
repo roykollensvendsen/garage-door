@@ -108,7 +108,7 @@ def test_a_request_asks_the_question_and_does_not_press(tmp_path):
     answer = run(service.request(Action.OPEN, requester="voice"))
     assert isinstance(answer, Question)
     assert answer.state is DoorState.CLOSED
-    assert answer.question == "The garage door is closed. Do you want me to open it?"
+    assert answer.question.startswith("The garage door is closed. Do you want me to open it?")
     assert device.presses == 0
 
 
@@ -135,16 +135,19 @@ def test_a_close_that_does_not_finish_warns_that_the_door_may_have_reversed(tmp_
     outcome = run(service.confirm(question.token))
     assert isinstance(outcome, Confirmed)
     assert outcome.reached is False
-    assert outcome.message.startswith("The garage door did NOT close, possibly reversed.")
-    assert "it is open" in outcome.message
-    assert device.presses == 1  # never a second press on its own
     assert log_lines(tmp_path)[-1]["after"] == "open"
+    # The press answers before a soft start is over; the follow-up says it (ADR-GD-011).
+    followed = run(service.follow())
+    assert followed is not None
+    assert followed.say.startswith("The garage door did NOT close: it is still open.")
+    assert "Look before trying again." in followed.say
+    assert device.presses == 1  # never a second press on its own
 
 
 def test_a_press_answers_in_the_voices_time_while_the_door_is_still_moving(tmp_path):
     # The voice gives a tool about 15 seconds (claude-voice docs/plugin-standard.md,
     # rule 3); a full travel takes longer. The owner chose (2026-11-10) to hear in time
-    # that the door is on its way and not yet confirmed, rather than nothing.
+    # that the door is on its way, rather than nothing; garage_status follows it from there.
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
     service, clock = make(device, tmp_path)
     question = run(service.request(Action.OPEN, requester="voice"))
@@ -154,17 +157,15 @@ def test_a_press_answers_in_the_voices_time_while_the_door_is_still_moving(tmp_p
     assert isinstance(outcome, Confirmed)
     assert outcome.reached is False
     assert outcome.after is DoorState.MOVING
-    assert outcome.message == (
-        "Pressed. The garage door is moving, and not yet confirmed open. "
-        "Ask me for its status in half a minute."
-    )
+    assert outcome.message == "Opening the garage door. It takes about 20 seconds; I'm following it."
+    assert outcome.wait_for is DoorState.OPEN
     assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
     assert device.presses == 1
 
 
-def test_a_close_still_moving_says_it_is_not_yet_confirmed_closed(tmp_path):
-    # It may still reverse after the answer: say plainly that closed is not
-    # known yet, and how to find out. Never pressed again on its own.
+def test_a_close_still_moving_says_it_is_followed_until_closed(tmp_path):
+    # It may still reverse after the answer: closed is not said until it is seen,
+    # and garage_status follows it there (ADR-GD-011). Never pressed again on its own.
     device = FakeDevice(DoorState.OPEN, after_press=DoorState.MOVING)
     service, clock = make(device, tmp_path)
     question = run(service.request(Action.CLOSE, requester="voice"))
@@ -173,10 +174,8 @@ def test_a_close_still_moving_says_it_is_not_yet_confirmed_closed(tmp_path):
     outcome = run(service.confirm(question.token))
     assert isinstance(outcome, Confirmed)
     assert outcome.reached is False
-    assert outcome.message == (
-        "Pressed. The garage door is moving, and NOT yet confirmed closed. Ask me for its status "
-        "in half a minute; if it is not closed then, it may have reversed."
-    )
+    assert outcome.message == "Closing the garage door. It takes about 20 seconds; I'm following it."
+    assert outcome.wait_for is DoorState.CLOSED
     assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
     assert device.presses == 1
     assert log_lines(tmp_path)[-1]["after"] == "moving"
@@ -208,7 +207,7 @@ def test_the_wait_for_the_door_counts_from_the_yes(tmp_path):
     outcome = run(service.confirm(question.token))
     assert isinstance(outcome, Confirmed)
     assert device.presses == 1
-    assert clock.now - started <= REPLY_SECONDS + POLL_SECONDS
+    assert clock.now - started <= 8.0 + POLL_SECONDS  # the reply was due already: no more waiting
 
 
 class DropsNearTheEnd(SlowToReconnect):
@@ -254,8 +253,9 @@ def test_no_read_after_a_press_runs_past_the_reply(tmp_path, first_read, drop_at
 
 
 def test_the_wait_for_the_door_fits_in_the_voices_time():
-    # 3 s for the first state, the wait, one more read, 2 s to spare: 15 s.
-    assert REPLY_SECONDS == 9.0
+    # The voice pushes a call of over about 10 s to the background (the owner, 20.11):
+    # long enough to see the door leave its end, and garage_status follows it from there.
+    assert REPLY_SECONDS == 3.0
 
 
 @pytest.mark.parametrize(
@@ -327,7 +327,7 @@ def test_a_press_that_does_not_arrive_says_when_test_mode_is_not_known(tmp_path)
     outcome = run(service.confirm(question.token))
     assert isinstance(outcome, Confirmed)
     assert outcome.armed is None
-    assert outcome.message.startswith("Pressed, but the garage door did not reach open")
+    assert outcome.message.startswith("Opening the garage door.")
     assert outcome.message.endswith("I could not tell whether the controller is armed.")
 
 
@@ -388,7 +388,7 @@ def test_closing_is_asked_about_by_default(tmp_path):
     service, _ = make(device, tmp_path)
     answer = run(service.request(Action.CLOSE, requester="voice"))
     assert isinstance(answer, Question)
-    assert answer.question == "The garage door is open. Do you want me to close it?"
+    assert answer.question.startswith("The garage door is open. Do you want me to close it?")
 
 
 def test_a_token_works_once(tmp_path):

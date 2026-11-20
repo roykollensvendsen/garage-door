@@ -43,7 +43,8 @@ def test_each_read_after_a_press_is_timed_until_the_door_arrives(tmp_path):
     service, clock = make(device, tmp_path)
     pressed_at = clock.now
     press(service, Action.OPEN)
-    during = timing(tmp_path)
+    pressed, *during = timing(tmp_path)
+    assert (pressed["event"], pressed["ms"]) == ("pressed", 0)
     assert {line["event"] for line in during} == {"read"}
     assert {line["state"] for line in during} == {"moving"}
     assert [line["ms"] for line in during][:3] == [0, 1000, 2000]
@@ -72,10 +73,7 @@ def test_the_timing_changes_nothing_that_is_said_or_logged_about_the_press(tmp_p
     device = FakeDevice(DoorState.OPEN, after_press=DoorState.MOVING)
     service, _ = make(device, tmp_path)
     outcome = press(service, Action.CLOSE)
-    assert outcome.message == (
-        "Pressed. The garage door is moving, and NOT yet confirmed closed. Ask me for its status in "
-        "half a minute; if it is not closed then, it may have reversed."
-    )
+    assert outcome.message == "Closing the garage door. It takes about 20 seconds; I'm following it."
     assert [line["event"] for line in log_lines(tmp_path)] == ["asked", "pressed"]
     assert device.presses == 1
 
@@ -84,7 +82,11 @@ def test_a_door_that_arrives_during_the_answer_is_timed_there(tmp_path):
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.OPEN)
     service, _ = make(device, tmp_path)
     press(service, Action.OPEN)
-    assert [(line["event"], line["ms"]) for line in timing(tmp_path)] == [("read", 0), ("arrived", 0)]
+    assert [(line["event"], line["ms"]) for line in timing(tmp_path)] == [
+        ("pressed", 0),
+        ("read", 0),
+        ("arrived", 0),
+    ]
 
 
 def test_nothing_is_timed_without_a_press_that_moves_the_door(tmp_path):
@@ -140,10 +142,7 @@ def test_a_travel_log_that_cannot_be_written_leaves_every_answer_as_it_was(tmp_p
     device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
     service, clock = make(device, tmp_path)
     outcome = press(service, Action.OPEN)
-    assert outcome.message == (
-        "Pressed. The garage door is moving, and not yet confirmed open. "
-        "Ask me for its status in half a minute."
-    )
+    assert outcome.message == "Opening the garage door. It takes about 20 seconds; I'm following it."
     assert [line["event"] for line in log_lines(tmp_path)] == ["asked", "pressed"]
     clock.now += 20
     device.current = DoorState.OPEN
@@ -180,3 +179,18 @@ def test_a_status_read_by_the_voice_after_a_press_is_timed(tmp_path):
     asyncio.run(asyncio.wait_for(go(), WITHIN))
     assert timing(tmp_path)[-1]["event"] == "arrived"
     assert device.presses == 1
+
+
+def test_a_press_is_logged_with_how_long_it_took_from_the_call_to_the_relay(tmp_path):
+    device = FakeDevice(DoorState.CLOSED, after_press=DoorState.MOVING)
+    service, clock = make(device, tmp_path)
+    plain_press = device.press
+
+    async def slow_press() -> str:
+        clock.now += 1.5  # the controller takes this long to say it pressed
+        return await plain_press()
+
+    device.press = slow_press  # type: ignore[method-assign]
+    press(service, Action.OPEN)
+    pressed = timing(tmp_path)[0]
+    assert (pressed["event"], pressed["ms"], pressed["latency_ms"]) == ("pressed", 0, 1500)
