@@ -50,7 +50,7 @@ def test_the_firmware_uses_the_planned_pins():
 
 
 def test_the_firmware_listens_on_the_planned_wire_pin_and_never_sends_on_it():
-    # Sending on the opener's wire waits for Roy's approval (decisions/ADR-GD-003).
+    # Sending on the opener's wire waits for the owner's approval (decisions/ADR-GD-003).
     # The wire's UART is set up with ESP-IDF itself (door_logic/wire_uart.h), to
     # count framing errors and overflows; ESPHome's uart component is not used.
     config = _esphome_config()
@@ -91,7 +91,7 @@ def test_the_controller_starts_unarmed_after_every_boot():
 
 
 def test_the_door_state_comes_only_from_the_opener_wire():
-    # Roy, 2026-11-06: no reed contacts. The opener's own status on 0+2 is the
+    # The owner, 2026-11-06: no reed contacts. The opener's own status on 0+2 is the
     # only source; door_logic.h keeps its tested reed logic for anyone who adds them.
     config = _esphome_config()
     assert "binary_sensor" not in config
@@ -149,7 +149,7 @@ def test_every_picture_the_docs_show_exists():
 
 
 def test_the_relay_polarity_is_set_in_one_place_and_defaults_to_active_high():
-    # Roy's first-test relay module may trigger on a low input (2026-11-04). The
+    # The owner's first-test relay module may trigger on a low input (2026-11-04). The
     # level is one substitution, so "off" means relay open whichever module is
     # fitted; the bench check in the build guide decides it before the opener.
     raw = _esphome_config()
@@ -167,7 +167,7 @@ def test_the_press_output_never_restores_an_on_state():
 
 def test_ota_updates_use_the_api_key_not_a_second_one():
     # ESPHome 2026.10 refuses an OTA key that differs from the API key; the
-    # example secrets used one key for both, so CI never saw it (Roy's flash).
+    # example secrets used one key for both, so CI never saw it (the owner's flash).
     ota = _esphome_config()["ota"][0]
     assert "encryption" not in ota
     assert "ota_encryption_key" not in (ROOT / "firmware/secrets.example.yaml").read_text()

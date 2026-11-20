@@ -66,7 +66,7 @@ def test_two_wrong_letters_in_a_word_do_not_match():
 
 
 def test_a_repeated_word_dropped_by_speech_recognition_still_matches():
-    # Roy, 2026-11-06: "sesam, sesam" came through as "sesam".
+    # The owner, 2026-11-06: "sesam, sesam" came through as "sesam".
     phrases = Phrases.from_table({"nb": {"open": ["sesam, sesam, lukk deg opp"]}})
     assert phrases.matches(Action.OPEN, "sesam lukk deg opp")
     assert phrases.matches(Action.OPEN, "sesam sesam sesam lukk deg opp")
@@ -95,7 +95,7 @@ def test_nothing_matches_without_phrases_or_without_words():
 
 
 def test_any_phrase_is_allowed_even_one_word():
-    # Roy, 2026-11-06: no length limit; choosing a word he does not say otherwise is up to him.
+    # The owner, 2026-11-06: no length limit; choosing a word they do not say otherwise is up to them.
     phrases = Phrases.from_table({"nb": {"open": ["sesam"]}})
     assert phrases.matches(Action.OPEN, "sesam")
     assert phrases.matches(Action.OPEN, "Sesam, sesam!")
@@ -108,7 +108,7 @@ def test_a_phrase_without_words_is_refused(phrase):
 
 
 def test_the_same_phrase_may_open_and_close():
-    # Roy, 2026-11-06. The door's state decides the direction: a press the
+    # The owner, 2026-11-06. The door's state decides the direction: a press the
     # other way is refused as "already open" or "already closed".
     phrases = Phrases.from_table({"en": {"open": ["please"], "close": ["please"]}})
     assert phrases.matches(Action.OPEN, "please open the garage")
@@ -120,7 +120,7 @@ def test_only_open_and_close_can_have_phrases():
         Phrases.from_table({"nb": {"arm": ["sesam lukk deg opp"]}})
 
 
-# --- The file on Roy's machine --------------------------------------------------
+# --- The file on the owner's machine ------------------------------------------
 
 
 def test_no_file_means_the_feature_is_off(tmp_path):

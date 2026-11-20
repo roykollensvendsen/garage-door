@@ -21,7 +21,7 @@ class DoorState(StrEnum):
 
 
 class Action(StrEnum):
-    """What Roy can ask for."""
+    """What the owner can ask for."""
 
     OPEN = "open"
     CLOSE = "close"
@@ -59,7 +59,7 @@ CONTROLLER_REFUSED = {
 }
 
 
-#: Said when the controller answers but refuses the laptop's key, with what Roy can do about it.
+#: Said when the controller answers but refuses the laptop's key, with what the owner can do about it.
 WRONG_KEY = (
     "The garage door controller refused the laptop's key. "
     "Check that the controller was flashed with the key in firmware/secrets.yaml, then ask again."

@@ -3,7 +3,7 @@
 
 These run the real GarageService against `SimulatedController`, whose door
 takes time to travel, reverses on an obstacle, and reports through the same
-rules as the firmware. They show what Roy would hear in each case.
+rules as the firmware. They show what the owner would hear in each case.
 """
 
 from __future__ import annotations

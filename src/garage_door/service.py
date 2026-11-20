@@ -3,7 +3,7 @@
 
 A press takes two calls. ``request`` reads the door and returns a question for
 the voice session to read aloud, with a one-time token. ``confirm`` presses,
-and is only called with that token after Roy has said yes. Nothing presses on
+and is only called with that token after the owner has said yes. Nothing presses on
 a single call, and anything that makes the outcome uncertain is refused.
 
 The controller enforces its own limits as well (see firmware/door_logic); this
