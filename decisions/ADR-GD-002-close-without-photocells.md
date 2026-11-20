@@ -6,7 +6,7 @@ Accepted by the owner, by voice, 2026-11-04.
 
 ## Context
 
-The owner's opener has no photocells (terminals 2 and 3 are empty in his photo),
+The owner's opener has no photocells (terminals 2 and 3 are empty in their photo),
 so a closing door is stopped only by the opener's own force reversal: it
 reverses after it meets something, not before. The controller closes the
 same push-button input (terminals 1 and 2) as the wall button and the

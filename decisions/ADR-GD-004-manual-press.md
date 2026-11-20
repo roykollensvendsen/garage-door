@@ -14,8 +14,8 @@ state is unknown, so refuse). That is right for a press nobody is watching.
 It also blocks the test that has to come first: does a press through the
 relay move the door?
 
-The owner's point: when he stands at the door, sees it and says yes to each
-press, he is the safety check, just as he is at the wall button.
+The owner's point: when they stand at the door, sees it and says yes to each
+press, they are the safety check, just as they are at the wall button.
 
 ## Options considered
 

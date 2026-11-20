@@ -165,7 +165,7 @@ It runs from a USB power bank in the garage.
 
 ## First door test: the owner's relay module
 
-For the first test on the door, the owner uses a relay module he already has
+For the first test on the door, the owner uses a relay module they already have
 instead of the AQY212EH. The PhotoMOS stays the part for the permanent build:
 it is isolated, silent and draws about 6 mA.
 
@@ -252,7 +252,7 @@ not connected to the opener and the controller unarmed:
 - **Bad jumper wires (2026-11-05, about 10:10).** Three manual presses
   (09:41, 09:47, 09:49) were accepted by the controller, but the door did
   not move. The owner found several blue jumper wires with no continuity: bad
-  crimps. He replaced the relay's output wires (COM to terminal 1, NO to
+  crimps. The owner replaced the relay's output wires (COM to terminal 1, NO to
   terminal 2) with proper wire, continuity-checked every wire on the bus
   side (red 0 to a1, black 2 to the rail, yellow a13 to GPIO36, black rail
   to ESP32 GND, green jumper a5 to b9), and took out the shorted 10 kΩ at

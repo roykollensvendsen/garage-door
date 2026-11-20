@@ -2,9 +2,9 @@
 
 ## Status
 
-Accepted. The owner, 2026-11-06: he asked for it by voice, then confirmed it
+Accepted. The owner, 2026-11-06: they asked for it by voice, then confirmed it
 directly in this session: "Jeg vil ha magiske ord både for åpning og
-lukking". On the length limit he chose "Ingen grense" (no limit).
+lukking". On the length limit they chose "Ingen grense" (no limit).
 
 ## Context
 
@@ -26,7 +26,7 @@ tool, and this server checks what it is given. The server cannot hear the owner.
   because closing without photocells is the riskier direction. The owner chose
   both.
 - **A minimum length (2 words, 10 letters) against everyday words.**
-  Proposed and not taken: the owner chose no limit, so choosing a phrase he does
+  Proposed and not taken: the owner chose no limit, so choosing a phrase they do
   not otherwise say is up to the user.
 - **The model decides whether the phrase was said.** Not taken: the list
   stays on the user's machine and the server matches it.

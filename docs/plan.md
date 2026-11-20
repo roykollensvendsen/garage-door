@@ -266,7 +266,7 @@ whose range status is not valid. Test it before trusting it.
 
 ### Measured on the owner's opener (2026-11-04)
 
-The owner measured his LM80EVF with a Fluke 87 V on DC volts, opener plugged in and
+The owner measured their LM80EVF with a Fluke 87 V on DC volts, opener plugged in and
 idle. Probe tips alone did not reach the contacts in the push-in terminals:
 **insert a wire through the orange lever** and measure on the wire.
 
@@ -304,7 +304,7 @@ idle. Probe tips alone did not reach the contacts in the push-in terminals:
   matter). Its LED is driven straight from GPIO25 through 330 Ω (≈6 mA; the
   part switches on at ≤3 mA). No coil, no click, no flyback diode, and full
   galvanic isolation from the opener. **For the first door test**, the owner uses a
-  relay module he already has (Songle SRD-03VDC-SL-C, 3 V coil, about
+  relay module they already have (Songle SRD-03VDC-SL-C, 3 V coil, about
   120 mA, onboard driver, 2026-11-04): VCC to 3V3, **CTH** (the input that
   triggers on high) to GPIO25, CTL empty, COM and NO across 1–2, NC empty.
   A low or floating GPIO leaves it open, so a boot or crash cannot press.

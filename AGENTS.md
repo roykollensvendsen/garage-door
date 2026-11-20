@@ -28,7 +28,7 @@ These are not style. A change that breaks one is wrong, even if the tests pass.
    ([ADR-GD-004](decisions/ADR-GD-004-manual-press.md)): a *manual press*
    may go through with the state unknown, but only when the controller is
    armed, manual mode is switched on (off at every boot, and by itself after
-   10 minutes), and the owner says yes while he can see the door. It never names a
+   10 minutes), and the owner says yes while they can see the door. It never names a
    direction or a result, and it is logged as manual. Never widen this
    exception, and never use it for open or close.
 4. **Never press automatically.** No retries, no re-press after a failed

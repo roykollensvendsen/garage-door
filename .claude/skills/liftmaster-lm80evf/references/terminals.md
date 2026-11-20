@@ -4,7 +4,7 @@
 
 Source: Manual 114A4C095B. The terminal drawings are on the fold-out figure
 page, **PDF p. 269**: figure 19–20 shows the wall controls and photocells,
-figure 26 the door-in-door contact and the warning light. The owner's photo of his
+figure 26 the door-in-door contact and the warning light. The owner's photo of their
 unit (2026-11-04) shows the same labels and colours.
 
 ## Layout
