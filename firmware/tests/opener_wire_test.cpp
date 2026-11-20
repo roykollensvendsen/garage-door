@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The opener's data wire (terminals 0+2, Security+ 2.0 wireline), run on the
-// laptop. The packets are the owner's own scope captures from his LM80EVF on
+// laptop. The packets are the owner's own scope captures from their LM80EVF on
 // 2026-11-04 (docs/plan.md, "Measured on the owner's opener"), so the decoding is
 // checked against the real opener, not against itself.
 

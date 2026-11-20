@@ -7,7 +7,7 @@ description: Open and close a LiftMaster or Chamberlain garage door (LM80EVF and
 # Talk to your garage door
 
 !!! warning "Not ready for others yet"
-    This is the owner's own project for his own garage, shared as it is built. It
+    This is the owner's own project for their own garage, shared as it is built. It
     has been tested on one opener only, the parts and instructions still
     change, and nothing here is promised to be safe for your door. Read it,
     learn from it, but do not build it for real use yet.

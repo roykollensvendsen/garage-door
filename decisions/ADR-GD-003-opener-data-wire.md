@@ -3,8 +3,8 @@
 ## Status
 
 Proposed. The owner asked for both, reading and sending (by voice, 2026-11-04).
-The details below are a proposal for him to approve. Nothing is wired,
-flashed or sent on the opener's wire until he does.
+The details below are a proposal for the owner to approve. Nothing is wired,
+flashed or sent on the opener's wire until they do.
 
 ## Context
 

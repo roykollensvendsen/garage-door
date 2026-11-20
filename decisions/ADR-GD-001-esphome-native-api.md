@@ -8,7 +8,7 @@ Proposed by Claude, 2026-11-04, waiting for the owner.
 
 A SparkFun ESP32 Thing (DEV-13907) will press the LiftMaster LM80EVF's
 push-button input (terminals 1+2) for 500 ms and read two reed contacts. A
-local MCP module on the owner's laptop, part of his planned modular local MCP server,
+local MCP module on the owner's laptop, part of their planned modular local MCP server,
 decides when to press. The ESP32 cannot join the tailnet, so the two meet on
 the home LAN. The link must be authenticated, and nothing may be reachable from
 the internet. See [`docs/plan.md`](../docs/plan.md).

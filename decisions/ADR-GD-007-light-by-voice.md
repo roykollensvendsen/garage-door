@@ -2,9 +2,9 @@
 
 ## Status
 
-Proposed. The owner asked for it by voice on 2026-11-05. This is the plan for him
+Proposed. The owner asked for it by voice on 2026-11-05. This is the plan for them
 to approve. Nothing is built, wired, flashed or sent on the opener's wire
-until he does.
+until they do.
 
 ## Context
 

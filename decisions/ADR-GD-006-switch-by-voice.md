@@ -10,8 +10,8 @@ Until now the controller was armed, and manual mode switched on, only from
 the terminal (`garage-door arm`, `garage-door manual on`) or Home Assistant.
 The controller boots unarmed ([ADR-GD-004](ADR-GD-004-manual-press.md)
 and the plan), so after every power cut the owner had to reach a terminal before
-the door could be used by voice. He asked for both switches in the MCP
-server, which his voice session uses.
+the door could be used by voice. They asked for both switches in the MCP
+server, which their voice session uses.
 
 Arming and manual mode are what let a confirmed press reach the relay, and
 manual mode lets a press through with the door's state unknown. Switching
@@ -20,7 +20,7 @@ them on widens what a voice session can do; switching them off narrows it.
 ## Options considered
 
 - **Keep them in the terminal only.** Not taken: the owner has to find a terminal
-  after every power cut, and he asked for this.
+  after every power cut, and they asked for this.
 - **Switch at once, on or off.** Not taken: one misheard sentence, or another
   session, could arm the controller with nobody having said yes.
 - **A question and a spoken yes to switch on; switching off at once.**
